@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direction B · Darkroom — Rental Unit Tracker mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Darkroom: the Lightroom Library module (spec §6) applied to apartments.
+   Neutral graphite so photos and the five label colors carry all the color. */
+:root {
+  --bg: #1E1F21; --panel: #28292C; --panel-2: #303135; --line: #3A3B40; --text: #D8D8D4; --muted: #8C8E93; --hi: #F2F2EE;
+  --lb-red: #D9534A; --lb-yellow: #E3BE3E; --lb-green: #55A562; --lb-blue: #4C8BE0; --lb-purple: #9A6BDB;
+  --pick: #ECECE8; --map-land: #232427; --map-blk: #2A2B2F; --map-bldg: #333439; --map-water: #1B2733; --map-park: #24302A;
+  --font: "IBM Plex Sans", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 400 13px/1.45 var(--font); font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.app { display: grid; grid-template-columns: 230px 1fr 340px; grid-template-rows: 44px 1fr 168px; height: 100vh; }
+.top { grid-column: 1 / -1; display: flex; align-items: center; gap: 18px; padding: 0 14px; border-bottom: 1px solid #111214; background: #191A1C; }
+.top .name { font-weight: 600; color: var(--hi); }
+.modules { display: flex; gap: 16px; margin-left: auto; color: var(--muted); font-size: 14px; }
+.modules .on { color: var(--hi); }
+.modules span + span::before { content: "|"; margin-right: 16px; color: var(--line); }
+
+/* Left rail */
+.rail { grid-row: 2 / 4; background: var(--panel); border-right: 1px solid #111214; overflow: auto; }
+.pnl { border-bottom: 1px solid #111214; }
+.pnl h3 { margin: 0; padding: 8px 12px; font-size: 12.5px; font-weight: 600; color: var(--hi); background: var(--panel-2); display: flex; gap: 6px; }
+.pnl h3::before { content: "▾"; color: var(--muted); }
+.pnl ul { list-style: none; margin: 0; padding: 6px 0; }
+.pnl li { display: flex; justify-content: space-between; padding: 3px 12px 3px 24px; color: var(--text); }
+.pnl li.on { background: #3C3D42; color: var(--hi); }
+.pnl li span { color: var(--muted); }
+.pnl .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+/* Map */
+.map { position: relative; overflow: hidden; background: var(--map-land); }
+.mapsvg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.land { fill: var(--map-land); } .blk { fill: var(--map-blk); } .bldg { fill: var(--map-bldg); }
+.park { fill: var(--map-park); } .river { fill: none; stroke: var(--map-water); stroke-width: 74; stroke-linecap: round; }
+.river-edge { display: none; } .hwy { fill: none; stroke: #3B3C41; stroke-width: 8; } .ave { fill: none; stroke: #34353A; stroke-width: 5; }
+.lbl { font: 500 12px var(--font); fill: #6E7075; } .lbl-road { font-size: 10px; }
+.pin { fill: #9C9EA3; stroke: var(--bg); stroke-width: 2.5; }
+.pin.sel { fill: var(--hi); }
+.pin.rej { fill: none; stroke: #6E7075; stroke-width: 1.6; stroke-dasharray: 2 2; }
+.ring { fill: none; stroke-width: 3; }
+.l-blue { stroke: var(--lb-blue); } .l-green { stroke: var(--lb-green); } .l-yellow { stroke: var(--lb-yellow); }
+.badge { fill: var(--hi); stroke: var(--bg); stroke-width: 1.5; }
+.halo { fill: none; stroke: var(--hi); stroke-opacity: .35; stroke-width: 1.5; }
+.pin-t { font: 600 11px var(--font); fill: var(--bg); }
+.toolbar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; gap: 14px; align-items: center; padding: 6px 12px; background: rgba(25,26,28,.86); border-top: 1px solid #111214; color: var(--muted); }
+.toolbar b { color: var(--hi); font-weight: 500; }
+.toolbar .r { margin-left: auto; }
+
+/* Inspector */
+.insp { grid-row: 2 / 4; grid-column: 3; background: var(--panel); border-left: 1px solid #111214; overflow: auto; }
+.price-hist { padding: 12px; background: #1B1C1E; border-bottom: 1px solid #111214; }
+.price-hist .row { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; }
+.price-hist .big { font-size: 26px; color: var(--hi); font-weight: 500; }
+.price-hist svg { width: 100%; height: 54px; display: block; margin-top: 4px; }
+.kv { display: grid; grid-template-columns: 112px 1fr; gap: 3px 10px; padding: 8px 12px 10px; }
+.kv .k { color: var(--muted); text-align: right; }
+.kv .v { color: var(--hi); }
+.kv .v.unk { color: var(--muted); font-style: italic; }
+.kv .v.sub { color: var(--muted); }
+.markers { display: flex; gap: 12px; align-items: center; padding: 10px 12px; }
+.markers .stars { font-size: 16px; letter-spacing: 2px; color: var(--hi); }
+.markers .stars i { font-style: normal; color: #4B4C51; }
+.flagic { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 3px; background: var(--pick); color: var(--bg); font-weight: 700; font-size: 11px; }
+.sw { width: 14px; height: 14px; border-radius: 2px; display: inline-block; }
+.sw.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 3px var(--hi); }
+.links { display: flex; flex-direction: column; gap: 4px; padding: 8px 12px 14px 134px; }
+.links a { color: var(--lb-blue); text-decoration: none; }
+
+/* Filmstrip */
+.strip { grid-column: 2; background: #19191B; border-top: 1px solid #111214; display: flex; gap: 6px; padding: 8px; overflow-x: auto; }
+.cell { flex: 0 0 150px; background: var(--panel); border-radius: 3px; padding: 6px; display: grid; grid-template-rows: 78px auto auto; gap: 4px; position: relative; border-bottom: 3px solid transparent; }
+.cell.sel { background: #44454A; outline: 1px solid var(--hi); }
+.cell.dim { opacity: .4; }
+.cell .img { border-radius: 2px; position: relative; }
+.cell .img .fl { position: absolute; left: 4px; top: 4px; width: 14px; height: 14px; border-radius: 2px; background: var(--pick); color: var(--bg); font: 700 9px/14px var(--font); text-align: center; }
+.cell .img .nw { position: absolute; right: 4px; top: 4px; font: 600 9.5px var(--font); color: var(--bg); background: var(--hi); padding: 0 4px; border-radius: 2px; }
+.cell .t { color: var(--hi); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell .m { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; }
+.cell .m .s { letter-spacing: 1px; color: var(--text); }
+.l-b-blue { border-bottom-color: var(--lb-blue); } .l-b-green { border-bottom-color: var(--lb-green); } .l-b-yellow { border-bottom-color: var(--lb-yellow); }
+@media (max-width: 1100px) { .app { grid-template-columns: 0 1fr 320px; } .rail { display: none; } }
+@media (max-width: 760px) { .app { grid-template-columns: 1fr; grid-template-rows: 44px 1fr 150px; } .insp { display: none; } .strip { grid-column: 1; } .modules { display: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top"><span class="name">Rental Unit Tracker</span><span style="color:var(--muted)">Minneapolis, 9 units</span>
+    <nav class="modules"><span class="on">Explore</span><span>Shortlist</span><span>Compare</span></nav></header>
+
+  <aside class="rail">
+    <div class="pnl"><h3>Collections</h3><ul><li class="on">All units <span>9</span></li><li>Inbox (new) <span>2</span></li><li>Downtown shortlist <span>3</span></li><li>Tour Saturday <span>2</span></li><li>Under $2k total <span>4</span></li></ul></div>
+    <div class="pnl"><h3>Status</h3><ul><li>New <span>2</span></li><li>Reviewing <span>3</span></li><li>Shortlisted <span>1</span></li><li>Tour scheduled <span>1</span></li><li>Toured <span>1</span></li><li>Rejected <span>1</span></li></ul></div>
+    <div class="pnl"><h3>Labels</h3><ul><li><span style="color:inherit"><i class="dot" style="background:var(--lb-red)"></i>Deal breaker?</span><span>0</span></li><li><span style="color:inherit"><i class="dot" style="background:var(--lb-yellow)"></i>Needs a call</span><span>1</span></li><li><span style="color:inherit"><i class="dot" style="background:var(--lb-green)"></i>Both like</span><span>1</span></li><li><span style="color:inherit"><i class="dot" style="background:var(--lb-blue)"></i>Roommate likes</span><span>1</span></li></ul></div>
+    <div class="pnl"><h3>Filter</h3><ul><li>Total ≤ $2,300 <span>on</span></li><li>Bedrooms ≥ 1 <span>on</span></li><li>Hide rejected <span>off</span></li></ul></div>
+  </aside>
+
+  <section class="map" aria-label="Map">
+    {{MAP}}
+    <div class="toolbar"><span>Sort <b>Total monthly</b></span><span>Pins <b>Units</b></span><span>Color <b>Label</b></span><span class="r">P pick · X reject · 0–5 stars · 6–9 labels</span></div>
+  </section>
+
+  <aside class="insp" aria-label="Inspector">
+    <div class="price-hist"><div class="row"><span>Total monthly</span><span>Price history</span></div>
+      <div class="big">$1,932</div>
+      <svg viewBox="0 0 300 54" preserveAspectRatio="none"><path d="M0 12 H180 V40 H300" fill="none" stroke="var(--hi)" stroke-width="1.5"/><rect x="0" y="40" width="300" height="14" fill="#25262A"/></svg>
+      <div class="row"><span>Sep 28, $1,695 rent</span><span>Oct 12, $1,650</span></div></div>
+    <div class="markers"><span class="flagic">P</span><span class="stars">★★★★<i>★</i></span><span class="sw" style="background:var(--lb-red)"></span><span class="sw" style="background:var(--lb-yellow)"></span><span class="sw" style="background:var(--lb-green)"></span><span class="sw on" style="background:var(--lb-blue)"></span><span class="sw" style="background:var(--lb-purple)"></span></div>
+    <div class="pnl"><h3>Unit</h3><div class="kv">
+      <span class="k">Unit</span><span class="v">1504, Riverlight</span>
+      <span class="k">Status</span><span class="v">Shortlisted</span>
+      <span class="k">Beds / baths</span><span class="v">1 / 1</span>
+      <span class="k">Size</span><span class="v">720 ft², $2.68 per ft²</span>
+      <span class="k">Floor</span><span class="v">15 of 24</span>
+      <span class="k">Windows</span><span class="v">S floor-to-ceiling, S, W</span>
+      <span class="k">Laundry</span><span class="v">In unit</span>
+      <span class="k">Balcony</span><span class="v unk">unknown</span>
+      <span class="k">Available</span><span class="v">Jun 1, 2027</span></div></div>
+    <div class="pnl"><h3>Monthly cost</h3><div class="kv">
+      <span class="k">Rent</span><span class="v">$1,650</span>
+      <span class="k">Amenity fee</span><span class="v">$25</span>
+      <span class="k">Parking</span><span class="v">$150 garage</span>
+      <span class="k">Internet</span><span class="v">$60 <span class="sub">estimate</span></span>
+      <span class="k">Electric</span><span class="v">$47 <span class="sub">assumed</span></span>
+      <span class="k">Included</span><span class="v sub">Heat, water, trash</span></div></div>
+    <div class="pnl"><h3>Building</h3><div class="kv">
+      <span class="k">Riverlight</span><span class="v">High-rise, 2016</span>
+      <span class="k">Neighborhood</span><span class="v">Downtown East</span>
+      <span class="k">Skyway</span><span class="v">Connected</span>
+      <span class="k">Amenities</span><span class="v">Fitness, package room, roof deck</span></div></div>
+    <div class="pnl"><h3>Links</h3><div class="links"><a href="#">Zillow listing</a><a href="#">Apartments.com listing</a><a href="#">Building website</a><a href="#">Google Maps</a><a href="#">Street View</a></div></div>
+  </aside>
+
+  <section class="strip" aria-label="Units">
+    <div class="cell"><div class="img" style="background:linear-gradient(200deg,#F4F0E6 0 55%,#D2C2A8 55%)"><span class="nw">New</span></div><div class="t">Elm Row 214</div><div class="m"><span>$1,478</span><span class="s">·····</span></div></div>
+    <div class="cell dim"><div class="img" style="background:#9AA4AA"></div><div class="t">Halvorsen 11</div><div class="m"><span>$1,566</span><span>rejected</span></div></div>
+    <div class="cell"><div class="img" style="background:linear-gradient(115deg,#DDE5E8 0 30%,#F3EEE4 30% 72%,#8E9AA2 72%)"></div><div class="t">Riverlight 908</div><div class="m"><span>$1,857</span><span class="s">★★★</span></div></div>
+    <div class="cell sel l-b-blue"><div class="img" style="background:linear-gradient(160deg,#E9EEF0 0 38%,#C9D6DD 38% 40%,#F6F1E8 40% 70%,#BFA88C 70%)"><span class="fl">P</span></div><div class="t">Riverlight 1504</div><div class="m"><span>$1,932</span><span class="s">★★★★</span></div></div>
+    <div class="cell"><div class="img" style="background:linear-gradient(170deg,#A9C3D3 0 30%,#E5E9EB 30% 64%,#9E8B74 64%)"></div><div class="t">Second Story upper</div><div class="m"><span>$2,041</span><span class="s">★★</span></div></div>
+    <div class="cell l-b-green"><div class="img" style="background:linear-gradient(180deg,#B9D3E4 0 45%,#6F8794 45% 52%,#EAE6DC 52%)"><span class="fl">P</span></div><div class="t">The Larch 3F</div><div class="m"><span>$2,086</span><span class="s">★★★★</span></div></div>
+    <div class="cell l-b-yellow"><div class="img" style="background:linear-gradient(140deg,#C7D2D8 0 50%,#E9E4DA 50%)"></div><div class="t">Cedar Mill 702</div><div class="m"><span>$2,174</span><span class="s">★★★</span></div></div>
+    <div class="cell"><div class="img" style="background:#C8D2D7"></div><div class="t">Cedar Mill 1105</div><div class="m"><span>$2,233</span><span class="s">·····</span></div></div>
+  </section>
+</div>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direction A · Plat Book — Rental Unit Tracker mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* Plat Book: the map and list borrow from Sanborn fire-insurance atlases,
+   where buildings were hand-tinted by material: pink brick, yellow frame, blue stone. */
+:root {
+  --paper: #E4E8DF; --sheet: #F2F3EE; --ink: #1F2E45; --ink-2: #4F5B6B; --rule: #B8BFB2; --rule-2: #CFD4CA;
+  --red-ink: #A8372B;
+  --brick: #E2A398; --frame: #E7CE78; --stone: #92B3CE; --olive: #9DAE7C; --olive-d: #6E8150;
+  --water: #A9C4D6; --park: #C3D3AE;
+  --lb-red: #C8473C; --lb-yellow: #D9B23A; --lb-green: #5E8F4E; --lb-blue: #3F6FA8; --lb-purple: #7C5AA6;
+  --serif: "Zilla Slab", Rockwell, Georgia, serif;
+  --sans: "Atkinson Hyperlegible", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper: #1C232B; --sheet: #232C35; --ink: #E3E6DD; --ink-2: #A6AFA6; --rule: #3C4853; --rule-2: #303B45;
+    --red-ink: #E07A6C; --brick: #8E5A53; --frame: #8C7A3E; --stone: #4C6A84; --olive: #5D6E45; --water: #24435A; --park: #2E3F2A; }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--paper); color: var(--ink); font: 400 14px/1.5 var(--sans); font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--red-ink); outline-offset: 2px; }
+.app { display: grid; grid-template-rows: 60px 1fr; height: 100vh; }
+.top { display: flex; align-items: center; gap: 14px; padding: 0 18px; border-bottom: 2px solid var(--ink); background: var(--sheet); }
+.title { font: 700 21px/1 var(--serif); letter-spacing: .01em; white-space: nowrap; }
+.title span { font-weight: 500; color: var(--ink-2); font-size: 15px; margin-left: 6px; }
+.search { flex: 0 1 300px; height: 34px; border: 1px solid var(--rule); background: var(--paper); display: flex; align-items: center; padding: 0 10px; color: var(--ink-2); }
+.toggle { display: inline-flex; border: 1px solid var(--ink); }
+.toggle button { border: 0; background: transparent; padding: 6px 12px; font-weight: 700; font-size: 13px; }
+.toggle button.on { background: var(--ink); color: var(--sheet); }
+.sp { flex: 1; }
+.add { border: 0; background: var(--red-ink); color: #fff; padding: 8px 14px; font-weight: 700; }
+
+.body { display: grid; grid-template-columns: 390px 1fr; min-height: 0; }
+.index { overflow: auto; background: var(--sheet); border-right: 2px solid var(--ink); }
+.ix-head { display: flex; justify-content: space-between; padding: 12px 18px 8px; font-size: 13px; color: var(--ink-2); border-bottom: 1px solid var(--rule); position: sticky; top: 0; background: var(--sheet); z-index: 1; }
+.ix-head b { color: var(--ink); }
+.bgroup { border-bottom: 1px solid var(--rule); }
+.bhead { display: grid; grid-template-columns: 14px 1fr auto; gap: 10px; align-items: baseline; padding: 12px 18px 6px; }
+.bhead i { width: 14px; height: 14px; display: block; border: 1px solid var(--ink); transform: translateY(2px); }
+.bhead h3 { margin: 0; font: 700 17px/1.2 var(--serif); }
+.bhead .nb { color: var(--ink-2); font-size: 12.5px; }
+.bhead .ct { font: 600 13px var(--serif); color: var(--ink-2); }
+.urow { display: grid; grid-template-columns: 58px 1fr auto; gap: 10px; padding: 7px 18px 7px 42px; align-items: center; cursor: pointer; }
+.urow:hover { background: var(--paper); }
+.urow.sel { background: var(--paper); box-shadow: inset 3px 0 0 var(--red-ink); }
+.urow.dim { opacity: .5; }
+.urow .no { font: 700 15px var(--serif); }
+.urow .no.sm { font-size: 13px; }
+.urow .sp2 { font-size: 12.5px; color: var(--ink-2); }
+.urow .sp2 .st { display: inline-block; width: 9px; height: 9px; margin-right: 5px; border: 1px solid var(--ink); vertical-align: 0; }
+.urow .tot { text-align: right; font: 700 16px var(--serif); }
+.urow .tot small { display: block; font: 400 11.5px var(--sans); color: var(--ink-2); }
+.stars { letter-spacing: 1px; font-size: 11px; color: var(--ink); }
+.stars .o { color: var(--rule); }
+.tagnew { font-size: 11px; font-weight: 700; color: var(--red-ink); border: 1px solid var(--red-ink); padding: 0 4px; margin-left: 4px; }
+
+.map { position: relative; overflow: hidden; background: var(--paper); }
+.mapsvg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.land { fill: var(--paper); }
+.blk { fill: var(--sheet); stroke: var(--rule); stroke-width: 1; }
+.bldg { stroke: var(--ink); stroke-width: .6; }
+.bldg-a { fill: var(--brick); } .bldg-b { fill: var(--frame); } .bldg-c { fill: var(--stone); }
+.park { fill: var(--park); stroke: var(--olive-d); stroke-width: .8; stroke-dasharray: 3 2; }
+.river { fill: none; stroke: var(--water); stroke-width: 74; stroke-linecap: round; }
+.river-edge { fill: none; stroke: var(--ink); stroke-width: 76; stroke-opacity: .0; }
+.hwy { fill: none; stroke: var(--ink); stroke-width: 7; stroke-opacity: .18; }
+.ave { fill: none; stroke: var(--sheet); stroke-width: 7; }
+.lbl { font: 600 14px var(--serif); fill: var(--ink); letter-spacing: .04em; }
+.lbl-water { font-style: italic; fill: var(--ink-2); }
+.lbl-road { font: 400 11px var(--sans); fill: var(--ink-2); }
+.lot { stroke: var(--ink); stroke-width: 1.6; }
+.s-new { fill: var(--frame); } .s-review { fill: var(--stone); } .s-short { fill: var(--brick); }
+.s-tour { fill: var(--olive); } .s-toured { fill: var(--olive-d); } .s-reject { fill: var(--sheet); stroke-dasharray: 3 2; }
+.lot-t { font: 700 13px var(--serif); fill: var(--ink); }
+.x { stroke: var(--ink-2); stroke-width: 1.6; }
+.sel-ring { fill: none; stroke: var(--red-ink); stroke-width: 2.4; }
+.sel-callout { font: 700 13px var(--serif); fill: var(--red-ink); }
+
+/* Floating plate: the detail panel sits on the map like an atlas inset */
+.plate { position: absolute; top: 18px; right: 18px; bottom: 18px; width: 400px; overflow: auto; background: var(--sheet);
+  border: 2px solid var(--ink); outline: 1px solid var(--ink); outline-offset: 3px; }
+.plate .photos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; padding: 10px 10px 0; }
+.plate .photos div { aspect-ratio: 1; }
+.plate .photos div:first-child { grid-column: span 4; aspect-ratio: 16/9; }
+.pl-head { padding: 12px 16px 10px; border-bottom: 1px solid var(--rule); }
+.pl-head h1 { margin: 0; font: 700 28px/1.05 var(--serif); }
+.pl-head .addr { color: var(--ink-2); font-size: 13px; }
+.pl-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+.pl-row .big { font: 700 26px var(--serif); }
+.pl-row .big small { font: 400 13px var(--sans); color: var(--ink-2); }
+.flagbtns { display: inline-flex; border: 1px solid var(--ink); margin-left: auto; }
+.flagbtns button { border: 0; background: transparent; padding: 4px 10px; font-weight: 700; font-size: 12.5px; }
+.flagbtns button.on { background: var(--olive-d); color: #fff; }
+.sw { width: 15px; height: 15px; display: inline-block; border: 1px solid var(--ink); }
+.sw.on { outline: 2px solid var(--red-ink); outline-offset: 1px; }
+.blk2 { padding: 12px 16px; border-bottom: 1px solid var(--rule); }
+.blk2 h2 { margin: 0 0 8px; font: 700 15px var(--serif); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+td { padding: 3px 0; border-bottom: 1px dotted var(--rule); }
+td.r { text-align: right; font-weight: 700; }
+td.s { color: var(--ink-2); font-size: 12px; }
+tr.sum td { border-top: 1.5px solid var(--ink); border-bottom: 0; font: 700 15px var(--serif); padding-top: 6px; }
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 13px; }
+.facts b { display: block; font: 700 16px var(--serif); }
+.unk { color: var(--ink-2); font-style: italic; font-weight: 400 !important; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; font-size: 12.5px; }
+.chips span { border: 1px solid var(--ink); padding: 1px 6px; }
+.chips .n { border-color: var(--rule); color: var(--ink-2); text-decoration: line-through; }
+.chips .q { border-style: dashed; color: var(--ink-2); }
+.links { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; font-weight: 700; }
+.links a { color: var(--red-ink); }
+.legend { position: absolute; left: 18px; bottom: 18px; background: var(--sheet); border: 1px solid var(--ink); padding: 8px 10px; font-size: 12px; display: grid; gap: 3px; }
+.legend div { display: flex; gap: 6px; align-items: center; }
+.legend i { width: 11px; height: 11px; border: 1px solid var(--ink); display: inline-block; }
+.legend b { font: 700 13px var(--serif); }
+@media (max-width: 1100px) { .plate { width: 340px; } .body { grid-template-columns: 330px 1fr; } }
+@media (max-width: 760px) {
+  .body { grid-template-columns: 1fr; grid-template-rows: 45vh 1fr; }
+  .index { order: 2; border-right: 0; border-top: 2px solid var(--ink); }
+  .plate, .legend, .toggle, .search { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="title">Rental Unit Tracker <span>Minneapolis</span></div>
+    <div class="search">Search units, buildings, notes</div>
+    <div class="sp"></div>
+    <div class="toggle"><button class="on">Explore</button><button>Shortlist</button></div>
+    <div class="toggle"><button class="on">Units</button><button>Buildings</button></div>
+    <button class="add">Add unit</button>
+  </header>
+  <main class="body">
+    <section class="index" aria-label="Units by building">
+      <div class="ix-head"><span><b>9 units</b> in 6 buildings</span><span>Grouped by building, total monthly</span></div>
+
+      <div class="bgroup">
+        <div class="bhead"><i style="background:var(--brick)"></i><div><h3>Riverlight</h3><div class="nb">Downtown East, high-rise, skyway</div></div><span class="ct">3 units</span></div>
+        <div class="urow"><span class="no">908</span><span class="sp2"><span class="st" style="background:var(--stone)"></span>1 bd, 690 ft², fl 9 <span class="stars">★★★<span class="o">★★</span></span></span><span class="tot">$1,857<small>$1,575 rent</small></span></div>
+        <div class="urow sel"><span class="no">1504</span><span class="sp2"><span class="st" style="background:var(--brick)"></span>1 bd, 720 ft², fl 15 <span class="stars">★★★★<span class="o">★</span></span> <span class="sw" style="background:var(--lb-blue);width:9px;height:9px"></span></span><span class="tot">$1,932<small>$1,650 rent</small></span></div>
+        <div class="urow"><span class="no sm">Plan C</span><span class="sp2"><span class="st" style="background:var(--frame)"></span>2 bd, about 1,080 ft² <span class="tagnew">New</span></span><span class="tot">from $2,560<small>from $2,240</small></span></div>
+      </div>
+      <div class="bgroup">
+        <div class="bhead"><i style="background:var(--olive-d)"></i><div><h3>Cedar Mill</h3><div class="nb">North Loop, mid-rise, converted mill</div></div><span class="ct">2 units</span></div>
+        <div class="urow"><span class="no">702</span><span class="sp2"><span class="st" style="background:var(--olive-d)"></span>1 bd + den, 860 ft² <span class="stars">★★★<span class="o">★★</span></span></span><span class="tot">$2,174<small>$1,890 rent</small></span></div>
+        <div class="urow"><span class="no">1105</span><span class="sp2"><span class="st" style="background:var(--stone)"></span>1 bd, 820 ft², fl 11</span><span class="tot">$2,233<small>$1,950 rent</small></span></div>
+      </div>
+      <div class="bgroup">
+        <div class="bhead"><i style="background:var(--frame)"></i><div><h3>Elm Row</h3><div class="nb">North Loop, walk-up</div></div><span class="ct">1 unit</span></div>
+        <div class="urow"><span class="no">214</span><span class="sp2"><span class="st" style="background:var(--frame)"></span>Studio, 480 ft² <span class="tagnew">New</span></span><span class="tot">$1,478<small>$1,295 rent</small></span></div>
+      </div>
+      <div class="bgroup">
+        <div class="bhead"><i style="background:var(--olive)"></i><div><h3>The Larch</h3><div class="nb">Loring Park, walk-up</div></div><span class="ct">1 unit</span></div>
+        <div class="urow"><span class="no">3F</span><span class="sp2"><span class="st" style="background:var(--olive)"></span>2 bd, 1.5 ba, 1,010 ft² <span class="stars">★★★★<span class="o">★</span></span></span><span class="tot">$2,086<small>tour Sat</small></span></div>
+      </div>
+      <div class="bgroup">
+        <div class="bhead"><i style="background:var(--stone)"></i><div><h3>Second Story duplex</h3><div class="nb">Marcy-Holmes, house</div></div><span class="ct">1 unit</span></div>
+        <div class="urow"><span class="no sm">Upper</span><span class="sp2"><span class="st" style="background:var(--stone)"></span>2 bd, 1,100 ft²</span><span class="tot">$2,041<small>$1,700 rent</small></span></div>
+      </div>
+      <div class="bgroup">
+        <div class="bhead"><i style="background:var(--sheet)"></i><div><h3>Halvorsen Flats</h3><div class="nb">Elliot Park, walk-up</div></div><span class="ct">1 unit</span></div>
+        <div class="urow dim"><span class="no">11</span><span class="sp2">Rejected: no laundry</span><span class="tot">$1,566<small>$1,350 rent</small></span></div>
+      </div>
+    </section>
+
+    <section class="map" aria-label="Map">
+      {{MAP:140 60 1180 660}}
+      <aside class="plate" aria-label="Unit 1504 details">
+        <div class="photos"><div class="ph1" style="background:linear-gradient(160deg,#E9EEF0 0 38%,#C9D6DD 38% 40%,#F6F1E8 40% 70%,#BFA88C 70%)"></div><div style="background:#C8D3D9"></div><div style="background:#E8E1D3"></div><div style="background:#B9CCD8"></div><div style="background:#D9CDB8"></div></div>
+        <div class="pl-head"><h1>Riverlight, Unit 1504</h1><div class="addr">201 S Example St, Downtown East. Shortlisted, listed 17 days.</div></div>
+        <div class="pl-row"><span class="big">$1,932 <small>a month, $1,650 rent</small></span>
+          <span class="flagbtns"><button class="on">Pick</button><button>Reject</button><button>None</button></span></div>
+        <div class="pl-row"><span class="stars" style="font-size:17px">★★★★<span class="o">★</span></span>
+          <span class="sw" style="background:var(--lb-red)"></span><span class="sw" style="background:var(--lb-yellow)"></span><span class="sw" style="background:var(--lb-green)"></span><span class="sw on" style="background:var(--lb-blue)"></span><span class="sw" style="background:var(--lb-purple)"></span>
+          <span style="margin-left:auto;font-weight:700;font-size:13px">Status: Shortlisted ▾</span></div>
+        <div class="blk2"><h2>Monthly cost</h2>
+          <table>
+            <tr><td>Rent</td><td class="s">listing</td><td class="r">$1,650</td></tr>
+            <tr><td>Amenity fee</td><td class="s">listing</td><td class="r">$25</td></tr>
+            <tr><td>Garage, 1 space</td><td class="s">listing</td><td class="r">$150</td></tr>
+            <tr><td>Internet</td><td class="s">your estimate</td><td class="r">$60</td></tr>
+            <tr><td>Electric, assumed</td><td class="s">your estimate</td><td class="r">$47</td></tr>
+            <tr><td>Heat, water, trash</td><td class="s">included</td><td class="r">$0</td></tr>
+            <tr class="sum"><td>Total</td><td></td><td class="r">$1,932</td></tr>
+          </table></div>
+        <div class="blk2"><h2>Unit</h2><div class="facts">
+          <div><b>1 bd</b>bedrooms</div><div><b>1 ba</b>bathrooms</div><div><b>720 ft²</b>size</div>
+          <div><b>15 of 24</b>floor</div><div><b>S, W</b>windows</div><div><b class="unk">unknown</b>balcony</div></div></div>
+        <div class="blk2"><h2>Building</h2><div class="chips"><span>Skyway</span><span>Fitness</span><span>Package room</span><span>Roof deck</span><span class="n">Pool</span><span class="q">EV charging?</span></div></div>
+        <div class="blk2"><h2>Listings</h2><table><tr><td>Apartments.com</td><td class="s">Oct 12</td><td class="r">$1,650</td></tr><tr><td>Zillow</td><td class="s">Sep 28</td><td class="r">$1,695 → $1,650</td></tr></table></div>
+        <div class="blk2"><div class="links"><a href="#">Zillow</a><a href="#">Apartments.com</a><a href="#">Building site</a><a href="#">Google Maps</a><a href="#">Street View</a></div></div>
+      </aside>
+      <div class="legend"><b>Lot color: status</b><div><i style="background:var(--frame)"></i>New</div><div><i style="background:var(--stone)"></i>Reviewing</div><div><i style="background:var(--brick)"></i>Shortlisted</div><div><i style="background:var(--olive)"></i>Tour scheduled</div><div><i style="background:var(--olive-d)"></i>Toured</div></div>
+    </section>
+  </main>
+</div>
+</body>
+</html>
