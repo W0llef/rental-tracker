@@ -1,0 +1,23 @@
+# dependencies and builds
+node_modules/
+dist/
+coverage/
+
+# test output
+playwright-report/
+test-results/
+blob-report/
+
+# editor and OS
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# local environment files (the app needs none, but never commit them)
+.env
+.env.*
+
+# never commit personal data
+backups/
+*.backup.json

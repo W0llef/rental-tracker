@@ -1,0 +1,226 @@
+.app {
+  display: grid;
+  grid-template-rows: auto 56px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+
+/* Banner for non-live builds */
+.banner {
+  padding: var(--s2) var(--s4);
+  background: var(--plow);
+  color: #3a2a00;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Top bar */
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: 0 var(--s4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--ice);
+  min-width: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  white-space: nowrap;
+}
+
+.brandMark {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  background: var(--river);
+  display: grid;
+  place-items: center;
+}
+
+.brandMark svg {
+  width: 16px;
+  height: 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+/* Columns (≥ 760 px: list + map; the detail column opens when a unit is selected) */
+.main {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.list,
+.detail {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--ice);
+}
+
+/* Nothing can be selected yet, so the detail column stays closed on wide screens */
+.detail {
+  display: none;
+}
+
+.map {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  background: var(--map-land);
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--ice);
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--slate);
+}
+
+.empty {
+  flex: 1;
+  padding: var(--s5) var(--s4);
+}
+
+.emptyTitle {
+  margin: 0 0 var(--s1);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.emptyText {
+  margin: 0;
+  color: var(--slate);
+}
+
+.buildInfo {
+  margin: 0;
+  padding: var(--s3) var(--s4);
+  border-top: 1px solid var(--ice);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--slate);
+}
+
+.buildInfo code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+}
+
+/* Placeholder map: block grid in the Wayfinding colors until MapLibre arrives */
+.mapPlaceholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background-color: var(--map-land);
+  background-image:
+    linear-gradient(var(--map-road) 2px, transparent 2px),
+    linear-gradient(90deg, var(--map-road) 2px, transparent 2px);
+  background-size: 64px 64px;
+}
+
+.mapNote {
+  margin: 0;
+  padding: var(--s2) var(--s3);
+  background: var(--surface);
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  color: var(--slate);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Bottom tabs exist only on phones */
+.tabs {
+  display: none;
+}
+
+/* 760–959 px: narrower list */
+@media (max-width: 959px) {
+  .main {
+    grid-template-columns: 320px minmax(0, 1fr);
+  }
+}
+
+/* < 760 px: phone, bottom tabs List · Map · Unit (DESIGN.md §3) */
+@media (max-width: 759px) {
+  .app {
+    grid-template-rows: auto 56px minmax(0, 1fr) 56px;
+  }
+
+  .main {
+    display: block;
+    position: relative;
+  }
+
+  .list,
+  .detail,
+  .map {
+    position: absolute;
+    inset: 0;
+    display: none;
+    border-right: 0;
+  }
+
+  .app[data-tab='list'] .list,
+  .app[data-tab='unit'] .detail {
+    display: flex;
+  }
+
+  .app[data-tab='map'] .map {
+    display: block;
+  }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background: var(--surface);
+    border-top: 1px solid var(--ice);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .tab {
+    border: 0;
+    background: transparent;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--slate);
+    min-height: 44px;
+  }
+
+  .tab[aria-current='page'] {
+    color: var(--ink);
+    box-shadow: inset 0 3px 0 var(--river);
+  }
+}

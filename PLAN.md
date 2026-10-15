@@ -16,7 +16,8 @@ The spec §11 stack is confirmed with four changes and a few additions. Everythi
 
 | Area | Choice | Change vs. spec? | Why |
 | --- | --- | --- | --- |
-| Language / build | TypeScript (strict) + Vite | Same | |
+| Language / build | TypeScript (strict) + Vite | Same | TypeScript is pinned to 6.0 for now: the linter (typescript-eslint) doesn't support 7.x yet. |
+| Fonts | Overpass via `@fontsource-variable/overpass` | Addition (M0) | Self-hosts the typeface from the build, so it works offline (DESIGN.md §2.6). |
 | UI framework | **React** (not Svelte) | Picks one of the two | Larger ecosystem for exactly what Phase 1 needs: accessible dialogs/menus (Radix), list virtualization, a MapLibre wrapper. AI coding tools are also most reliable in React, which matters since one is the builder. |
 | Routing | React Router, **hash URLs** (`#/unit/…`) | Addition | Hash URLs work on GitHub Pages with no server rewrite rules. |
 | UI-only state | Zustand | Addition | Small store for selection, filters, mode, viewport. Data itself lives in IndexedDB. |
@@ -875,6 +876,7 @@ None. New questions will be added here as they come up.
 | --- | --- |
 | 2026-10-15 | First draft for approval |
 | 2026-10-15 | Draft 2: direction C chosen; Q1–Q10 decided; lease length; base maps and pin options; fast data entry and AI import (§5.7); milestones revised to M0–M13; GitHub repo from M0; Q11 opened |
+| 2026-10-15 | M0: deploys use the `gh-pages` branch (live at the root, preview in `preview/`) instead of the GitHub Actions Pages artifact, because the Actions method can only serve one build at a time; Pages source must be set once to "Deploy from a branch" (README). TypeScript pinned to 6.0 (see §1). Only dependencies needed for the empty shell are installed; Zustand, Radix, Dexie and the rest arrive with the milestone that first uses them |
 | 2026-10-15 | Draft 3: Q11 decided (fast entry in Phase 1); workflow, versions and backups (§13) and progress tracking (§14) added; `CLAUDE.md` added; preview builds isolated from real data; backup download before migrations |
 
 ---
@@ -911,7 +913,7 @@ The full working agreement for every session is in `CLAUDE.md`; this is the summ
 | Milestone | Status | Version | Approved |
 | --- | --- | --- | --- |
 | Planning (PLAN, DESIGN, mockups) | Approved | — | 2026-10-15 |
-| M0 Scaffold and deploys | Next | — | — |
+| M0 Scaffold and deploys | In review (branch `m0-scaffold`) | — | — |
 | M1 Data model, database, undo | Not started | — | — |
 | M2 List and detail | Not started | — | — |
 | M3 Map, pins, layers | Not started | — | — |
