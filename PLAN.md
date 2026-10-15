@@ -4,7 +4,7 @@ Status: **Draft 3** · Oct 15, 2026 · covers spec Draft v1 (`SPEC.md`)
 
 This plan covers Phase 1 only (spec §12: "track and compare"). The data model, however, contains every field from spec §3 now, plus the few supporting fields later phases need, so Phases 2–4 add screens and services without reshaping stored data.
 
-**Status:** approved in principle; Q11 answered (fast data entry is in Phase 1). Next: M0. Workflow, versions and progress: §13–§14 and `CLAUDE.md`.
+**Status:** approved in principle; Q11 answered (fast data entry is in Phase 1). M0 done. Next: M1. Workflow, versions and progress: §13–§14 and `CLAUDE.md`.
 
 **Draft 2 changes:** design direction C (Wayfinding) chosen; your answers to Q1–Q10 applied (§11); lease length for spreading one-time costs (§5.3); switchable base maps and customizable pins (§4.3); a fast data-entry and AI-import section (§5.7) with revised milestones (§9). One new scope question, Q11, is in §11.
 
@@ -913,7 +913,7 @@ The full working agreement for every session is in `CLAUDE.md`; this is the summ
 | Milestone | Status | Version | Approved |
 | --- | --- | --- | --- |
 | Planning (PLAN, DESIGN, mockups) | Approved | — | 2026-10-15 |
-| M0 Scaffold and deploys | In review (branch `m0-scaffold`) | — | — |
+| M0 Scaffold and deploys | Approved | v0.0.0 | 2026-10-15 |
 | M1 Data model, database, undo | Not started | — | — |
 | M2 List and detail | Not started | — | — |
 | M3 Map, pins, layers | Not started | — | — |
@@ -932,4 +932,5 @@ The full working agreement for every session is in `CLAUDE.md`; this is the summ
 
 Newest first. Each milestone chat adds one entry when the milestone is approved: what was built, known issues, whether the data format changed, and notes for the next milestone.
 
+- **2026-10-15 · M0 Scaffold and deploys (v0.0.0).** Built: Vite + React + TypeScript (strict) app with Direction C tokens (light/dark), empty app shell (list, map placeholder, phone tabs), non-live banner and build info, a separate `rental-tracker-preview` database name for every non-live build, Vitest and Playwright (laptop and phone, axe) tests, a Checks workflow, and a Deploy workflow (`main` to the Pages root, milestone branches to `preview/`, both on the `gh-pages` branch). Fixed after merge: the live deploy ran the tests with the live setting on and one test assumed a non-live build; tests now always run as a development build. Known issues: this session's GitHub access refused creating the tag `v0.0.0` and deleting the old branch `m0-scaffold` (HTTP 403), so the owner creates the tag and deletes the branch on GitHub (the tag must point at the commit that deploys successfully). Data format changed: no. *Notes for M1:* add Dexie, zod and Zustand then (not before); the database name comes from `src/config.ts` (`dbName`); run `npm run e2e` with `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium` in the cloud workspace; push to `main` can fail once with a transient 403, so retry once.
 - **2026-10-15 · Planning.** Spec reviewed; PLAN, DESIGN and three mockups made; direction C chosen; Q1–Q11 decided; layers panel and pin options added to mockup C. *Next:* M0. Before starting, the owner creates an empty **public** GitHub repository named `rental-tracker` (GitHub Pages is free only for public repositories; the repo holds code and docs, never rental data) and connects GitHub to Claude.

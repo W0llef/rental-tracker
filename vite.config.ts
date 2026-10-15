@@ -14,7 +14,8 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
  * See .github/workflows/deploy.yml and README.md.
  */
 const base = process.env.APP_BASE ?? '/';
-const channel = process.env.APP_CHANNEL ?? 'dev';
+// Tests always run as a development build, whatever the deploy settings are.
+const channel = process.env.VITEST ? 'dev' : (process.env.APP_CHANNEL ?? 'dev');
 
 export default defineConfig({
   base,
