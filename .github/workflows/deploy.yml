@@ -1,0 +1,107 @@
+# Publishes the app to GitHub Pages (served from the gh-pages branch):
+#   main                      -> https://<you>.github.io/<repo>/           the live app (real data)
+#   milestone branch m<N>-…   -> https://<you>.github.io/<repo>/preview/   the milestone in review
+# Preview builds use a separate browser database, so they can never touch real data.
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - 'm[0-9]*'
+
+permissions:
+  contents: write
+
+# One publish at a time, never cancelled half-way (they all write to the same branch).
+concurrency:
+  group: pages-publish
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      REPO_NAME: ${{ github.event.repository.name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+
+      - name: Choose live or preview
+        id: target
+        run: |
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            echo "channel=live" >> "$GITHUB_OUTPUT"
+            echo "base=/${REPO_NAME}/" >> "$GITHUB_OUTPUT"
+            echo "dir=." >> "$GITHUB_OUTPUT"
+          else
+            echo "channel=preview" >> "$GITHUB_OUTPUT"
+            echo "base=/${REPO_NAME}/preview/" >> "$GITHUB_OUTPUT"
+            echo "dir=preview" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install, check and build
+        working-directory: src
+        env:
+          APP_CHANNEL: ${{ steps.target.outputs.channel }}
+          APP_BASE: ${{ steps.target.outputs.base }}
+          APP_COMMIT: ${{ github.sha }}
+          APP_BRANCH: ${{ github.ref_name }}
+        run: |
+          # Short commit id for display
+          export APP_COMMIT="${APP_COMMIT:0:7}"
+          npm ci
+          npm run lint
+          npm test
+          npm run build
+
+      - name: Publish to the gh-pages branch
+        env:
+          DIR: ${{ steps.target.outputs.dir }}
+          CHANNEL: ${{ steps.target.outputs.channel }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir site && cd site
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          publish() {
+            if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+              git fetch -q --depth 1 origin gh-pages
+              git reset -q --hard FETCH_HEAD
+            fi
+            if [ "$CHANNEL" = "live" ]; then
+              # Replace the live app, keep the preview folder
+              find . -mindepth 1 -maxdepth 1 ! -name .git ! -name preview -exec rm -rf {} +
+              cp -a ../src/dist/. ./
+            else
+              rm -rf preview
+              mkdir preview
+              cp -a ../src/dist/. preview/
+            fi
+            touch .nojekyll
+            git add -A
+            if git diff --cached --quiet; then
+              echo "Nothing to publish."
+              return 0
+            fi
+            git commit -q -m "Deploy ${CHANNEL} ${GITHUB_SHA::7} (${GITHUB_REF_NAME})"
+            git push -q origin gh-pages
+          }
+
+          for attempt in 1 2 3; do
+            if publish; then exit 0; fi
+            echo "Publish attempt ${attempt} failed; retrying..."
+            sleep 5
+          done
+          exit 1

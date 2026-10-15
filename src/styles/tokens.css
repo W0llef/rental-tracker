@@ -1,0 +1,152 @@
+/* Design tokens — Direction C "Wayfinding". Source of truth: DESIGN.md §2. */
+
+:root {
+  /* Base palette (§2.1) */
+  --snow: #f6f8f9;
+  --surface: #ffffff;
+  --frost: #edf2f4;
+  --ice: #dce5e9;
+  --slate: #56666f;
+  --ink: #13242f;
+  --river: #0f2e44;
+  --on-river: #f3f7f9;
+  --lake: #2462c6;
+  --plow: #e5a11a;
+  --assumed-ink: #6a4a00;
+
+  /* Status colors (§2.2) */
+  --st-new: #e5a11a;
+  --st-reviewing: #6e7f89;
+  --st-shortlisted: #2462c6;
+  --st-tour: #0f8b8d;
+  --st-toured: #0a5f61;
+  --st-applied: #6d4bc4;
+  --st-approved: #2e8540;
+  --st-leased: #1c5b2c;
+  --st-declined: #c2412d;
+  --st-off: #9aa6ad;
+
+  /* Color labels (§2.3) */
+  --lb-red: #d64545;
+  --lb-yellow: #e3b52f;
+  --lb-green: #3a9a55;
+  --lb-blue: #3b7ddd;
+  --lb-purple: #8e5cd9;
+
+  /* Wayfinding map colors (§2.5) */
+  --map-land: #eef2f3;
+  --map-blk: #e3e9ec;
+  --map-bldg: #d5dde1;
+  --map-water: #b9d3e4;
+  --map-park: #d4e6d3;
+  --map-road: #ffffff;
+  --map-hwy: #f7e3b3;
+  --map-label: #6a7980;
+
+  /* Shape and spacing (§2.7) */
+  --r-sm: 4px;
+  --r-md: 8px;
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+
+  --shadow-float: 0 8px 24px rgba(15, 46, 68, 0.12);
+
+  --font: 'Overpass Variable', 'Overpass', 'Highway Gothic', system-ui, sans-serif;
+
+  color-scheme: light;
+}
+
+/* Dark: follows the system unless the page says data-theme="light" (§2.8) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --snow: #0e1a22;
+    --surface: #14232d;
+    --frost: #1b2d39;
+    --ice: #26394a;
+    --slate: #9db0bb;
+    --ink: #e7eef2;
+    --river: #e7eef2;
+    --on-river: #0f2e44;
+    --lake: #6fa2f2;
+    --plow: #f0b43a;
+    --assumed-ink: #f0b43a;
+
+    --st-new: #f0b43a;
+    --st-reviewing: #8a9ba5;
+    --st-shortlisted: #5c93f0;
+    --st-tour: #2db3b5;
+    --st-toured: #1e8e90;
+    --st-applied: #9c80e6;
+    --st-approved: #4fb063;
+    --st-leased: #3e9a55;
+    --st-declined: #e06a55;
+    --st-off: #607079;
+
+    --lb-red: #e66a6a;
+    --lb-yellow: #ebc452;
+    --lb-green: #56b470;
+    --lb-blue: #6a9deb;
+    --lb-purple: #a983e6;
+
+    --map-land: #13222c;
+    --map-blk: #182a35;
+    --map-bldg: #20343f;
+    --map-water: #0b2a3e;
+    --map-park: #173327;
+    --map-road: #26394a;
+    --map-hwy: #4a3e22;
+    --map-label: #8da0aa;
+
+    --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --snow: #0e1a22;
+  --surface: #14232d;
+  --frost: #1b2d39;
+  --ice: #26394a;
+  --slate: #9db0bb;
+  --ink: #e7eef2;
+  --river: #e7eef2;
+  --on-river: #0f2e44;
+  --lake: #6fa2f2;
+  --plow: #f0b43a;
+  --assumed-ink: #f0b43a;
+
+  --st-new: #f0b43a;
+  --st-reviewing: #8a9ba5;
+  --st-shortlisted: #5c93f0;
+  --st-tour: #2db3b5;
+  --st-toured: #1e8e90;
+  --st-applied: #9c80e6;
+  --st-approved: #4fb063;
+  --st-leased: #3e9a55;
+  --st-declined: #e06a55;
+  --st-off: #607079;
+
+  --lb-red: #e66a6a;
+  --lb-yellow: #ebc452;
+  --lb-green: #56b470;
+  --lb-blue: #6a9deb;
+  --lb-purple: #a983e6;
+
+  --map-land: #13222c;
+  --map-blk: #182a35;
+  --map-bldg: #20343f;
+  --map-water: #0b2a3e;
+  --map-park: #173327;
+  --map-road: #26394a;
+  --map-hwy: #4a3e22;
+  --map-label: #8da0aa;
+
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  color-scheme: dark;
+}

@@ -6,13 +6,13 @@ Read this first in every session. It tells you what the project is, the owner's 
 
 A personal, map-first web app for tracking rental units in Minneapolis–St. Paul. It runs entirely in the browser (IndexedDB), has no backend, and is deployed to GitHub Pages.
 
-| File | What it is |
-| --- | --- |
-| `SPEC.md` | The owner's product spec (the "what"). Don't edit it; record changes in `PLAN.md`. |
-| `PLAN.md` | How it's built: stack, data model, services, milestones (§9), decisions (§11), change log (§12), workflow (§13), **progress and session log (§14)**. The source of truth. |
-| `DESIGN.md` | Look and feel: tokens, pins, layouts, keyboard shortcuts. Direction C (Wayfinding). |
-| `mockups/c-wayfinding.html` | Reference mockup of the main screen and map layers panel. |
-| `README.md` | Plain instructions for running, deploying and backing up. |
+| File                        | What it is                                                                                                                                                                |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SPEC.md`                   | The owner's product spec (the "what"). Don't edit it; record changes in `PLAN.md`.                                                                                        |
+| `PLAN.md`                   | How it's built: stack, data model, services, milestones (§9), decisions (§11), change log (§12), workflow (§13), **progress and session log (§14)**. The source of truth. |
+| `DESIGN.md`                 | Look and feel: tokens, pins, layouts, keyboard shortcuts. Direction C (Wayfinding).                                                                                       |
+| `mockups/c-wayfinding.html` | Reference mockup of the main screen and map layers panel.                                                                                                                 |
+| `README.md`                 | Plain instructions for running, deploying and backing up.                                                                                                                 |
 
 ## The owner's rules
 
