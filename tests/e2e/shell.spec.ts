@@ -27,14 +27,14 @@ test.describe('app shell', () => {
     const tabs = page.getByRole('navigation', { name: 'Views' });
     if (isPhone(info.project.name)) {
       await expect(tabs).toBeVisible();
-      await expect(page.getByRole('region', { name: 'Units' })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'List' })).toBeVisible();
       await expect(page.getByRole('region', { name: 'Map', exact: true })).toBeHidden();
       await tabs.getByRole('button', { name: 'Map' }).click();
       await expect(page.getByRole('region', { name: 'Map', exact: true })).toBeVisible();
-      await expect(page.getByRole('region', { name: 'Units' })).toBeHidden();
+      await expect(page.getByRole('region', { name: 'List' })).toBeHidden();
     } else {
       await expect(tabs).toBeHidden();
-      await expect(page.getByRole('region', { name: 'Units' })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'List' })).toBeVisible();
       await expect(page.getByRole('region', { name: 'Map', exact: true })).toBeVisible();
     }
   });

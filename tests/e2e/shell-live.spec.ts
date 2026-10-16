@@ -30,13 +30,20 @@ for (const scheme of ['light', 'dark'] as const) {
 
     if (viewport.width >= 760) {
       const map = await box('Map');
-      const list = await box('Units');
+      const list = await box('List');
       expect(map.top).toBeCloseTo(56, 0);
       expect(map.height).toBeGreaterThan(viewport.height - 60);
       expect(list.height).toBeGreaterThan(viewport.height - 60);
     }
   });
 }
+
+test('live list is empty and does not offer sample data', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('No units yet')).toBeVisible();
+  await expect(page.getByText('Adding units arrives in a later update.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'load sample data' })).toHaveCount(0);
+});
 
 test('live data check page uses the real database and offers no sample data', async ({ page }) => {
   await page.goto('/#/debug');

@@ -60,6 +60,8 @@ All values are CSS custom properties in `src/styles/tokens.css`. Names below are
 | `--lake` | `#2462C6` | `#6FA2F2` | Primary actions, links, focus ring |
 | `--plow` | `#E5A11A` | `#F0B43A` | New, attention, "assumed" cost lines |
 
+Flag text uses `--pick-ink` (`#237032` / `#4FB063`) and `--reject-ink` (`#A8341F` / `#E8826F`), darker than the status colors so it stays AA on `--frost`.
+
 Contrast: `--ink`, `--slate` and `--lake` all meet WCAG AA (4.5:1) on `--surface` and `--snow` in both themes. Amber never carries text on white; "New" tags put dark text (`#3A2A00`) on amber.
 
 ### 2.2 Status colors (pin edge, status pill, list)
@@ -204,9 +206,9 @@ Phone gestures: swipe the unit's photo strip; tap a star to rate; long-press a c
 ```
 
 - Selected: `--frost` background and a 4 px navy bar on the left. Hover: `--frost`.
-- Rejected: 50% opacity and "Rejected: <reason>" replaces the flag/status line.
+- Rejected: dimmed (text in `--slate`, thumbnail at 50% opacity, so text stays AA) and "Rejected: <reason>" replaces the flag/status line.
 - Floor plan only: "Plan C" plus a "floor plan" tag; specs say "units vary"; prices say "from".
-- New: amber "New" tag first in the bottom row.
+- New: the status pill reads "New" with its amber edge; no separate badge on the card (it repeated the pill). The amber New dot stays an option on map pins (§2.4), which show no status text.
 - Needs location: a "Needs location" chip with "Place on map".
 - Multi-select: ⌘/Ctrl-click or Shift-click; a checkbox appears in the photo corner.
 - The **Building card** (Buildings view) shows name, neighborhood, building type, "3 of your units", and the range "$1,857–$2,560".

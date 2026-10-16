@@ -1,5 +1,6 @@
 import { action } from '../commands/action';
 import type { RentalDB } from '../db/db';
+import { localDate } from '../domain/format';
 import { unitKeyOf } from '../domain/unitKey';
 import { building, listing, noteEntry, unit } from '../model';
 import type {
@@ -342,7 +343,7 @@ export function makeSampleData(today: ISODate, at: string = new Date().toISOStri
 }
 
 /** Adds the sample data as one undoable action. */
-export async function loadSampleData(db: RentalDB, today = new Date().toISOString().slice(0, 10)) {
+export async function loadSampleData(db: RentalDB, today = localDate()) {
   const data = makeSampleData(today);
   await action(db, 'Load sample data', async () => {
     await db.buildings.bulkAdd(data.buildings);

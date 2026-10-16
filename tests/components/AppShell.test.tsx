@@ -13,9 +13,10 @@ describe('AppShell', () => {
   it('shows the title, the three regions and the build info', () => {
     render(<AppShell />);
     expect(screen.getByRole('heading', { level: 1, name: 'Rental Unit Tracker' })).toBeVisible();
-    expect(screen.getByRole('region', { name: 'Units' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Unit' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'List' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Details' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Map' })).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: /Search units/ })).toBeInTheDocument();
     expect(screen.getByTestId('build-info')).toHaveTextContent('Database:');
   });
 
