@@ -208,7 +208,7 @@ Phone gestures: swipe the unit's photo strip; tap a star to rate; long-press a c
 - Selected: `--frost` background and a 4 px navy bar on the left. Hover: `--frost`.
 - Rejected: dimmed (text in `--slate`, thumbnail at 50% opacity, so text stays AA) and "Rejected: <reason>" replaces the flag/status line.
 - Floor plan only: "Plan C" plus a "floor plan" tag; specs say "units vary"; prices say "from".
-- New: amber "New" tag first in the bottom row.
+- New: the status pill reads "New" with its amber edge; no separate badge on the card (it repeated the pill). The amber New dot stays an option on map pins (§2.4), which show no status text.
 - Needs location: a "Needs location" chip with "Place on map".
 - Multi-select: ⌘/Ctrl-click or Shift-click; a checkbox appears in the photo corner.
 - The **Building card** (Buildings view) shows name, neighborhood, building type, "3 of your units", and the range "$1,857–$2,560".

@@ -79,10 +79,6 @@ export function LabelSwatch({ color, name }: { color: LabelColor; name: string }
   );
 }
 
-export function NewTag() {
-  return <span className={styles.newTag}>New</span>;
-}
-
 export function Tag({ children }: { children: ReactNode }) {
   return <span className={styles.tag}>{children}</span>;
 }

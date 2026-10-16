@@ -151,6 +151,10 @@ describe('main screen with units', () => {
     expect(screen.getByRole('link', { name: /Plan C/ })).toHaveTextContent('from $2,560');
     expect(screen.getByRole('link', { name: /Unit 310/ })).toHaveTextContent('Rejected: Too far');
     expect(screen.getByRole('link', { name: /Unit 908/ })).toHaveTextContent('Rent unknown');
+    // A new unit says "New" once, in its status pill (no separate badge)
+    expect(within(screen.getByRole('link', { name: /Unit 908/ })).getAllByText('New')).toHaveLength(
+      1,
+    );
   });
 
   it('searches buildings, units and notes', async () => {

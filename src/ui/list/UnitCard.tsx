@@ -9,7 +9,7 @@ import {
 } from '../../domain/format';
 import type { Settings } from '../../model';
 import type { UnitRow } from '../../state/derive';
-import { FlagMark, LabelSwatch, NewTag, Stars, StatusPill, Tag, TypeIcon } from '../common/Markers';
+import { FlagMark, LabelSwatch, Stars, StatusPill, Tag, TypeIcon } from '../common/Markers';
 import styles from './list.module.css';
 
 /** One unit in the list (DESIGN.md §4.1). Rent is the headline until total cost (M8). */
@@ -86,7 +86,6 @@ export function UnitCard({
           )}
         </span>
         <span className={styles.foot}>
-          {u.status === 'new' && !rejected && <NewTag />}
           {u.isFloorPlanOnly && <Tag>floor plan</Tag>}
           {b && b.location === null && <Tag>Needs location</Tag>}
           {rejected ? (
