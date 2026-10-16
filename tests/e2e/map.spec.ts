@@ -249,6 +249,7 @@ test.describe('map (preview/dev build)', () => {
     page,
   }, info) => {
     test.skip(isPhone(info.project.name), 'laptop: room for several cards');
+    test.slow(); // opens three large cards and checks every pair
     await showMap(page, false);
     await map(page).getByRole('button', { name: 'Pins', exact: true }).click();
     const panel = map(page).getByRole('region', { name: 'Pins' });
@@ -317,15 +318,26 @@ test.describe('map (preview/dev build)', () => {
     ).toBe(true);
     await page.mouse.move(5, 5);
     await expect(preview).toHaveCount(0);
+  });
 
-    // A single unit's photo pin shows the larger photo too
-    const house = map(page).locator('[data-pin][aria-label*="3624 15th Ave S"]').first();
-    if (await house.count()) {
-      await house.locator('[class*="noph"]').hover();
-      await expect(preview).toContainText('3624 15th Ave S');
-      await page.mouse.move(5, 5);
-      await expect(preview).toHaveCount(0);
-    }
+  test('a single unit’s photo pin shows the larger photo', async ({ page }, info) => {
+    test.skip(isPhone(info.project.name), 'hover needs a pointer');
+    await page.getByRole('searchbox').fill('3624');
+    await showMap(page, false);
+    await map(page).getByRole('button', { name: 'Pins', exact: true }).click();
+    await map(page)
+      .getByRole('region', { name: 'Pins' })
+      .getByRole('group', { name: 'Pin style' })
+      .getByRole('button', { name: 'Photo' })
+      .click();
+    await map(page).getByRole('button', { name: 'Close pins' }).click();
+    await map(page).getByRole('button', { name: 'Fit all units' }).click();
+    await settle(page);
+    await pins(page).first().locator('[class*="noph"]').hover();
+    const preview = map(page).locator('[data-preview]');
+    await expect(preview).toContainText('3624 15th Ave S');
+    await page.mouse.move(5, 5);
+    await expect(preview).toHaveCount(0);
   });
 
   test('each card is joined to its marker by a line you can see', async ({ page }, info) => {
