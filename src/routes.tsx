@@ -1,4 +1,5 @@
 import { createHashRouter, Navigate } from 'react-router-dom';
+import type { RouteObject } from 'react-router-dom';
 import { AppShell } from './ui/shell/AppShell';
 
 /**
@@ -6,7 +7,7 @@ import { AppShell } from './ui/shell/AppShell';
  * The main screen is one route; selecting a unit or building only adds a child path, so
  * the list keeps its scroll position and state while the detail panel changes (M2).
  */
-export const router = createHashRouter([
+export const routes: RouteObject[] = [
   {
     path: '/',
     element: <AppShell />,
@@ -18,4 +19,6 @@ export const router = createHashRouter([
     lazy: () => import('./ui/debug/DebugPage').then((m) => ({ Component: m.DebugPage })),
   },
   { path: '*', element: <Navigate to="/" replace /> },
-]);
+];
+
+export const router = createHashRouter(routes);

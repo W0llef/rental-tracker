@@ -91,7 +91,7 @@ function EmptyNoData() {
         <p className={styles.emptyText}>Adding units arrives in a later update.</p>
       ) : (
         <p className={styles.emptyText}>
-          To try the list, load sample data on the <Link to="/debug">Data check</Link> page.
+          To try the list, <Link to="/debug">load sample data</Link> on the Data check page.
         </p>
       )}
     </div>
