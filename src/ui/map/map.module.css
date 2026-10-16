@@ -351,11 +351,46 @@
   pointer-events: none;
 }
 
+/* Tray colors per base map, so a building's group stands out on any map (owner review 3).
+   Wayfinding follows the theme; the street rasters are always light; aerial is dark. */
+.root {
+  --fan-ink: var(--river);
+  --fan-ink-fg: var(--on-river);
+  --fan-tint: var(--snow);
+  --fan-tint-opacity: 0.8;
+}
+
+.root[data-base='streets'],
+.root[data-base='osm'],
+.root[data-base='cycle'] {
+  --fan-ink: #0f2e44;
+  --fan-ink-fg: #f3f7f9;
+  --fan-tint: #ffffff;
+  --fan-tint-opacity: 0.82;
+}
+
+.root[data-base='aerial'] {
+  --fan-ink: #ffffff;
+  --fan-ink-fg: #0f2e44;
+  --fan-tint: #0f2e44;
+  --fan-tint-opacity: 0.62;
+}
+
+.trayFill {
+  fill: var(--fan-tint);
+  stroke: var(--fan-tint);
+  opacity: var(--fan-tint-opacity);
+}
+
+.trayEdge {
+  fill: var(--fan-ink);
+  stroke: var(--fan-ink);
+}
+
 .fanLine {
-  stroke: var(--river);
-  stroke-width: 1.5;
-  stroke-dasharray: 2 3;
-  opacity: 0.7;
+  stroke: var(--fan-ink);
+  stroke-width: 1.75;
+  stroke-linecap: round;
 }
 
 .hub {
@@ -366,9 +401,9 @@
   height: 22px;
   padding: 0;
   border-radius: 50%;
-  background: var(--river);
-  color: var(--on-river);
-  border: 3px solid var(--surface);
+  background: var(--fan-ink);
+  color: var(--fan-ink-fg);
+  border: 2px solid var(--fan-tint);
   box-shadow: 0 1px 2px rgba(15, 46, 68, 0.35);
   display: grid;
   place-items: center;

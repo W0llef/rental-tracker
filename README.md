@@ -45,8 +45,9 @@ browser for that exact web address. That means:
   count, a stripe per unit, and New if any unit is new. Click it to **fan out** its units; fans
   stay open, and you can open several. The × at a fan's center folds it; **Collapse all** or
   `Esc` folds them all. Zoomed in to street level, buildings fan out by themselves where there's
-  room (you can turn that off). Plates find free space around their building, so they don't cover
-  each other; point at a fan to fade the others.
+  room (you can turn that off). Each open building's units sit in their own outlined tray, colored
+  to stand out on the current map; plates find free space so trays don't overlap. Point at a fan to
+  fade the others.
 - Zoomed out, nearby buildings merge into round **bubbles** with a unit count, and crowded pins
   shrink to **dots**; both can be turned off. Point at a card to see its pin in full, or at a pin
   to highlight its cards.

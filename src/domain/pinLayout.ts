@@ -96,9 +96,76 @@ export function lineEnd(hub: Point, center: Point, s: Size): Point {
   return [Math.min(Math.max(hub[0], r.left), r.right), Math.min(Math.max(hub[1], r.top), r.bottom)];
 }
 
+/** A rectangle grown by `d` on every side. */
+export const grow = (r: Rect, d: number): Rect => ({
+  left: r.left - d,
+  right: r.right + d,
+  top: r.top - d,
+  bottom: r.bottom + d,
+});
+
+/** Whether segments a–b and c–d cross (touching at a shared end doesn't count). */
+export function segmentsCross(a: Point, b: Point, c: Point, d: Point): boolean {
+  const cross = (o: Point, p: Point, q: Point) =>
+    (p[0] - o[0]) * (q[1] - o[1]) - (p[1] - o[1]) * (q[0] - o[0]);
+  const d1 = cross(c, d, a);
+  const d2 = cross(c, d, b);
+  const d3 = cross(a, b, c);
+  const d4 = cross(a, b, d);
+  return d1 * d2 < 0 && d3 * d4 < 0;
+}
+
+/** Whether the segment a–b passes through the rectangle (Liang–Barsky clipping). */
+export function segmentHitsRect(a: Point, b: Point, r: Rect): boolean {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  let t0 = 0;
+  let t1 = 1;
+  const edges: [number, number][] = [
+    [-dx, a[0] - r.left],
+    [dx, r.right - a[0]],
+    [-dy, a[1] - r.top],
+    [dy, r.bottom - a[1]],
+  ];
+  for (const [p, q] of edges) {
+    if (p === 0) {
+      if (q < 0) return false;
+      continue;
+    }
+    const t = q / p;
+    if (p < 0) {
+      if (t > t1) return false;
+      if (t > t0) t0 = t;
+    } else {
+      if (t < t0) return false;
+      if (t < t1) t1 = t;
+    }
+  }
+  return true;
+}
+
 // ── Fans ───────────────────────────────────────────────────────────────────
 
+/**
+ * The tray drawn around a fan (DESIGN.md §2.4): its plates padded by `TRAY_PAD`, the hub
+ * circle and a band of `TRAY_BAND` around each leader line, all outlined by `TRAY_EDGE`.
+ */
+export const TRAY_PAD = 5;
+export const TRAY_BAND = 5;
+export const TRAY_EDGE = 1.5;
+export const TRAY_HUB = 15;
+/** How far a tray reaches past its plates, plus a small gap so trays never touch. */
+const TRAY_SPACE = 2 * (TRAY_PAD + TRAY_EDGE) + 2 - 4; // minus GAP, added by the check
+/** How close another plate may come to a leader line (its tray band, the plate's tray, a gap). */
+const BAND_SPACE = TRAY_BAND + TRAY_EDGE + TRAY_PAD + TRAY_EDGE + 2;
+
+export type Segment = [Point, Point];
+
 const HUB_R = 13;
+/** How far other fans' lines stay from a fan's center. */
+const HUB_KEEP_OUT = 40;
+/** Pixels of extra distance a plate accepts per radian it turns from the preferred side. */
+const TURN_COST = 40;
 const GAP = 4;
 const R_START = 40;
 const R_STEP = 10;
@@ -156,32 +223,57 @@ export function placeFan(
     view?: Size;
     /** Direction to try first (radians, screen coordinates); straight up by default. */
     prefer?: number;
+    /** Leader lines of fans already placed (shared, extended here). */
+    segments?: Segment[];
+    /** Other open fans' centers: lines keep a little way off them, so no fan is boxed in. */
+    hubs?: readonly Point[];
   },
 ): Point[] | null {
   const local: Rect[] = [around(hub[0], hub[1], HUB_R)];
-  const angles = anglesFrom(opts.prefer ?? UP);
+  const lines: Segment[] = [];
+  const prefer = opts.prefer ?? UP;
+  const angles = anglesFrom(prefer);
   const centers: Point[] = [];
   const pts = (opts.points ?? []).map(([x, y]) => around(x, y, 8));
+  const others = opts.segments ?? [];
   const blocked = (r: Rect) =>
-    placed.some((p) => overlaps(p, r, GAP)) || local.some((p) => overlaps(p, r, GAP));
+    placed.some((p) => overlaps(p, r, GAP)) ||
+    local.some((p) => overlaps(p, r, GAP)) ||
+    others.some(([a, b]) => segmentHitsRect(a, b, grow(r, BAND_SPACE)));
+  /** The line to this plate would cross another plate, tray or line (its own included). */
+  const lineCrosses = (end: Point) =>
+    placed.some((p) => segmentHitsRect(hub, end, p)) ||
+    local.slice(1).some((p) => segmentHitsRect(hub, end, grow(p, TRAY_PAD))) ||
+    others.some(([a, b]) => segmentsCross(hub, end, a, b)) ||
+    (opts.hubs ?? []).some(([x, y]) => segmentHitsRect(hub, end, around(x, y, HUB_KEEP_OUT)));
 
   for (const size of sizes) {
     let best: { c: Point; r: Rect } | null = null;
-    // Pass 1: free, on screen, not covering another building. Pass 2: just free.
-    for (const pass of [1, 2] as const) {
-      for (let rad = R_START; rad <= opts.reach && !best; rad += R_STEP) {
+    // Each pass takes the cheapest spot: distance from the hub plus a cost for turning away
+    // from the preferred direction, so a fan keeps to its side. Passes relax in order:
+    //  1. free, on screen, off other buildings' points, its line crossing nothing
+    //  2. the same, but it may cover another building's point
+    //  3. free and its line crossing nothing, even partly off screen (a fan you opened)
+    //  4. just free
+    // Plates move farther out before a line is allowed to cut through another building.
+    for (const pass of [1, 2, 3, 4] as const) {
+      let bestCost = Infinity;
+      for (let rad = R_START; rad <= opts.reach && rad < bestCost; rad += R_STEP) {
         for (const a of angles) {
+          const cost = rad + TURN_COST * Math.abs(a - prefer);
+          if (cost >= bestCost) continue;
           const c: Point = [
             Math.round(hub[0] + rad * Math.cos(a)),
             Math.round(hub[1] + rad * Math.sin(a)),
           ];
           const r = centeredRect(c[0], c[1], size);
           if (blocked(r)) continue;
-          // Automatic fans must fit fully on screen; pass 1 also keeps off other buildings
-          if ((pass === 1 || opts.strict) && opts.view && !inside(r, opts.view, 4)) continue;
+          // Automatic fans must always fit fully on screen
+          if ((pass <= 2 || opts.strict) && opts.view && !inside(r, opts.view, 4)) continue;
           if (pass === 1 && pts.some((p) => overlaps(p, r, 0))) continue;
+          if (pass <= 3 && lineCrosses(lineEnd(hub, c, size))) continue;
           best = { c, r };
-          break;
+          bestCost = cost;
         }
       }
       if (best) break;
@@ -206,9 +298,12 @@ export function placeFan(
     }
     const chosen = best as { c: Point; r: Rect };
     local.push(chosen.r);
+    lines.push([hub, lineEnd(hub, chosen.c, size)]);
     centers.push([chosen.c[0] - hub[0], chosen.c[1] - hub[1]]);
   }
-  placed.push(...local);
+  // Others keep clear of the whole tray: its plates (grown by the tray) and its lines
+  placed.push(...local.map((r) => grow(r, TRAY_SPACE)));
+  others.push(...lines);
   return centers;
 }
 
@@ -258,6 +353,7 @@ export function layoutPins(
   const full = new Set<string>();
   const autoOpen: string[] = [];
   const points: Point[] = buildings.map((b) => [b.x, b.y]);
+  const segments: Segment[] = [];
   const pointsBut = (id: string) => points.filter((_, i) => buildings[i]?.id !== id);
 
   // 1. The selected pin, when it's a single or collapsed one
@@ -272,15 +368,25 @@ export function layoutPins(
   const forcedHubs = buildings
     .filter((b) => b.forced && b.unitSizes)
     .map((b) => [b.x, b.y] as Point);
+  // Every open fan's center is taken before any plates go down, so an earlier fan's
+  // plates can't cover a later fan's hub
+  const hubKeep = (h: Point) => around(h[0], h[1], TRAY_HUB + TRAY_EDGE + 2);
+  const hubRects = forcedHubs.map(hubKeep);
+  placed.push(...hubRects);
   for (const b of buildings) {
     if (!b.forced || !b.unitSizes) continue;
     const hub: Point = [b.x, b.y];
+    // Its own reserved center mustn't count against its own lines
+    const own = placed.findIndex((r) => r.left === hubKeep(hub).left && r.top === hubKeep(hub).top);
+    if (own >= 0) placed.splice(own, 1);
     const c = placeFan(hub, b.unitSizes, placed, {
       reach: FORCED_REACH,
       strict: false,
       points: pointsBut(b.id),
       view: opts.view,
       prefer: preferredAngle(hub, forcedHubs),
+      segments,
+      hubs: forcedHubs.filter(([x, y]) => x !== hub[0] || y !== hub[1]),
     });
     if (c) fans.set(b.id, c);
   }
@@ -303,6 +409,7 @@ export function layoutPins(
           return [o.x, o.y] as Point;
         }),
       ),
+      segments,
     });
     if (c) {
       fans.set(b.id, c);
@@ -314,7 +421,9 @@ export function layoutPins(
   for (const b of buildings) {
     if (fans.has(b.id) || full.has(b.id)) continue;
     const rect = pinRect(b.x, b.y, b.size);
-    const fits = !placed.some((p) => overlaps(p, rect));
+    const fits =
+      !placed.some((p) => overlaps(p, rect)) &&
+      !segments.some(([a, c]) => segmentHitsRect(a, c, grow(rect, TRAY_BAND + TRAY_EDGE)));
     if (!opts.shrink || b.keepFull || (opts.zoom >= STREET_ZOOM && fits)) {
       placed.push(rect);
       full.add(b.id);

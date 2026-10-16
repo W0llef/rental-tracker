@@ -279,6 +279,33 @@ test.describe('map (preview/dev build)', () => {
     await expect(map(page).locator('[data-fan][class*="dimFan"]')).toHaveCount(1);
   });
 
+  test('each open building gets a tray whose colors follow the base map', async ({
+    page,
+  }, info) => {
+    test.skip(isPhone(info.project.name), 'laptop: room for several fans');
+    await showMap(page, false);
+    await map(page)
+      .getByRole('button', { name: /4 units at Lowertown Flats/ })
+      .click();
+    await map(page)
+      .getByRole('button', { name: /3 units at Grand Terrace/ })
+      .click();
+    await expect(map(page).locator('[data-fan] mask')).toHaveCount(2);
+    const ink = () =>
+      map(page)
+        .locator('[data-fan] line[class*="fanLine"]')
+        .first()
+        .evaluate((el) => getComputedStyle(el).stroke);
+    // Wayfinding in light mode: navy
+    expect(await ink()).toBe('rgb(15, 46, 68)');
+    await page.keyboard.press('l');
+    const layers = map(page).getByRole('region', { name: 'Map layers' });
+    await layers.getByRole('button', { name: /Aerial photo/ }).click();
+    await expect.poll(ink).toBe('rgb(255, 255, 255)');
+    await layers.getByRole('button', { name: /Detailed streets/ }).click();
+    await expect.poll(ink).toBe('rgb(15, 46, 68)');
+  });
+
   test('buildings fan out by themselves at street zoom, where there is room', async ({
     page,
   }, info) => {

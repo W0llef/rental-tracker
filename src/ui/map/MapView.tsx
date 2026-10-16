@@ -26,6 +26,10 @@ import {
   estimatePinSize,
   layoutPins,
   lineEnd,
+  TRAY_BAND,
+  TRAY_EDGE,
+  TRAY_HUB,
+  TRAY_PAD,
 } from '../../domain/pinLayout';
 import type { LayoutBuilding, Point, Size } from '../../domain/pinLayout';
 import {
@@ -517,6 +521,38 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     };
   }, [loaded, selectedBuildingId, lastOpened]);
 
+  // A fan you just opened pans the map just enough to show its whole tray (once per opening)
+  const shownFan = useRef<string | null>(null);
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !lastOpened || shownFan.current === lastOpened) return;
+    const b = byId.get(lastOpened);
+    const centers = layout.fans.get(lastOpened);
+    if (!b || !centers) return;
+    shownFan.current = lastOpened;
+    const { clientWidth: w, clientHeight: h } = map.getContainer();
+    if (!w || !h) return;
+    const hub = map.project([b.lng, b.lat]);
+    const sizes = fanOrder(b.pinned).map((r) => sizeOf(unitSpec(r)));
+    const m = 12 + TRAY_PAD + TRAY_EDGE;
+    let [l, r, t, btm] = [hub.x - TRAY_HUB, hub.x + TRAY_HUB, hub.y - TRAY_HUB, hub.y + TRAY_HUB];
+    centers.forEach(([dx, dy], i) => {
+      const sz = sizes[i] as Size;
+      l = Math.min(l, hub.x + dx - sz.w / 2);
+      r = Math.max(r, hub.x + dx + sz.w / 2);
+      t = Math.min(t, hub.y + dy - sz.h / 2);
+      btm = Math.max(btm, hub.y + dy + sz.h / 2);
+    });
+    // Shift by what sticks out, but never push the far edge off (left/top win when the tray
+    // is bigger than the screen)
+    const dx = l < m ? l - m : r > w - m ? Math.min(r - (w - m), l - m) : 0;
+    const dy = t < m ? t - m : btm > h - m ? Math.min(btm - (h - m), t - m) : 0;
+    if (dx || dy) map.panBy([dx, dy], { duration: reducedMotion() ? 0 : 400 });
+  }, [layout, lastOpened, byId, sizeOf, unitSpec]);
+  useEffect(() => {
+    if (!lastOpened) shownFan.current = null;
+  }, [lastOpened]);
+
   // Closing a panel returns focus to its button
   const wasOpen = useRef(panel);
   useEffect(() => {
@@ -612,8 +648,40 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
           ...centers.map(([x, y], i) =>
             Math.max(Math.abs(x) + (sizes[i]?.w ?? 0) / 2, Math.abs(y) + (sizes[i]?.h ?? 0) / 2),
           ),
-        ) + 8;
+        ) + 16;
       const name = buildingName(b.building);
+      const trayId = `tray-${b.id}`;
+      /** The tray's shape, grown by `d`: padded plates, the hub and a band along each line. */
+      const trayShape = (d: number) => (
+        <>
+          <circle cx={0} cy={0} r={TRAY_HUB + d} />
+          {ends.map(([x, y], i) => (
+            <line
+              key={`l${i}`}
+              x1={0}
+              y1={0}
+              x2={x}
+              y2={y}
+              strokeWidth={2 * (TRAY_BAND + d)}
+              strokeLinecap="round"
+            />
+          ))}
+          {centers.map(([x, y], i) => {
+            const sz = sizes[i] as Size;
+            const pad = TRAY_PAD + d;
+            return (
+              <rect
+                key={`r${i}`}
+                x={x - sz.w / 2 - pad}
+                y={y - sz.h / 2 - pad}
+                width={sz.w + 2 * pad}
+                height={sz.h + 2 * pad}
+                rx={6 + pad}
+              />
+            );
+          })}
+        </>
+      );
       markers.push(
         <Marker
           key={id}
@@ -636,6 +704,27 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
               style={{ left: -reach, top: -reach }}
               aria-hidden="true"
             >
+              {/* The tray: one frosted shape around the building's plates and lines, with an
+                  outline (the larger shape minus the tray itself, via a mask) */}
+              <defs>
+                <mask
+                  id={trayId}
+                  maskUnits="userSpaceOnUse"
+                  x={-reach}
+                  y={-reach}
+                  width={reach * 2}
+                  height={reach * 2}
+                >
+                  <rect x={-reach} y={-reach} width={reach * 2} height={reach * 2} fill="white" />
+                  <g fill="black" stroke="black">
+                    {trayShape(0)}
+                  </g>
+                </mask>
+              </defs>
+              <g className={styles.trayFill}>{trayShape(0)}</g>
+              <g className={styles.trayEdge} mask={`url(#${trayId})`}>
+                {trayShape(TRAY_EDGE)}
+              </g>
               {ends.map(([x, y], i) => (
                 <line key={i} className={styles.fanLine} x1={0} y1={0} x2={x} y2={y} />
               ))}

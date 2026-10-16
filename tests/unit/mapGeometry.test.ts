@@ -11,9 +11,14 @@ import {
   pinRect,
   placeFan,
   preferredAngle,
+  grow,
+  segmentHitsRect,
+  segmentsCross,
+  TRAY_EDGE,
+  TRAY_PAD,
   STREET_ZOOM,
 } from '../../src/domain/pinLayout';
-import type { LayoutBuilding, Rect, Size } from '../../src/domain/pinLayout';
+import type { LayoutBuilding, Rect, Segment, Size } from '../../src/domain/pinLayout';
 import { makeAddress, newBuilding } from '../../src/model/factories';
 
 const plate: Size = { w: 60, h: 26 };
@@ -175,6 +180,62 @@ describe('layoutPins: fans', () => {
     };
     expect(meanX('left')).toBeLessThan(0);
     expect(meanX('right')).toBeGreaterThan(0);
+  });
+
+  it('keeps trays of different buildings apart, and lines off other plates', () => {
+    const bs = [
+      b('a', 300, 300, { forced: true, unitSizes: units(4, 110, 30) }),
+      b('b', 400, 330, { forced: true, unitSizes: units(4, 110, 30) }),
+      b('c', 340, 420, { forced: true, unitSizes: units(3, 110, 30) }),
+    ];
+    const l = layoutPins(bs, { zoom: 16, shrink: true, view: { w: 1200, h: 900 } });
+    const reach = TRAY_PAD + TRAY_EDGE;
+    const trays = bs.map((x) =>
+      l.fans.get(x.id)!.map(([dx, dy], i) => ({
+        rect: grow(centeredRect(x.x + dx, x.y + dy, x.unitSizes![i]!), reach),
+        line: [[x.x, x.y], lineEnd([x.x, x.y], [x.x + dx, x.y + dy], x.unitSizes![i]!)] as Segment,
+      })),
+    );
+    for (let i = 0; i < trays.length; i++)
+      for (let j = 0; j < trays.length; j++) {
+        if (i === j) continue;
+        for (const p of trays[i]!)
+          for (const q of trays[j]!) {
+            if (i < j) expect(overlaps(p.rect, q.rect, 0)).toBe(false);
+            expect(segmentHitsRect(p.line[0], p.line[1], q.rect)).toBe(false);
+            expect(segmentsCross(p.line[0], p.line[1], q.line[0], q.line[1])).toBe(false);
+          }
+      }
+  });
+
+  it('never covers another open fan’s center', () => {
+    const bs = [
+      b('first', 300, 300, { forced: true, unitSizes: units(6, 140, 80) }),
+      b('second', 380, 250, { forced: true, unitSizes: units(4, 140, 80) }),
+    ];
+    const l = layoutPins(bs, { zoom: 16, shrink: true, view: { w: 1400, h: 1000 } });
+    const hub2 = { left: 380 - 14, right: 380 + 14, top: 250 - 14, bottom: 250 + 14 };
+    l.fans
+      .get('first')!
+      .forEach(([dx, dy], i) =>
+        expect(overlaps(centeredRect(300 + dx, 300 + dy, bs[0]!.unitSizes![i]!), hub2, 0)).toBe(
+          false,
+        ),
+      );
+  });
+
+  it('tells when two segments cross', () => {
+    expect(segmentsCross([0, 0], [10, 10], [0, 10], [10, 0])).toBe(true);
+    expect(segmentsCross([0, 0], [10, 0], [0, 5], [10, 5])).toBe(false);
+    expect(segmentsCross([0, 0], [10, 10], [10, 10], [20, 0])).toBe(false); // shared end
+  });
+
+  it('tells when a segment crosses a rectangle', () => {
+    const r = { left: 0, right: 10, top: 0, bottom: 10 };
+    expect(segmentHitsRect([-5, 5], [15, 5], r)).toBe(true);
+    expect(segmentHitsRect([-5, -5], [-1, 20], r)).toBe(false);
+    expect(segmentHitsRect([5, 5], [6, 6], r)).toBe(true);
+    expect(segmentHitsRect([20, 0], [30, 10], r)).toBe(false);
   });
 
   it('joins a plate to its hub at the plate’s nearest edge', () => {

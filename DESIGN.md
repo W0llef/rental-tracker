@@ -113,7 +113,7 @@ Pending fields: total cost and cost per ft² (M8), travel time (Phase 2). Until 
 
 | State | Look, in any style |
 | --- | --- |
-| Fanned out | Each unit's plate in the nearest free spot around a navy hub button (×, folds the fan), joined by a dotted navy leader line to the plate's nearest edge (no tail); plates never cover each other or the map controls; fans grow away from each other; pointing at one fan fades the others to 35%; *Collapse all* sits with the map controls |
+| Fanned out | Each unit's plate in the nearest free spot around a hub button (×, folds the fan), joined by a solid 1.75 px leader line to the plate's nearest edge (no tail). The plates, hub and lines sit in one **tray**: plates padded 5 px, a 5 px band along each line and a 15 px circle at the hub, filled with a frosted tint and outlined 1.5 px. Tray colors per base map — Wayfinding: `--river` outline and line on `--snow` at 80% (so navy on pale in light, light on dark in dark); Detailed streets, OpenStreetMap, Cycle map: `#0F2E44` on white at 82%; Aerial: white on `#0F2E44` at 62%. The hub takes the outline color. Trays never touch; plates never cover each other or the map controls; fans grow away from each other; pointing at one fan fades the others to 35%; *Collapse all* sits with the map controls |
 | Selected | Navy plate, 34 px tall, rent 17 px (photo grows to 64 px); list row gets a navy left bar |
 | Rejected | Dashed outline, struck-through text, no edge; 55% opacity when "Fade" is chosen; gone when "Hide" is chosen |
 | Fails baseline criteria | 55% opacity, solid outline |
