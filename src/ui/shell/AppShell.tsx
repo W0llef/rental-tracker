@@ -51,6 +51,7 @@ export function AppShell() {
   }
 
   const search = useRef<HTMLInputElement>(null);
+  const lastMove = useRef<{ from: string | null; to: string } | null>(null);
   useListKeys({
     focusSearch: () => search.current?.focus(),
     // Esc: close a map panel, then fold the fans you opened, then close the details
@@ -69,17 +70,22 @@ export function AppShell() {
           ? listView.units.map((r) => `unit:${r.unit.id}`)
           : listView.buildings.map((r) => `building:${r.building.id}`);
       if (!keys.length) return;
-      const at = selectedKey ? keys.indexOf(selectedKey) : -1;
+      // Keys pressed quickly can arrive before the screen shows the last move; until it
+      // does, continue from where that move went.
+      const pending = lastMove.current;
+      const current = pending && pending.from === selectedKey ? pending.to : selectedKey;
+      const at = current ? keys.indexOf(current) : -1;
       const next =
         at === -1
           ? delta === 1
             ? keys[0]
             : keys[keys.length - 1]
           : keys[Math.min(keys.length - 1, Math.max(0, at + delta))];
-      if (!next || next === selectedKey) return;
+      if (!next || next === current) return;
       const [kind, id] = next.split(':');
+      lastMove.current = { from: selectedKey, to: next };
       // Moving through the list replaces the history entry, so Back still closes the panel.
-      navigate(`/${kind}/${id}`, { replace: selectedKey !== null });
+      navigate(`/${kind}/${id}`, { replace: current !== null });
     },
   });
 
