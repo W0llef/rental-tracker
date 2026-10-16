@@ -529,8 +529,8 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     navigate(`/${key.replace(':', '/')}`, { replace: selectedKey !== null });
 
   // ── Rendering helpers ──
-  // Pointing at a fan (a plate, its hub or a line) dims the other open fans
-  const [hoverFan, setHoverFan] = useState<string | null>(null);
+  // Pointing at a fan's plate (or its card) dims the other open fans
+  const hoverFan = hoverBuildingId && layout.fans.has(hoverBuildingId) ? hoverBuildingId : null;
   const hot = (key: string) => hoverKey === key;
 
   const unitPin = (r: UnitRow, inFan: boolean) => {
@@ -627,8 +627,6 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
             aria-label={`Units at ${name}`}
             data-fan={b.id}
             className={hoverFan && hoverFan !== b.id ? styles.dimFan : undefined}
-            onMouseEnter={() => setHoverFan(b.id)}
-            onMouseLeave={() => setHoverFan(null)}
           >
             <svg
               className={styles.fan}
