@@ -1,12 +1,13 @@
 .app {
-  display: grid;
-  grid-template-rows: auto 56px minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   height: 100%;
   min-height: 0;
 }
 
-/* Banner for non-live builds */
+/* Banner for non-live builds (absent on the live app, so no layout may depend on it) */
 .banner {
+  flex: none;
   padding: var(--s2) var(--s4);
   background: var(--plow);
   color: #3a2a00;
@@ -16,6 +17,8 @@
 
 /* Top bar */
 .top {
+  flex: none;
+  height: 56px;
   display: flex;
   align-items: center;
   gap: var(--s3);
@@ -55,6 +58,7 @@
 
 /* Columns (≥ 760 px: list + map; the detail column opens when a unit is selected) */
 .main {
+  flex: 1 1 0;
   display: grid;
   grid-template-columns: 360px minmax(0, 1fr);
   min-height: 0;
@@ -175,10 +179,6 @@
 
 /* < 760 px: phone, bottom tabs List · Map · Unit (DESIGN.md §3) */
 @media (max-width: 759px) {
-  .app {
-    grid-template-rows: auto 56px minmax(0, 1fr) 56px;
-  }
-
   .main {
     display: block;
     position: relative;
@@ -203,6 +203,8 @@
   }
 
   .tabs {
+    flex: none;
+    height: calc(56px + env(safe-area-inset-bottom));
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     background: var(--surface);

@@ -21,3 +21,4 @@ blob-report/
 # never commit personal data
 backups/
 *.backup.json
+dist-live/
