@@ -85,19 +85,25 @@ test.describe('map (preview/dev build)', () => {
     }
   });
 
-  test('selecting a card shows its pin as the navy plate', async ({ page }, info) => {
+  test('selecting a card opens its building on the map, the unit marked', async ({
+    page,
+  }, info) => {
     test.skip(isPhone(info.project.name), 'laptop layout: list and map side by side');
     await showMap(page, false);
     await page.getByRole('link', { name: /Unit 603.*Lowertown Flats/ }).click();
     const id = new URL(page.url()).hash.split('/').pop();
-    const pin = map(page).locator(`[data-pin="unit:${id}"]`);
+    // Its building has several units, so its card opens with the unit's row selected
+    const card = map(page).getByRole('group', { name: 'Units at Lowertown Flats' });
+    await expect(card.locator('[data-pin]')).toHaveCount(4);
+    await expect(card.locator(`[data-pin="unit:${id}"]`)).toHaveAttribute('aria-pressed', 'true');
+    // A single unit's pin is a navy plate when selected
+    await page
+      .getByRole('link', { name: /3624 15th Ave S/ })
+      .first()
+      .click();
+    const single = new URL(page.url()).hash.split('/').pop();
+    const pin = map(page).locator(`[data-pin="unit:${single}"]`);
     await expect(pin).toHaveAttribute('aria-pressed', 'true');
-    await expect(pin).toHaveAttribute('data-shape', 'plate');
-    // Its building is grouped, so it fans out with leader lines around the hub
-    await expect(map(page).getByRole('group', { name: 'Units at Lowertown Flats' })).toBeAttached();
-    await expect(
-      map(page).getByRole('group', { name: 'Units at Lowertown Flats' }).locator('[data-pin]'),
-    ).toHaveCount(4);
   });
 
   test('pointing at a dot previews its pin without moving anything', async ({ page }, info) => {
@@ -153,59 +159,73 @@ test.describe('map (preview/dev build)', () => {
     await expect(map(page).locator('[class*="peek"]')).toHaveCount(0);
   });
 
-  test('a grouped pin fans out; a unit in the fan opens its details', async ({ page }, info) => {
+  test('a grouped pin opens a card; a unit in it opens its details', async ({ page }, info) => {
     const phone = isPhone(info.project.name);
     await showMap(page, phone);
     await map(page)
       .getByRole('button', { name: /4 units at Lowertown Flats/ })
       .click();
-    const fan = map(page).getByRole('group', { name: 'Units at Lowertown Flats' });
-    await expect(fan.locator('[data-pin]')).toHaveCount(4);
+    const card = map(page).getByRole('group', { name: 'Units at Lowertown Flats' });
+    await expect(card.locator('[data-pin]')).toHaveCount(4);
+    await expect(card).toContainText('4 units');
     // Cheapest first, rejected last
-    const labels = await fan
+    const labels = await card
       .locator('[data-pin]')
       .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
     expect(labels[0]).toContain('$1,090');
     expect(labels[3]).toContain('rejected');
 
-    await fan.getByRole('button', { name: /Unit 603/ }).click();
+    await card.getByRole('button', { name: /Unit 603/ }).click();
     await expect(page).toHaveURL(/#\/unit\//);
     await expect(page.getByRole('heading', { name: 'Unit 603', level: 2 })).toBeVisible();
     if (phone) {
       await expect(
         page.getByRole('navigation', { name: 'Views' }).getByRole('button', { name: 'Unit' }),
       ).toHaveAttribute('aria-current', 'page');
+      await page
+        .getByRole('navigation', { name: 'Views' })
+        .getByRole('button', { name: 'Map' })
+        .click();
     }
+    // The building's name in the header opens the building
+    await card.getByRole('button', { name: 'Lowertown Flats', exact: true }).click();
+    await expect(page).toHaveURL(/#\/building\//);
   });
 
-  test('several fans stay open until folded or collapsed', async ({ page }, info) => {
-    test.skip(isPhone(info.project.name), 'laptop: room for several fans');
+  test('several cards stay open until closed or collapsed', async ({ page }, info) => {
+    test.skip(isPhone(info.project.name), 'laptop: room for several cards');
     await showMap(page, false);
-    const fans = map(page).locator('[data-fan]');
+    const cards = map(page).locator('[data-card]');
     await map(page)
       .getByRole('button', { name: /4 units at Lowertown Flats/ })
       .click();
     await map(page)
       .getByRole('button', { name: /3 units at Grand Terrace/ })
       .click();
-    await expect(fans).toHaveCount(2);
+    await expect(cards).toHaveCount(2);
 
     // Clicking empty map leaves them open, and nothing stays highlighted or dimmed
     await map(page)
       .locator('canvas')
       .click({ position: { x: 20, y: 300 } });
     await expect(page.getByRole('list', { name: 'Units' }).locator('[data-hover]')).toHaveCount(0);
-    await expect(map(page).locator('[data-fan][class*="dimFan"]')).toHaveCount(0);
-    await expect(fans).toHaveCount(2);
+    await expect(map(page).locator('[data-card][class*="dimCard"]')).toHaveCount(0);
+    await expect(cards).toHaveCount(2);
 
-    // The hub folds one; Collapse all folds the rest
-    await map(page).getByRole('button', { name: 'Fold units at Grand Terrace' }).click();
-    await expect(fans).toHaveCount(1);
+    // The card's ✕ closes it, and so does its marker; Collapse all closes the rest
+    await map(page).getByRole('button', { name: 'Close Grand Terrace' }).click();
+    await expect(cards).toHaveCount(1);
+    await map(page)
+      .getByRole('button', { name: /3 units at Grand Terrace/ })
+      .click();
+    await expect(cards).toHaveCount(2);
+    await map(page).getByRole('button', { name: 'Close units at Grand Terrace' }).click();
+    await expect(cards).toHaveCount(1);
     await map(page).getByRole('button', { name: 'Collapse all' }).click();
-    await expect(fans).toHaveCount(0);
+    await expect(cards).toHaveCount(0);
     await expect(map(page).getByRole('button', { name: 'Collapse all' })).toHaveCount(0);
 
-    // Esc folds the fans you opened before it closes the details
+    // Esc closes the cards you opened before it closes the details
     await map(page)
       .getByRole('button', { name: /4 units at Lowertown Flats/ })
       .click();
@@ -216,19 +236,19 @@ test.describe('map (preview/dev build)', () => {
     await map(page)
       .getByRole('button', { name: /3 units at Grand Terrace/ })
       .click();
-    await expect(fans).toHaveCount(2);
+    await expect(cards).toHaveCount(2);
     await page.keyboard.press('Escape');
-    // Grand Terrace folds; Lowertown stays open because its unit is selected
-    await expect(fans).toHaveCount(1);
+    // Grand Terrace closes; Lowertown stays open because its unit is selected
+    await expect(cards).toHaveCount(1);
     await expect(page).toHaveURL(/#\/unit\//);
     await page.keyboard.press('Escape');
     await expect(page).not.toHaveURL(/#\/unit\//);
   });
 
-  test('plates never cover each other, even large photo pins in several fans', async ({
+  test('cards never cover each other, pins or dots, even with large photo pins', async ({
     page,
   }, info) => {
-    test.skip(isPhone(info.project.name), 'laptop: room for several fans');
+    test.skip(isPhone(info.project.name), 'laptop: room for several cards');
     await showMap(page, false);
     await map(page).getByRole('button', { name: 'Pins', exact: true }).click();
     const panel = map(page).getByRole('region', { name: 'Pins' });
@@ -245,68 +265,102 @@ test.describe('map (preview/dev build)', () => {
     await page.mouse.move(area.x + area.width * 0.4, area.y + area.height * 0.45);
     await page.mouse.wheel(0, -250);
     await page.waitForTimeout(700);
-    for (const name of [/units at Northloop Yards/, /units at The Larkin/]) {
+    for (const name of [/units at Northloop Yards/, /units at The Larkin/, /units at Riverlight/]) {
       const pin = map(page).getByRole('button', { name });
       if (await pin.count()) await pin.first().click();
+      await page.waitForTimeout(500);
     }
-    await expect(map(page).locator('[data-fan]')).toHaveCount(2);
+    await expect(map(page).locator('[data-card]')).toHaveCount(3);
     await page.waitForTimeout(600);
-    const boxes = await map(page)
-      .locator('[data-pin]:not([data-shape="dot"])')
-      .evaluateAll((els) =>
-        els.map((e) => {
-          const r = e.getBoundingClientRect();
-          return { k: e.getAttribute('data-pin'), l: r.left, r: r.right, t: r.top, b: r.bottom };
-        }),
-      );
-    expect(boxes.length).toBeGreaterThan(5);
+    const boxes = await map(page).evaluate((root) => {
+      const box = (e: Element, k: string) => {
+        const r = e.getBoundingClientRect();
+        return { k, l: r.left, r: r.right, t: r.top, b: r.bottom };
+      };
+      return {
+        cards: [...root.querySelectorAll('[data-card]')].map((e) =>
+          box(e, `card ${e.getAttribute('data-card')}`),
+        ),
+        // Collapsed pins and dots (not rows inside cards), and the open buildings' markers
+        others: [
+          ...[...root.querySelectorAll('[data-pin]')]
+            .filter((e) => !e.closest('[data-card]'))
+            .map((e) => box(e, e.getAttribute('data-pin') ?? '')),
+          ...[...root.querySelectorAll('[data-hub]')].map((e) =>
+            box(e, `marker ${e.getAttribute('data-hub')}`),
+          ),
+        ],
+      };
+    });
+    const hit = (a: (typeof boxes.cards)[0], c: (typeof boxes.cards)[0]) =>
+      a.l < c.r - 1 && c.l < a.r - 1 && a.t < c.b - 1 && c.t < a.b - 1;
     const clash: string[] = [];
-    for (let i = 0; i < boxes.length; i++)
-      for (let j = i + 1; j < boxes.length; j++) {
-        const a = boxes[i]!;
-        const c = boxes[j]!;
-        if (a.l < c.r - 1 && c.l < a.r - 1 && a.t < c.b - 1 && c.t < a.b - 1)
-          clash.push(`${a.k} × ${c.k}`);
-      }
+    boxes.cards.forEach((a, i) => {
+      for (const c of [...boxes.cards.slice(i + 1), ...boxes.others])
+        if (hit(a, c)) clash.push(`${a.k} × ${c.k}`);
+    });
     expect(clash).toEqual([]);
 
-    // Pointing at one fan dims the other
-    await map(page)
-      .getByRole('group', { name: 'Units at The Larkin' })
-      .locator('[data-pin]')
-      .first()
-      .hover();
-    await expect(map(page).locator('[data-fan][class*="dimFan"]')).toHaveCount(1);
+    // Pointing at one card fades the others; pointing at a thumbnail shows a larger preview
+    const larkin = map(page).getByRole('group', { name: 'Units at The Larkin' });
+    await larkin.locator('[data-pin]').first().hover();
+    await expect(map(page).locator('[data-card][class*="dimCard"]')).toHaveCount(2);
+    await larkin.locator('[data-pin] [class*="thumb"]').first().hover();
+    await expect(map(page).locator('[data-preview]')).toBeVisible();
+    await page.mouse.move(5, 5);
+    await expect(map(page).locator('[data-preview]')).toHaveCount(0);
   });
 
-  test('each open building gets a tray whose colors follow the base map', async ({
-    page,
-  }, info) => {
-    test.skip(isPhone(info.project.name), 'laptop: room for several fans');
+  test('each card is joined to its marker by a line you can see', async ({ page }, info) => {
+    test.skip(isPhone(info.project.name), 'laptop: room for several cards');
     await showMap(page, false);
+    for (const name of [/4 units at Lowertown Flats/, /3 units at Grand Terrace/])
+      await map(page).getByRole('button', { name }).click();
+    await expect(map(page).locator('[data-card]')).toHaveCount(2);
+    for (const id of await map(page)
+      .locator('[data-card]')
+      .evaluateAll((els) => els.map((e) => e.getAttribute('data-card')))) {
+      const gap = await map(page).evaluate((root, id) => {
+        const c = root.querySelector(`[data-card="${id}"]`)!.getBoundingClientRect();
+        const m = root.querySelector(`[data-hub="${id}"]`)!.getBoundingClientRect();
+        const [x, y] = [(m.left + m.right) / 2, (m.top + m.bottom) / 2];
+        const nx = Math.min(Math.max(x, c.left), c.right);
+        const ny = Math.min(Math.max(y, c.top), c.bottom);
+        return Math.hypot(nx - x, ny - y);
+      }, id);
+      // The marker's radius (11) plus a visible stretch of line
+      expect(gap).toBeGreaterThan(24);
+    }
+    // Pointing at a card makes its marker stand out
+    const card = map(page).locator('[data-card]').first();
+    const id = await card.getAttribute('data-card');
+    const width = () =>
+      map(page)
+        .locator(`[data-hub="${id}"]`)
+        .evaluate((e) => e.getBoundingClientRect().width);
+    const before = await width();
+    await card.hover();
+    await expect.poll(width).toBeGreaterThan(before + 3);
+  });
+
+  test('the Pin size slider shrinks pins and cards', async ({ page }, info) => {
+    const phone = isPhone(info.project.name);
+    await showMap(page, phone);
     await map(page)
       .getByRole('button', { name: /4 units at Lowertown Flats/ })
       .click();
-    await map(page)
-      .getByRole('button', { name: /3 units at Grand Terrace/ })
-      .click();
-    await expect(map(page).locator('[data-fan] mask')).toHaveCount(2);
-    const ink = () =>
-      map(page)
-        .locator('[data-fan] line[class*="fanLine"]')
-        .first()
-        .evaluate((el) => getComputedStyle(el).stroke);
-    // Wayfinding in light mode: navy
-    expect(await ink()).toBe('rgb(15, 46, 68)');
-    await page.keyboard.press('l');
-    const layers = map(page).getByRole('region', { name: 'Map layers' });
-    await layers.getByRole('button', { name: /Aerial photo/ }).click();
-    await expect.poll(ink).toBe('rgb(255, 255, 255)');
-    await layers.getByRole('button', { name: /Detailed streets/ }).click();
-    await expect.poll(ink).toBe('rgb(15, 46, 68)');
+    const card = map(page).locator('[data-card]').first();
+    const width = () => card.evaluate((e) => e.getBoundingClientRect().width);
+    const before = await width();
+    await map(page).getByRole('button', { name: 'Pins', exact: true }).click();
+    const slider = map(page).getByRole('slider', { name: 'Pin size' });
+    await slider.fill('70');
+    await expect.poll(width).toBeLessThan(before * 0.8);
+    await map(page).getByRole('button', { name: 'Reset to 100%' }).click();
+    await expect.poll(width).toBeGreaterThan(before * 0.95);
   });
 
-  test('buildings fan out by themselves at street zoom, where there is room', async ({
+  test('buildings open by themselves at street zoom, where their card fits', async ({
     page,
   }, info) => {
     const phone = isPhone(info.project.name);
@@ -314,19 +368,19 @@ test.describe('map (preview/dev build)', () => {
     await showMap(page, phone);
     await map(page).getByRole('button', { name: 'Fit all units' }).click();
     await zoomTo(page, 15);
-    const fans = map(page).locator('[data-fan]');
-    await expect(fans).toHaveCount(1);
-    // Collapse all keeps it folded while you stay zoomed in…
+    const cards = map(page).locator('[data-card]');
+    await expect(cards).toHaveCount(1);
+    // Collapse all keeps it closed while you stay zoomed in…
     await map(page).getByRole('button', { name: 'Collapse all' }).click();
-    await expect(fans).toHaveCount(0);
+    await expect(cards).toHaveCount(0);
     await zoomIn(page, 1);
-    await expect(fans).toHaveCount(0);
+    await expect(cards).toHaveCount(0);
     // …and zooming out below street level and back lets it open again
     await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
     await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
-    await expect(fans).toHaveCount(0);
+    await expect(cards).toHaveCount(0);
     await zoomTo(page, 15);
-    await expect(fans).toHaveCount(1);
+    await expect(cards).toHaveCount(1);
   });
 
   test('the Pins panel combines fields, per view, and is remembered', async ({ page }, info) => {
@@ -471,7 +525,7 @@ test.describe('map (preview/dev build)', () => {
     const phone = isPhone(info.project.name);
     await page.getByRole('searchbox').fill('Lowertown');
     await showMap(page, phone);
-    // One building: the map fits it closely enough that it fans out by itself
+    // One building: the map fits it closely enough that its card opens by itself
     await map(page).getByRole('button', { name: 'Fit all units' }).click();
     const fan = map(page).getByRole('group', { name: 'Units at Lowertown Flats' });
     await expect(fan.locator('[data-pin]')).toHaveCount(4);
@@ -541,7 +595,7 @@ test.describe('map (preview/dev build)', () => {
     });
   }
 
-  test('has no horizontal scrolling with the map and a fan open', async ({ page }, info) => {
+  test('has no horizontal scrolling with the map and a card open', async ({ page }, info) => {
     await showMap(page, isPhone(info.project.name));
     await map(page)
       .getByRole('button', { name: /4 units at Lowertown Flats/ })

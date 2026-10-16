@@ -2,7 +2,13 @@ import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { Legend as LegendData } from '../../domain/pins';
 import { PRICE_COLOR_LABEL } from '../../domain/pins';
-import { PENDING_FIELDS, PIN_FIELDS, fieldEnabled, toggleField } from '../../domain/pinPrefs';
+import {
+  PENDING_FIELDS,
+  PIN_FIELDS,
+  PIN_SIZE,
+  fieldEnabled,
+  toggleField,
+} from '../../domain/pinPrefs';
 import type {
   ColorBy,
   NewBadge,
@@ -152,6 +158,29 @@ export function PinsPanel({
             Fields print under the photo. Until photos arrive (M11) the frame shows the unit type.
           </p>
         )}
+        <div className={styles.sizeRow}>
+          <label htmlFor={`pin-size-${editing}`}>Pin size</label>
+          <input
+            id={`pin-size-${editing}`}
+            type="range"
+            min={PIN_SIZE.min}
+            max={PIN_SIZE.max}
+            step={PIN_SIZE.step}
+            value={prefs.size}
+            aria-valuetext={`${prefs.size}%`}
+            onChange={(e) => set({ size: Number(e.target.value) })}
+          />
+          <output htmlFor={`pin-size-${editing}`}>{prefs.size}%</output>
+        </div>
+        {prefs.size !== PIN_SIZE.normal && (
+          <button
+            type="button"
+            className={styles.linkBtn}
+            onClick={() => set({ size: PIN_SIZE.normal })}
+          >
+            Reset to 100%
+          </button>
+        )}
       </Section>
 
       <Section title="On the pin">
@@ -278,7 +307,7 @@ export function PinsPanel({
               checked={prefs.autoFan}
               onChange={(e) => set({ autoFan: e.target.checked })}
             />
-            Fan out buildings when zoomed in
+            Open buildings’ cards when zoomed in, where they fit
           </label>
         )}
       </Section>

@@ -25,13 +25,9 @@ import {
   STREET_ZOOM,
   estimatePinSize,
   layoutPins,
-  lineEnd,
-  TRAY_BAND,
-  TRAY_EDGE,
-  TRAY_HUB,
-  TRAY_PAD,
+  MARKER_R,
 } from '../../domain/pinLayout';
-import type { LayoutBuilding, Point, Size } from '../../domain/pinLayout';
+import type { Card, LayoutBuilding, Size } from '../../domain/pinLayout';
 import {
   allRejected,
   buildingPinLabel,
@@ -50,7 +46,7 @@ import {
 } from '../../domain/pins';
 import type { PinContent, PriceScale } from '../../domain/pins';
 import type { PinPrefs, PinStyle } from '../../domain/pinPrefs';
-import { buildingName } from '../../domain/format';
+import { buildingName, unitTitle } from '../../domain/format';
 import { deriveMapItems } from '../../state/derive';
 import type { Dataset, ListView, MapBuilding, UnitRow } from '../../state/derive';
 import { loadViewport, saveViewport, useUi } from '../../state/ui';
@@ -58,16 +54,19 @@ import type { ListMode } from '../../state/ui';
 import { BASE_MAPS, paletteFromTokens, styleFor } from './baseMaps';
 import { LayersPanel } from './LayersPanel';
 import { Legend } from './Legend';
+import { MapCard } from './MapCard';
+import type { CardRow } from './MapCard';
 import { Pin } from './Pin';
 import { PinsPanel } from './PinsPanel';
 import styles from './map.module.css';
 
 /**
  * The map (PLAN.md §4.3): HTML pins for the buildings the list shows. A building with
- * several units shows one pin summarizing them (ranges, one stripe per unit) and fans out
- * on click; several fans can be open at once, and at street zoom buildings fan out by
- * themselves where they have room. Neighborhood bubbles at low zoom, dots when crowded, a
- * Pins panel and a Map layers panel. Loaded on demand so the list appears first.
+ * several units shows one pin summarizing them (ranges, one stripe per unit) and opens a
+ * card listing its units on click; several can be open at once, and at street zoom
+ * buildings open by themselves where their card fits. Neighborhood bubbles at low zoom,
+ * dots when crowded, a Pins panel and a Map layers panel. Loaded on demand so the list
+ * appears first. (In the store, an open building is still called a "fan".)
  */
 
 export interface MapViewProps {
@@ -126,9 +125,9 @@ interface Layout {
   shown: string[];
   /** Of those, the ones drawn in full (the rest are dots). */
   full: Set<string>;
-  /** Buildings fanned out: each unit's plate center, relative to the building's point. */
-  fans: Map<string, Point[]>;
-  /** Fans that opened by themselves (street zoom). */
+  /** Open buildings' cards, relative to the building's point. */
+  cards: Map<string, Card>;
+  /** Cards that opened by themselves (street zoom). */
   autoOpen: string[];
 }
 
@@ -137,7 +136,7 @@ const emptyLayout: Layout = {
   bubbles: [],
   shown: [],
   full: new Set(),
-  fans: new Map(),
+  cards: new Map(),
   autoOpen: [],
 };
 
@@ -152,8 +151,6 @@ interface PinSpec {
   count: number;
   newMark: 'dot' | 'tag' | null;
   selected: boolean;
-  /** Drawn in a fan: centered, no tail. */
-  fan: boolean;
 }
 
 const specKey = (s: PinSpec) =>
@@ -164,7 +161,6 @@ const specKey = (s: PinSpec) =>
     s.count,
     s.newMark ?? '',
     s.selected ? 'sel' : '',
-    s.fan ? 'fan' : '',
   ].join('|');
 
 /** One building as the map draws it: the units it pins and the ones its summary covers. */
@@ -174,7 +170,7 @@ interface Placed extends MapBuilding {
   /** Units the summary covers ("Fade"/"Hide" leave rejected ones out). */
   summary: UnitRow[];
   content: PinContent;
-  /** Units view and more than one unit: a group that can fan out. */
+  /** Units view and more than one unit: a group that opens a card. */
   group: boolean;
 }
 
@@ -265,7 +261,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     // `dark` re-reads the palette when the theme flips
   }, [baseLayer, data.settings.mapStyleUrl, dark, sharper]);
 
-  // ── Bubbles (low zoom): the selected building and open fans never hide in one ──
+  // ── Bubbles (low zoom): the selected building and open cards never hide in one ──
   const index = useMemo(() => {
     const sc = new Supercluster<PointProps, { units: number }>({
       radius: 56,
@@ -287,7 +283,9 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     return sc;
   }, [placed, selectedBuildingId]);
 
-  // ── Sizes: measured from real pins (a hidden copy), estimated until then ──
+  // ── Sizes: measured from real pins and cards (hidden copies), estimated until then, then
+  // scaled by the Pin size setting ──
+  const k = prefs.size / 100;
   const [sizes, setSizes] = useState<ReadonlyMap<string, Size>>(() => new Map());
   const newMark = useCallback(
     (on: boolean) => (on && prefs.newBadge !== 'off' ? prefs.newBadge : null),
@@ -296,7 +294,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
   const sizeOf = useCallback(
     (spec: PinSpec): Size => {
       const known = sizes.get(specKey(spec));
-      if (known) return known;
+      if (known) return { w: known.w * k, h: known.h * k };
       const est = estimatePinSize(
         spec.style,
         spec.content.segments.map((x) => x.text),
@@ -306,9 +304,10 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
           tag: spec.newMark === 'tag',
         },
       );
-      return spec.selected ? { w: est.w + 20, h: est.h + 8 } : est;
+      const sized = spec.selected ? { w: est.w + 20, h: est.h + 8 } : est;
+      return { w: sized.w * k, h: sized.h * k };
     },
-    [sizes],
+    [sizes, k],
   );
   /** The pin a building shows when collapsed (or its only unit's pin). */
   const collapsedSpec = useCallback(
@@ -324,26 +323,61 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
           : view === 'buildings'
             ? selectedKey === `building:${b.id}`
             : b.pinned.some((u) => unitKey(u) === selectedKey),
-        fan: false,
       };
     },
     [prefs.style, view, newMark, selectedKey],
   );
-  const unitSpec = useCallback(
-    (r: UnitRow): PinSpec => ({
-      style: prefs.style,
-      content: pinContent([r], prefs, false),
-      count: 1,
-      newMark: newMark(isNew(r.unit)),
-      selected: selectedKey === unitKey(r),
-      fan: true,
-    }),
-    [prefs, newMark, selectedKey],
+  /** An open building's card: one row per unit, cheapest first, rejected last. */
+  const cardRows = useCallback(
+    (b: Placed): CardRow[] =>
+      fanOrder(b.pinned).map((r) => {
+        const rejected = isRejected(r.unit);
+        return {
+          key: unitKey(r),
+          content: pinContent([r], prefs, false),
+          type: r.unit.type,
+          stripe: edgeColor(r.unit, prefs.colorBy, scale),
+          newMark: newMark(isNew(r.unit)),
+          selected: selectedKey === unitKey(r),
+          rejected,
+          faded: rejected && prefs.rejected === 'fade',
+          hot: false,
+          label: unitPinLabel(r),
+          title: unitTitle(r.unit, r.building),
+        };
+      }),
+    [prefs, scale, newMark, selectedKey],
+  );
+  /** Everything that decides a card's size. */
+  const cardKey = useCallback(
+    (b: Placed, rows: readonly CardRow[]) =>
+      [
+        'card',
+        prefs.style,
+        buildingName(b.building),
+        ...rows.map(
+          (r) =>
+            `${r.content.typeIcon ?? ''}:${r.content.segments.map((x) => x.text).join('¦')}:${r.newMark ?? ''}`,
+        ),
+      ].join('|'),
+    [prefs.style],
+  );
+  const cardSizeOf = useCallback(
+    (b: Placed): Size => {
+      const rows = cardRows(b);
+      const known = sizes.get(cardKey(b, rows));
+      // Until measured: a header and a row per unit
+      const s = known ?? { w: 200, h: 34 + rows.length * (prefs.style === 'photo' ? 40 : 30) };
+      return { w: s.w * k, h: s.h * k };
+    },
+    [cardRows, cardKey, sizes, k, prefs.style],
   );
 
   // ── Relayout: which pins are in view, bubbled, fanned, full or dots ──
   const [layout, setLayout] = useState<Layout>(emptyLayout);
   const lastZoom = useRef(Infinity);
+  /** Where each open card was last time, so it stays put while its spot is free. */
+  const lastCards = useRef<ReadonlyMap<string, Card>>(new Map());
   const relayout = useCallback(() => {
     const map = mapRef.current?.getMap();
     if (!map) return;
@@ -376,12 +410,16 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     }
     if (selectedBuildingId && byId.has(selectedBuildingId)) shown.add(selectedBuildingId);
 
-    // Cheaper buildings first: they keep their plate and get their fan first
+    // Cheaper buildings first: they keep their plate first
     const ranked = [...shown]
       .map((id) => byId.get(id))
       .filter((b): b is Placed => !!b)
       .sort((x, y) => lowestRent(x.summary) - lowestRent(y.summary));
-    const openNow = new Set([...clickedFans, ...(forcedFan ? [forcedFan] : [])]);
+    // Cards you opened go down in the order you opened them
+    const openOrder = [
+      ...clickedFans,
+      ...(forcedFan && !clickedFans.includes(forcedFan) ? [forcedFan] : []),
+    ];
     const autoOk = view === 'units' && prefs.autoFan && zoom >= AUTO_FAN_ZOOM;
     const input: LayoutBuilding[] = ranked.map((b) => {
       const pt = map.project([b.lng, b.lat]);
@@ -391,10 +429,12 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
         x: pt.x,
         y: pt.y,
         size: sizeOf(spec),
-        unitSizes: b.group ? fanOrder(b.pinned).map((r) => sizeOf(unitSpec(r))) : undefined,
-        forced: b.group && openNow.has(b.id),
+        cardSize: b.group ? cardSizeOf(b) : undefined,
+        forced: b.group && openOrder.includes(b.id),
         auto: b.group && autoOk && !foldedFans.includes(b.id),
         keepFull: b.id === selectedBuildingId,
+        order: openOrder.indexOf(b.id),
+        prev: lastCards.current.get(b.id),
       };
     });
     const container = map.getContainer();
@@ -416,12 +456,13 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
       view: clientWidth ? { w: clientWidth, h: clientHeight } : undefined,
       reserved,
     });
+    lastCards.current = out.cards;
     setLayout({
       zoom,
       bubbles,
       shown: ranked.map((b) => b.id),
       full: out.full,
-      fans: out.fans,
+      cards: out.cards,
       autoOpen: out.autoOpen,
     });
   }, [
@@ -436,7 +477,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     view,
     sizeOf,
     collapsedSpec,
-    unitSpec,
+    cardSizeOf,
   ]);
 
   useEffect(() => {
@@ -464,7 +505,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
       const b = boundsOf(placed);
       if (!map || !b) return;
       const el = map.getContainer();
-      // Leave room for fans only when the fit is close enough for them to open
+      // Leave room for cards only when the fit is close enough for them to open
       const plain = map.cameraForBounds(b, { padding: fitPadding(el, false), maxZoom: 15 });
       const fans = view === 'units' && prefs.autoFan && (plain?.zoom ?? 0) >= AUTO_FAN_ZOOM - 0.25;
       map.fitBounds(b, {
@@ -521,34 +562,31 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     };
   }, [loaded, selectedBuildingId, lastOpened]);
 
-  // A fan you just opened pans the map just enough to show its whole tray (once per opening)
+  // A card you just opened pans the map just enough to show it and its marker (once per
+  // opening)
   const shownFan = useRef<string | null>(null);
   useEffect(() => {
     const map = mapRef.current?.getMap();
     if (!map || !lastOpened || shownFan.current === lastOpened) return;
     const b = byId.get(lastOpened);
-    const centers = layout.fans.get(lastOpened);
-    if (!b || !centers) return;
+    const card = layout.cards.get(lastOpened);
+    if (!b || !card) return;
     shownFan.current = lastOpened;
     const { clientWidth: w, clientHeight: h } = map.getContainer();
     if (!w || !h) return;
     const hub = map.project([b.lng, b.lat]);
-    const sizes = fanOrder(b.pinned).map((r) => sizeOf(unitSpec(r)));
-    const m = 12 + TRAY_PAD + TRAY_EDGE;
-    let [l, r, t, btm] = [hub.x - TRAY_HUB, hub.x + TRAY_HUB, hub.y - TRAY_HUB, hub.y + TRAY_HUB];
-    centers.forEach(([dx, dy], i) => {
-      const sz = sizes[i] as Size;
-      l = Math.min(l, hub.x + dx - sz.w / 2);
-      r = Math.max(r, hub.x + dx + sz.w / 2);
-      t = Math.min(t, hub.y + dy - sz.h / 2);
-      btm = Math.max(btm, hub.y + dy + sz.h / 2);
-    });
-    // Shift by what sticks out, but never push the far edge off (left/top win when the tray
+    const size = cardSizeOf(b);
+    const m = 16;
+    const l = Math.min(hub.x - MARKER_R, hub.x + card.left);
+    const r = Math.max(hub.x + MARKER_R, hub.x + card.left + size.w);
+    const t = Math.min(hub.y - MARKER_R, hub.y + card.top);
+    const btm = Math.max(hub.y + MARKER_R, hub.y + card.top + size.h);
+    // Shift by what sticks out, but never push the far edge off (left/top win when the card
     // is bigger than the screen)
     const dx = l < m ? l - m : r > w - m ? Math.min(r - (w - m), l - m) : 0;
     const dy = t < m ? t - m : btm > h - m ? Math.min(btm - (h - m), t - m) : 0;
     if (dx || dy) map.panBy([dx, dy], { duration: reducedMotion() ? 0 : 400 });
-  }, [layout, lastOpened, byId, sizeOf, unitSpec]);
+  }, [layout, lastOpened, byId, cardSizeOf]);
   useEffect(() => {
     if (!lastOpened) shownFan.current = null;
   }, [lastOpened]);
@@ -565,35 +603,11 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     navigate(`/${key.replace(':', '/')}`, { replace: selectedKey !== null });
 
   // ── Rendering helpers ──
-  // Pointing at a fan's plate (or its card) dims the other open fans
-  const hoverFan = hoverBuildingId && layout.fans.has(hoverBuildingId) ? hoverBuildingId : null;
-  const hot = (key: string) => hoverKey === key;
-
-  const unitPin = (r: UnitRow, inFan: boolean) => {
-    const u = r.unit;
-    const rejected = isRejected(u);
-    const spec = inFan ? unitSpec(r) : collapsedSpec(byId.get(u.buildingId)!);
-    return (
-      <Pin
-        pinKey={unitKey(r)}
-        style={prefs.style}
-        content={spec.content}
-        type={u.type}
-        count={1}
-        stripes={[edgeColor(u, prefs.colorBy, scale)]}
-        selected={spec.selected}
-        rejected={rejected}
-        faded={rejected && prefs.rejected === 'fade'}
-        dot={false}
-        inFan={inFan}
-        hot={hot(unitKey(r))}
-        newMark={spec.newMark}
-        label={unitPinLabel(r)}
-        onClick={() => select(unitKey(r))}
-        onHover={(on) => setHover(on ? unitKey(r) : null)}
-      />
-    );
-  };
+  // Pointing at a card (or one of its units' list cards) brings it forward and fades the
+  // other cards
+  const hoverCard = hoverBuildingId && layout.cards.has(hoverBuildingId) ? hoverBuildingId : null;
+  /** Pins, dots and cards scale with the Pin size setting, about the building's point. */
+  const scaled = k !== 1 ? { transform: `scale(${k})` } : undefined;
 
   /** A building's collapsed pin (or a single unit's pin), as a plate or a dot. */
   const collapsedPin = (b: Placed, dot: boolean, opts: { peek?: boolean } = {}) => {
@@ -637,51 +651,17 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     if (!b) continue;
     const isSel = id === selectedBuildingId;
     const isHover = id === hoverBuildingId;
-    const centers = layout.fans.get(id);
+    const card = layout.cards.get(id);
 
-    if (centers && b.group) {
-      const ordered = fanOrder(b.pinned);
-      const sizes = ordered.map((r) => sizeOf(unitSpec(r)));
-      const ends = centers.map((c, i) => lineEnd([0, 0], c, sizes[i] as Size));
-      const reach =
-        Math.max(
-          ...centers.map(([x, y], i) =>
-            Math.max(Math.abs(x) + (sizes[i]?.w ?? 0) / 2, Math.abs(y) + (sizes[i]?.h ?? 0) / 2),
-          ),
-        ) + 16;
+    if (card && b.group) {
       const name = buildingName(b.building);
-      const trayId = `tray-${b.id}`;
-      /** The tray's shape, grown by `d`: padded plates, the hub and a band along each line. */
-      const trayShape = (d: number) => (
-        <>
-          <circle cx={0} cy={0} r={TRAY_HUB + d} />
-          {ends.map(([x, y], i) => (
-            <line
-              key={`l${i}`}
-              x1={0}
-              y1={0}
-              x2={x}
-              y2={y}
-              strokeWidth={2 * (TRAY_BAND + d)}
-              strokeLinecap="round"
-            />
-          ))}
-          {centers.map(([x, y], i) => {
-            const sz = sizes[i] as Size;
-            const pad = TRAY_PAD + d;
-            return (
-              <rect
-                key={`r${i}`}
-                x={x - sz.w / 2 - pad}
-                y={y - sz.h / 2 - pad}
-                width={sz.w + 2 * pad}
-                height={sz.h + 2 * pad}
-                rx={6 + pad}
-              />
-            );
-          })}
-        </>
-      );
+      const rows = cardRows(b).map((r) => ({ ...r, hot: hoverKey === r.key }));
+      // The line runs from the marker's edge to the card's nearest edge
+      const [ex, ey] = card.end;
+      const len = Math.hypot(ex, ey) || 1;
+      const [sx, sy] = [(ex / len) * MARKER_R, (ey / len) * MARKER_R];
+      const reach = Math.ceil(len) + 8;
+      const dim = !!hoverCard && hoverCard !== id;
       markers.push(
         <Marker
           key={id}
@@ -690,68 +670,46 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
           style={{ zIndex: isHover ? 6 : isSel ? 5 : 3 }}
           className={styles.anchor}
         >
-          <div
-            role="group"
-            aria-label={`Units at ${name}`}
-            data-fan={b.id}
-            className={hoverFan && hoverFan !== b.id ? styles.dimFan : undefined}
-          >
+          <div data-fan={b.id} className={isHover ? styles.cardHot : undefined}>
             <svg
-              className={styles.fan}
+              className={`${styles.cardLine} ${dim ? styles.dimCard : ''}`}
               width={reach * 2}
               height={reach * 2}
               viewBox={`${-reach} ${-reach} ${reach * 2} ${reach * 2}`}
               style={{ left: -reach, top: -reach }}
               aria-hidden="true"
             >
-              {/* The tray: one frosted shape around the building's plates and lines, with an
-                  outline (the larger shape minus the tray itself, via a mask) */}
-              <defs>
-                <mask
-                  id={trayId}
-                  maskUnits="userSpaceOnUse"
-                  x={-reach}
-                  y={-reach}
-                  width={reach * 2}
-                  height={reach * 2}
-                >
-                  <rect x={-reach} y={-reach} width={reach * 2} height={reach * 2} fill="white" />
-                  <g fill="black" stroke="black">
-                    {trayShape(0)}
-                  </g>
-                </mask>
-              </defs>
-              <g className={styles.trayFill}>{trayShape(0)}</g>
-              <g className={styles.trayEdge} mask={`url(#${trayId})`}>
-                {trayShape(TRAY_EDGE)}
-              </g>
-              {ends.map(([x, y], i) => (
-                <line key={i} className={styles.fanLine} x1={0} y1={0} x2={x} y2={y} />
-              ))}
+              <line className={styles.lineHalo} x1={sx} y1={sy} x2={ex} y2={ey} />
+              <line className={styles.lineInk} x1={sx} y1={sy} x2={ex} y2={ey} />
+              <circle className={styles.lineEnd} cx={ex} cy={ey} r={3.5} />
             </svg>
+            <div className={styles.cardAt} style={{ left: card.left, top: card.top, ...scaled }}>
+              <MapCard
+                id={b.id}
+                name={name}
+                rows={rows}
+                photo={prefs.style === 'photo'}
+                dim={dim}
+                onSelect={select}
+                onOpenBuilding={() => select(`building:${b.id}`)}
+                onClose={() => ui.foldFan(b.id)}
+                onHover={setHover}
+              />
+            </div>
+            {/* The building's marker; the same ring starts the card's header */}
             <button
               type="button"
-              className={styles.hub}
-              aria-label={`Fold units at ${name}`}
-              title="Fold"
+              className={styles.mark}
+              aria-label={`Close units at ${name}`}
+              title="Close"
               data-hub={b.id}
               onClick={(e) => {
                 e.stopPropagation();
                 ui.foldFan(b.id);
               }}
-            >
-              <svg viewBox="0 0 10 10" aria-hidden="true">
-                <path d="M2 2l6 6M8 2L2 8" stroke="currentColor" strokeWidth="1.8" />
-              </svg>
-            </button>
-            {ordered.map((r, i) => {
-              const [x, y] = centers[i] as Point;
-              return (
-                <div key={r.unit.id} className={styles.fanned} style={{ left: x, top: y }}>
-                  {unitPin(r, true)}
-                </div>
-              );
-            })}
+              onMouseEnter={() => setHover(`building:${b.id}`)}
+              onMouseLeave={() => setHover(null)}
+            />
           </div>
         </Marker>,
       );
@@ -768,27 +726,32 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
         style={{ zIndex: z }}
         className={styles.anchor}
       >
-        {collapsedPin(b, dot)}
-        {/* Pointing at a dot (or its card) previews the full pin above it, without moving
-            anything, so the pin under the pointer can't flicker. */}
-        {dot && isHover && (
-          <div className={styles.peek} aria-hidden="true">
-            {collapsedPin(b, false, { peek: true })}
-          </div>
-        )}
+        <div className={styles.scaled} style={scaled}>
+          {collapsedPin(b, dot)}
+          {/* Pointing at a dot (or its card) previews the full pin above it, without moving
+              anything, so the pin under the pointer can't flicker. */}
+          {dot && isHover && (
+            <div className={styles.peek} aria-hidden="true">
+              {collapsedPin(b, false, { peek: true })}
+            </div>
+          )}
+        </div>
       </Marker>,
     );
   }
 
-  // ── Measuring: pins near the view whose size isn't known yet, drawn invisibly ──
-  const toMeasure = new Map<string, PinSpec>();
+  // ── Measuring: pins and cards near the view whose size isn't known yet, drawn invisibly ──
+  type Measure = { kind: 'pin'; spec: PinSpec } | { kind: 'card'; b: Placed; rows: CardRow[] };
+  const toMeasure = new Map<string, Measure>();
   for (const id of layout.shown) {
     const b = byId.get(id);
     if (!b) continue;
-    const specs = [collapsedSpec(b), ...(b.group ? b.pinned.map(unitSpec) : [])];
-    for (const spec of specs) {
-      const k = specKey(spec);
-      if (!sizes.has(k)) toMeasure.set(k, spec);
+    const spec = collapsedSpec(b);
+    if (!sizes.has(specKey(spec))) toMeasure.set(specKey(spec), { kind: 'pin', spec });
+    if (b.group) {
+      const rows = cardRows(b);
+      const ck = cardKey(b, rows);
+      if (!sizes.has(ck)) toMeasure.set(ck, { kind: 'card', b, rows });
     }
   }
   const measureKeys = [...toMeasure.keys()].join('\n');
@@ -800,10 +763,13 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     for (const el of root.querySelectorAll<HTMLElement>('[data-spec]')) {
       const pin = el.firstElementChild as HTMLElement | null;
       if (!pin) continue;
-      const k = el.dataset.spec as string;
-      const tag = k.includes('|tag|');
-      // The New tag sticks out past the corner; leave room for it
-      found.push([k, { w: pin.offsetWidth + (tag ? 12 : 0), h: pin.offsetHeight + (tag ? 8 : 0) }]);
+      const key = el.dataset.spec as string;
+      // The New tag sticks out past a pin's corner; leave room for it
+      const tag = !key.startsWith('card|') && key.includes('|tag|');
+      found.push([
+        key,
+        { w: pin.offsetWidth + (tag ? 12 : 0), h: pin.offsetHeight + (tag ? 8 : 0) },
+      ]);
     }
     // Measuring has to happen after the copies are drawn; this is the one place it can.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -840,7 +806,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     );
   }
 
-  const anyFanOpen = view === 'units' && layout.fans.size > 0;
+  const anyFanOpen = view === 'units' && layout.cards.size > 0;
   const baseName = BASE_MAPS.find((b) => b.id === baseLayer)?.name ?? 'base';
   const zoomBy = (d: number) => {
     const map = mapRef.current;
@@ -878,8 +844,8 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
             const c = map.getCenter();
             const zoom = map.getZoom();
             saveViewport({ longitude: c.lng, latitude: c.lat, zoom });
-            // Zooming out to bubble level folds clicked fans; zooming out below street zoom
-            // forgets which automatic fans you folded. Panning never folds anything.
+            // Zooming out to bubble level closes cards you opened; zooming out below street zoom
+            // forgets which automatic cards you closed. Panning never folds anything.
             const out = zoom < lastZoom.current - 0.01;
             lastZoom.current = zoom;
             if (out) ui.forgetFans({ clicked: zoom < STREET_ZOOM, folded: zoom < AUTO_FAN_ZOOM });
@@ -983,7 +949,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
             Fit
           </button>
         </div>
-        {/* Always takes its space, so fans laid out around it don't shift when it appears */}
+        {/* Always takes its space, so cards laid out around it don't shift when it appears */}
         <button
           type="button"
           className={styles.collapseBtn}
@@ -991,7 +957,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
           style={anyFanOpen ? undefined : { visibility: 'hidden' }}
           aria-hidden={!anyFanOpen || undefined}
           tabIndex={anyFanOpen ? undefined : -1}
-          onClick={() => ui.collapseFans([...layout.fans.keys()])}
+          onClick={() => ui.collapseFans([...layout.cards.keys()])}
         >
           Collapse all
         </button>
@@ -1019,24 +985,32 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
       {legend && <Legend legend={legend} />}
 
       <div ref={measurer} className={styles.measurer} aria-hidden="true" inert>
-        {[...toMeasure].map(([k, spec]) => (
-          <div key={k} data-spec={k}>
-            <Pin
-              style={spec.style}
-              content={spec.content}
-              type="apartment"
-              count={spec.count}
-              stripes={['transparent']}
-              selected={spec.selected}
-              rejected={false}
-              faded={false}
-              dot={false}
-              inFan={spec.fan}
-              newMark={spec.newMark}
-              label=""
-              onClick={() => {}}
-              onHover={() => {}}
-            />
+        {[...toMeasure].map(([key, m]) => (
+          <div key={key} data-spec={key}>
+            {m.kind === 'card' ? (
+              <MapCard
+                id={m.b.id}
+                name={buildingName(m.b.building)}
+                rows={m.rows}
+                photo={prefs.style === 'photo'}
+              />
+            ) : (
+              <Pin
+                style={m.spec.style}
+                content={m.spec.content}
+                type="apartment"
+                count={m.spec.count}
+                stripes={['transparent']}
+                selected={m.spec.selected}
+                rejected={false}
+                faded={false}
+                dot={false}
+                newMark={m.spec.newMark}
+                label=""
+                onClick={() => {}}
+                onHover={() => {}}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -1046,7 +1020,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
 
 /**
  * Room around "Fit all units": plates sit above their point and are up to ~140 px wide;
- * with fan-out on, a close fit fans buildings out, so leave room for their arcs too.
+ * with automatic opening on, a close fit opens buildings' cards, so leave room for them too.
  */
 function fitPadding(el: HTMLElement, fans: boolean) {
   const k = Math.min(1, el.clientWidth / 900);

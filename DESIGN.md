@@ -35,7 +35,7 @@ The spec models flags, stars and color labels on Lightroom Classic, so this take
 Minneapolis in winter, read like a sign system: snow-white surfaces, lake-ice greys, a deep Mississippi navy for anything "you are here," and snowplow amber for anything new. Type is **Overpass**, an open-source typeface descended from the Highway Gothic lettering on US road signs. The one bold idea: **every pin is a small sign plate showing that unit's total monthly cost**, with a colored edge for its status, so the map itself answers "what does it really cost to live there?". The selected unit's plate and the detail header are the same navy sign. Everything else stays quiet: hairlines, white panels, no decorative shadows.
 
 - **Good at:** the cost-first pins make the map useful at a glance (the spec's core complaint is bait pricing); three plain columns follow the spec's Google Maps–style layout; scales cleanly to the edit form, compare table and phone; equally good in light and dark.
-- **Weak at:** price plates take more room than dots, so dense areas rely on building grouping and the fan-out (which the spec requires anyway); less photo-forward than B.
+- **Weak at:** price plates take more room than dots, so dense areas rely on building grouping and opening a building (the spec's fan-out, built as a card per building: PLAN Q12); less photo-forward than B.
 
 **Why C.** It serves the decisions the app exists for (total cost, status, where) on the map itself; it's the most legible for long sessions; and it carries into every Phase 1 screen without special cases. Two ideas from B are folded in: keyboard hints printed on the controls they trigger, and a compare tray that collects units while you browse.
 
@@ -113,7 +113,7 @@ Pending fields: total cost and cost per ft² (M8), travel time (Phase 2). Until 
 
 | State | Look, in any style |
 | --- | --- |
-| Fanned out | Each unit's plate in the nearest free spot around a hub button (×, folds the fan), joined by a solid 1.75 px leader line to the plate's nearest edge (no tail). The plates, hub and lines sit in one **tray**: plates padded 5 px, a 5 px band along each line and a 15 px circle at the hub, filled with a frosted tint and outlined 1.5 px. Tray colors per base map — Wayfinding: `--river` outline and line on `--snow` at 80% (so navy on pale in light, light on dark in dark); Detailed streets, OpenStreetMap, Cycle map: `#0F2E44` on white at 82%; Aerial: white on `#0F2E44` at 62%. The hub takes the outline color. Trays never touch; plates never cover each other or the map controls; fans grow away from each other; pointing at one fan fades the others to 35%; *Collapse all* sits with the map controls |
+| Open (a building with several units, clicked or automatic) | One **card** next to the building: 1.5 px `--river` border, 10 px corners, `--surface` fill with a 3 px surface-colored halo. Header: the building's marker (navy ring, center dot), its name (800, opens the building), the unit count and a ✕. One row per unit, cheapest first, rejected last: a 4 px stripe in the pin color, a 34 px thumbnail with photo pins, the fields with hairlines, the New tag or dot; selected row navy; rejected rows struck through (and slate, not see-through, when faded). The building's point shows a 22 px marker, joined to the card's nearest edge by a 2.25 px `--river` line over a 7 px surface halo (reads on every base map), with at least 32 px between them. Cards never cover other cards, pins, markers or dots; lines never cross. Pointing at a card: its marker grows 1.3×, its line thickens, other cards fade to 40%. Pointing at a thumbnail: a 232 px preview (150 px photo, caption) beside the card. *Collapse all* sits with the map controls. Phones: 40 px rows, 36 px ✕ |
 | Selected | Navy plate, 34 px tall, rent 17 px (photo grows to 64 px); list row gets a navy left bar |
 | Rejected | Dashed outline, struck-through text, no edge; 55% opacity when "Fade" is chosen; gone when "Hide" is chosen |
 | Fails baseline criteria | 55% opacity, solid outline |
@@ -170,7 +170,7 @@ Sentence case everywhere; no all-caps labels. Numbers carry their unit in the sa
 
 ### 2.9 Motion
 
-Only in response to an action: the detail panel slides in (160 ms), the fan-out expands from its hub (180 ms), toasts slide up. Map fly-to on selection is 400 ms. All of it is removed under `prefers-reduced-motion`.
+Only in response to an action: the detail panel slides in (160 ms), an opened building's card fades in (160 ms), toasts slide up. Map fly-to on selection is 400 ms. All of it is removed under `prefers-reduced-motion`.
 
 ---
 
@@ -370,11 +370,12 @@ The paste box is collapsed to one line until you paste; anything it recognizes a
 └───────────────────────────────────────┘   │ Rejected units [Show | Fade | Hide]     │
                                             │ When crowded ☑ Group nearby buildings   │
                                             │   ☑ Shrink crowded pins to dots         │
-                                            │   ☑ Fan out buildings when zoomed in    │
+                                            │   ☑ Open buildings’ cards when zoomed in│
+                                            │ Pin size  ──●──── 100%  (70–130%)       │
                                             └─────────────────────────────────────────┘
 ```
 
-Choices apply instantly. Pin settings are kept separately for the Units and Buildings views: the Pins panel edits the view the list shows and says so in a band under its title ("For the Units view. The Buildings view keeps its own settings."). They're remembered in this browser (per database); options that don't apply are greyed out (fields for dots) or hidden (fan-out in the Buildings view). The Layers panel adds *Sharper OpenStreetMap and Cycle maps* (off) when one of those maps is chosen. Settings → Display will later hold defaults.
+Choices apply instantly. Pin settings are kept separately for the Units and Buildings views: the Pins panel edits the view the list shows and says so in a band under its title ("For the Units view. The Buildings view keeps its own settings."). They're remembered in this browser (per database); options that don't apply are greyed out (fields for dots) or hidden (automatic opening in the Buildings view). *Pin size* sits under Pin style. The Layers panel adds *Sharper OpenStreetMap and Cycle maps* (off) when one of those maps is chosen. Settings → Display will later hold defaults.
 
 ### 4.8 Batch add units (`#/building/:id/add`)
 
@@ -447,7 +448,7 @@ Shortcuts act on the selected unit, or every selected unit when several are sele
 | `6` / `7` / `8` / `9` | Toggle red / yellow / green / blue label (purple from the menu, Q8) |
 | `↑` `↓` or `K` `J` | Previous / next unit in the list |
 | `⏎` | Open the selected unit's detail |
-| `Esc` | Close panel, collapse fan-out, or clear selection |
+| `Esc` | Close panel, close open buildings' cards, or clear selection |
 | `E` | Edit the selected unit |
 | `N` | Add a unit (quick-add) |
 | `C` | Add to / remove from compare |

@@ -341,107 +341,379 @@
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.75);
 }
 
-/* ── Fan-out ── */
+/* ── Open buildings: one card each (owner review 4, DESIGN.md §2.4) ──
+   The card, its line and its marker use the theme's navy with a halo of the surface color,
+   so they read on every base map. */
 
-.fan {
+/* Pins and dots scale with the Pin size setting, about the building's point */
+.scaled {
   position: absolute;
   left: 0;
   top: 0;
-  overflow: visible;
-  pointer-events: none;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
 }
 
-/* Tray colors per base map, so a building's group stands out on any map (owner review 3).
-   Wayfinding follows the theme; the street rasters are always light; aerial is dark. */
-.root {
-  --fan-ink: var(--river);
-  --fan-ink-fg: var(--on-river);
-  --fan-tint: var(--snow);
-  --fan-tint-opacity: 0.8;
+.cardAt {
+  position: absolute;
+  transform-origin: 0 0;
 }
 
-.root[data-base='streets'],
-.root[data-base='osm'],
-.root[data-base='cycle'] {
-  --fan-ink: #0f2e44;
-  --fan-ink-fg: #f3f7f9;
-  --fan-tint: #ffffff;
-  --fan-tint-opacity: 0.82;
+.card {
+  position: relative;
+  width: max-content;
+  min-width: 150px;
+  max-width: 360px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1.5px solid var(--river);
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--surface) 80%, transparent),
+    0 2px 8px rgba(15, 46, 68, 0.28);
+  font: 600 12.5px/1.2 var(--font);
+  font-feature-settings: 'tnum' 1;
 }
 
-.root[data-base='aerial'] {
-  --fan-ink: #ffffff;
-  --fan-ink-fg: #0f2e44;
-  --fan-tint: #0f2e44;
-  --fan-tint-opacity: 0.62;
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 3px 3px 8px;
+  border-bottom: 1px solid var(--ice);
 }
 
-.trayFill {
-  fill: var(--fan-tint);
-  stroke: var(--fan-tint);
-  opacity: var(--fan-tint-opacity);
+/* The building's marker: a navy ring with a center dot, on the map and in the header */
+.cardMark,
+.mark {
+  flex: none;
+  border-radius: 50%;
+  border: 2.5px solid var(--river);
+  background: radial-gradient(circle, var(--river) 0 32%, var(--surface) 36%);
 }
 
-.trayEdge {
-  fill: var(--fan-ink);
-  stroke: var(--fan-ink);
+.cardMark {
+  width: 14px;
+  height: 14px;
 }
 
-.fanLine {
-  stroke: var(--fan-ink);
-  stroke-width: 1.75;
-  stroke-linecap: round;
-}
-
-.hub {
+.mark {
   position: absolute;
   left: -11px;
   top: -11px;
   width: 22px;
   height: 22px;
   padding: 0;
-  border-radius: 50%;
-  background: var(--fan-ink);
-  color: var(--fan-ink-fg);
-  border: 2px solid var(--fan-tint);
-  box-shadow: 0 1px 2px rgba(15, 46, 68, 0.35);
-  display: grid;
-  place-items: center;
+  border-width: 3px;
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 1px 3px rgba(15, 46, 68, 0.45);
   cursor: pointer;
 }
 
-.hub svg {
+.mark:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: 3px;
+}
+
+.cardName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 3px 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 800 12.5px/1.2 var(--font);
+  text-align: left;
+  cursor: pointer;
+}
+
+.cardName:hover {
+  text-decoration: underline;
+}
+
+.cardName:focus-visible,
+.cardClose:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+.cardCount {
+  color: var(--slate);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.cardClose {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.cardClose:hover {
+  background: var(--frost);
+}
+
+.cardClose svg {
   width: 10px;
   height: 10px;
 }
 
-.hub:focus-visible {
-  outline: 3px solid var(--lake);
-  outline-offset: 2px;
+.cardRows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.fanned {
+.cardRows li + li {
+  border-top: 1px solid var(--ice);
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 30px;
+  margin: 0;
+  padding: 3px 8px 3px 13px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cardRows li:last-child .row {
+  border-radius: 0 0 9px 9px;
+}
+
+.row:hover {
+  background: var(--frost);
+}
+
+.row:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: -3px;
+}
+
+.row.hot {
+  outline-offset: -2px;
+}
+
+.rowEdge {
   position: absolute;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 0;
+  left: 4px;
+  top: 5px;
+  bottom: 5px;
+  width: 4px;
+  border-radius: 2px;
+}
+
+.rowText {
+  display: inline-flex;
+  align-items: center;
+  flex: 1;
+  min-height: 20px;
+}
+
+.rowSel,
+.rowSel:hover {
+  background: var(--river);
+  color: var(--on-river);
+}
+
+.rowSel .pseg,
+.rowSel .f-rent,
+.rowSel .ico {
+  color: var(--on-river);
+}
+
+.rowSel .pseg + .pseg {
+  border-left-color: color-mix(in srgb, var(--on-river) 35%, transparent);
+}
+
+.rowRej .pseg {
+  text-decoration: line-through;
+}
+
+.rowRej .rowEdge {
+  display: none;
+}
+
+/* "Fade": quieter text that still reads (a see-through row would fail contrast) */
+.rowFaded .pseg,
+.rowFaded .f-rent {
+  color: var(--slate);
+  font-weight: 600;
+}
+
+.rowFaded .thumb,
+.rowFaded .ico {
+  opacity: 0.55;
+}
+
+.rowNew {
+  padding: 2px 4px 1px;
+  border-radius: 3px;
+  background: var(--plow);
+  color: #3a2a00;
+  font: 800 10px/1 var(--font);
+}
+
+.rowNewDot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--plow);
+}
+
+.thumb {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 4px;
+  background: var(--frost);
+  color: var(--slate);
+  cursor: zoom-in;
+}
+
+.thumb svg {
+  width: 18px;
+  height: 18px;
+}
+
+.rowSel .thumb {
+  background: color-mix(in srgb, var(--on-river) 18%, transparent);
+  color: var(--on-river);
+}
+
+/* The larger photo beside the card, while you point at a thumbnail */
+.preview {
+  position: absolute;
+  left: calc(100% + 10px);
+  width: 232px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--ink) 15%, transparent),
+    var(--shadow-float);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.previewLeft {
+  left: auto;
+  right: calc(100% + 10px);
+}
+
+.previewPhoto {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  height: 150px;
+  background: var(--frost);
+  color: var(--slate);
+}
+
+.previewPhoto svg {
+  width: 44px;
+  height: 44px;
+}
+
+.previewPhoto small {
+  font-size: 11.5px;
+}
+
+.previewCaption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px 8px;
+  white-space: normal;
+  color: var(--slate);
+}
+
+.previewCaption strong {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+/* The line from the marker to its card: navy over a halo */
+.cardLine {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.lineHalo {
+  stroke: var(--surface);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+
+.lineInk {
+  stroke: var(--river);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+}
+
+.lineEnd {
+  fill: var(--river);
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+/* Pointing at a card: its marker grows, its line thickens, the other cards fade */
+.cardHot .mark {
+  transform: scale(1.3);
+}
+
+.cardHot .lineInk {
+  stroke-width: 3.5;
+}
+
+.cardHot .lineHalo {
+  stroke-width: 9;
+}
+
+.dimCard {
+  opacity: 0.4;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .fanned {
-    animation: fan-in 180ms ease-out both;
+  .card,
+  .cardLine {
+    transition: opacity 120ms;
   }
 
-  .fan {
-    animation: fade-in 180ms ease-out both;
+  .mark {
+    transition: transform 120ms;
   }
-}
 
-@keyframes fan-in {
-  from {
-    transform: scale(0.6);
-    opacity: 0;
+  .cardAt {
+    animation: fade-in 160ms ease-out both;
   }
 }
 
@@ -1090,16 +1362,7 @@
   }
 }
 
-/* ── Fans, hover, measuring (M3 review 2) ── */
-
-/* A plate in a fan sits centered on its spot; the leader line replaces the tail */
-.inFan {
-  transform: translate(-50%, -50%);
-}
-
-.inFan::after {
-  display: none;
-}
+/* ── Hover, measuring (M3 review 2) ── */
 
 /* Its card is under the pointer */
 .hot {
@@ -1146,13 +1409,53 @@
   color: var(--ink);
 }
 
-/* Another fan is under the pointer: this one steps back */
-.dimFan {
-  opacity: 0.35;
+/* Pins panel: the Pin size slider */
+.sizeRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 13px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  [data-fan] {
-    transition: opacity 120ms;
+.sizeRow input {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--river);
+}
+
+.sizeRow output {
+  min-width: 40px;
+  text-align: right;
+  font-feature-settings: 'tnum' 1;
+  color: var(--slate);
+}
+
+.linkBtn {
+  margin-top: 2px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--lake);
+  font: 600 12px/1.3 var(--font);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.linkBtn:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Phones: bigger touch targets in cards */
+@media (max-width: 759px) {
+  .row {
+    min-height: 40px;
+  }
+
+  .cardClose {
+    width: 36px;
+    height: 36px;
   }
 }

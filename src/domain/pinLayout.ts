@@ -2,14 +2,17 @@ import type { PinStyle } from './pinPrefs';
 
 /**
  * Where pins go on screen (PLAN.md §4.3, DESIGN.md §2.4). Pure: positions are screen
- * pixels supplied by the map, sizes are measured from the real pins.
+ * pixels supplied by the map, sizes are measured from the real pins and cards.
  *  - Bubbles (if on): at zoom 10 and below, nearby buildings merge into one count.
- *  - Fans: each unit's plate takes the nearest free spot around its building (above first,
- *    then the sides, then below), so plates never cover each other. Fans opened by clicking
- *    (or holding the selected unit) always open; automatic ones (zoom 15 and up) open only
- *    if every unit fits.
- *  - Dots (if "shrink" is on): below zoom 11 every pin is a dot; from 11 up, only pins that
- *    would overlap something already placed. The selected pin always shows in full.
+ *  - Cards (owner review 4): an open building shows one card listing its units, joined to
+ *    its marker by a short line. A card never covers another card, pin, marker or dot, its
+ *    line never crosses another card or line, and there is always a gap for the line to
+ *    show. A card you opened always opens, off screen if it must; an automatic one (zoom
+ *    15 and up) opens only if it fits next to its building, on screen. Cards keep their
+ *    spot while it stays free, so they don't jump around as you pan.
+ *  - Dots (if "shrink" is on): below zoom 11 every pin is a dot; from 11 up, a pin is a dot
+ *    where it would overlap something or cover another building's point. The selected pin
+ *    always shows in full.
  * Hovering never changes the layout (the map shows a preview over the dot instead), so the
  * pins under the pointer can't flicker.
  */
@@ -62,7 +65,7 @@ export function pinRect(x: number, y: number, s: Size): Rect {
   return { left: x - s.w / 2, right: x + s.w / 2, top: y - s.h - TAIL, bottom: y };
 }
 
-/** A plate in a fan: centered on its spot (no tail; a leader line joins it to the hub). */
+/** A rectangle of size `s` centered on a point. */
 export function centeredRect(x: number, y: number, s: Size): Rect {
   return { left: x - s.w / 2, right: x + s.w / 2, top: y - s.h / 2, bottom: y + s.h / 2 };
 }
@@ -86,15 +89,15 @@ export function overlaps(a: Rect, b: Rect, gap = 2): boolean {
 const inside = (r: Rect, view: Size, margin: number) =>
   r.left >= margin && r.top >= margin && r.right <= view.w - margin && r.bottom <= view.h - margin;
 
-const overlapArea = (a: Rect, b: Rect) =>
-  Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) *
-  Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
-
-/** Where a leader line from the hub meets a plate: the plate's nearest edge point. */
-export function lineEnd(hub: Point, center: Point, s: Size): Point {
-  const r = centeredRect(center[0], center[1], s);
-  return [Math.min(Math.max(hub[0], r.left), r.right), Math.min(Math.max(hub[1], r.top), r.bottom)];
+/** The point of a rectangle nearest to `p` (`p` itself when inside). */
+export function nearestPoint(p: Point, r: Rect): Point {
+  return [Math.min(Math.max(p[0], r.left), r.right), Math.min(Math.max(p[1], r.top), r.bottom)];
 }
+
+const distanceTo = (p: Point, r: Rect) => {
+  const [x, y] = nearestPoint(p, r);
+  return Math.hypot(x - p[0], y - p[1]);
+};
 
 /** A rectangle grown by `d` on every side. */
 export const grow = (r: Rect, d: number): Rect => ({
@@ -144,37 +147,39 @@ export function segmentHitsRect(a: Point, b: Point, r: Rect): boolean {
   return true;
 }
 
-// ── Fans ───────────────────────────────────────────────────────────────────
-
-/**
- * The tray drawn around a fan (DESIGN.md §2.4): its plates padded by `TRAY_PAD`, the hub
- * circle and a band of `TRAY_BAND` around each leader line, all outlined by `TRAY_EDGE`.
- */
-export const TRAY_PAD = 5;
-export const TRAY_BAND = 5;
-export const TRAY_EDGE = 1.5;
-export const TRAY_HUB = 15;
-/** How far a tray reaches past its plates, plus a small gap so trays never touch. */
-const TRAY_SPACE = 2 * (TRAY_PAD + TRAY_EDGE) + 2 - 4; // minus GAP, added by the check
-/** How close another plate may come to a leader line (its tray band, the plate's tray, a gap). */
-const BAND_SPACE = TRAY_BAND + TRAY_EDGE + TRAY_PAD + TRAY_EDGE + 2;
+// ── Cards ──────────────────────────────────────────────────────────────────
 
 export type Segment = [Point, Point];
 
-const HUB_R = 13;
-/** How far other fans' lines stay from a fan's center. */
-const HUB_KEEP_OUT = 40;
-/** Pixels of extra distance a plate accepts per radian it turns from the preferred side. */
-const TURN_COST = 40;
-const GAP = 4;
-const R_START = 40;
-const R_STEP = 10;
-/** How far an automatic fan may spread before it gives up and stays collapsed. */
-export const AUTO_FAN_REACH = 190;
-/** How far a fan you opened may spread looking for free spots. */
-const FORCED_REACH = 420;
+/** Radius of an open building's marker (the ring at its point). */
+export const MARKER_R = 11;
+/** Closest a card comes to its marker's center, so a stretch of line always shows. */
+export const CARD_GAP = 32;
+/** An automatic card opens only if it fits this close to its building, on screen. */
+export const AUTO_CARD_REACH = 150;
+/** Space kept between a card and anything else. */
+const CARD_SPACE = 6;
+/**
+ * Clearance around other buildings' points, for cards and lines: their dot or marker, and
+ * up and to the right, the New tag a dot can carry.
+ */
+const POINT_KEEP = { left: 12, right: 28, top: 22, bottom: 12 };
+/** A card you opened looks for a spot on screen this close first, then anywhere. */
+const ON_SCREEN_REACH = 360;
+const MAX_REACH = 5000;
+/** Pixels of extra distance a card accepts per radian it turns from the preferred side. */
+const TURN_COST = 30;
+const SCREEN_MARGIN = 6;
 
 const UP = -Math.PI / 2;
+
+/** Where an open building's card sits, relative to the building's point. */
+export interface Card {
+  left: number;
+  top: number;
+  /** Where the line from the marker meets the card (its nearest edge point). */
+  end: Point;
+}
 
 /** Angles to try, nearest to `prefer` first (straight up by default), every 15°. */
 export function anglesFrom(prefer = UP): number[] {
@@ -188,8 +193,8 @@ export function anglesFrom(prefer = UP): number[] {
 }
 
 /**
- * The direction a fan should grow: up, unless other open fans are nearby, then away from
- * them (still leaning up), so each fan's plates stay together.
+ * The direction a card should go: up, unless other open buildings are nearby, then away
+ * from them (still leaning up).
  */
 export function preferredAngle(hub: Point, others: readonly Point[], near = 360): number {
   let vx = 0;
@@ -199,7 +204,7 @@ export function preferredAngle(hub: Point, others: readonly Point[], near = 360)
     const dy = hub[1] - y;
     const d = Math.hypot(dx, dy);
     if (d < 1 || d > near) continue;
-    const w = (near - d) / near; // closer fans push harder
+    const w = (near - d) / near; // closer buildings push harder
     vx += (dx / d) * w;
     vy += (dy / d) * w;
   }
@@ -207,104 +212,137 @@ export function preferredAngle(hub: Point, others: readonly Point[], near = 360)
 }
 
 /**
- * Finds a spot for each plate around the hub, in order, avoiding everything in `placed`
- * (which it extends) and, when it can, the other buildings' points and the screen edge.
- * Returns plate centers relative to the hub, or null when `strict` and a plate didn't fit
- * within `reach` (nothing is added to `placed` then).
+ * A card of `size` in direction `angle` from the hub (at 0,0), centered on that ray, with
+ * its nearest edge `dist` away.
  */
-export function placeFan(
+export function cardAt(size: Size, angle: number, dist: number): Rect {
+  const ux = Math.cos(angle);
+  const uy = Math.sin(angle);
+  const gapAt = (t: number) =>
+    Math.hypot(
+      Math.max(Math.abs(t * ux) - size.w / 2, 0),
+      Math.max(Math.abs(t * uy) - size.h / 2, 0),
+    );
+  let lo = 0;
+  let hi = dist + size.w + size.h;
+  for (let i = 0; i < 28; i++) {
+    const mid = (lo + hi) / 2;
+    if (gapAt(mid) < dist) lo = mid;
+    else hi = mid;
+  }
+  return centeredRect(Math.round(hi * ux), Math.round(hi * uy), size);
+}
+
+const shift = (r: Rect, [x, y]: Point): Rect => ({
+  left: r.left + x,
+  right: r.right + x,
+  top: r.top + y,
+  bottom: r.bottom + y,
+});
+
+/** What cards placed so far take up (shared between cards, extended by each). */
+export interface CardContext {
+  /** Cards, pins and the map's own controls. */
+  placed: Rect[];
+  /** Every building's point on screen (dots, pins and markers sit there). */
+  points: readonly Point[];
+  /** Lines of cards already placed. */
+  segments: Segment[];
+}
+
+/**
+ * Finds the nearest free spot for a building's card. Returns null when `strict` (an
+ * automatic card) and nothing fits close by on screen; nothing is added then.
+ */
+export function placeCard(
   hub: Point,
-  sizes: readonly Size[],
-  placed: Rect[],
+  size: Size,
+  ctx: CardContext,
   opts: {
-    reach: number;
     strict: boolean;
-    points?: readonly Point[];
     view?: Size;
-    /** Direction to try first (radians, screen coordinates); straight up by default. */
     prefer?: number;
-    /** Leader lines of fans already placed (shared, extended here). */
-    segments?: Segment[];
-    /** Other open fans' centers: lines keep a little way off them, so no fan is boxed in. */
-    hubs?: readonly Point[];
+    /** Where the card was last time (relative to the hub): kept while still free. */
+    prev?: { left: number; top: number };
   },
-): Point[] | null {
-  const local: Rect[] = [around(hub[0], hub[1], HUB_R)];
-  const lines: Segment[] = [];
+): Card | null {
+  const others = ctx.points
+    .filter(([x, y]) => Math.hypot(x - hub[0], y - hub[1]) > 0.5)
+    .map(([x, y]) => ({
+      left: x - POINT_KEEP.left,
+      right: x + POINT_KEEP.right,
+      top: y - POINT_KEEP.top,
+      bottom: y + POINT_KEEP.bottom,
+    }));
+
+  /** Whether the card at `r` (screen coordinates) and its line keep clear of everything. */
+  const free = (r: Rect, onScreen: boolean, lineRules: boolean): Point | null => {
+    if (onScreen && opts.view && !inside(r, opts.view, SCREEN_MARGIN)) return null;
+    if (distanceTo(hub, r) < CARD_GAP - 1) return null;
+    if (ctx.placed.some((p) => overlaps(p, r, CARD_SPACE))) return null;
+    if (others.some((p) => overlaps(p, r, 0))) return null;
+    const end = nearestPoint(hub, r);
+    if (!lineRules) return end;
+    if (ctx.segments.some(([a, b]) => segmentHitsRect(a, b, grow(r, 3)))) return null;
+    if (ctx.placed.some((p) => segmentHitsRect(hub, end, p))) return null;
+    if (others.some((p) => segmentHitsRect(hub, end, p))) return null;
+    if (ctx.segments.some(([a, b]) => segmentsCross(hub, end, a, b))) return null;
+    return end;
+  };
+
+  const take = (r: Rect, end: Point): Card => {
+    ctx.placed.push(r);
+    ctx.segments.push([hub, end]);
+    return { left: r.left - hub[0], top: r.top - hub[1], end: [end[0] - hub[0], end[1] - hub[1]] };
+  };
+
+  // Keep last time's spot while it's still free (and on screen, for an automatic card)
+  if (opts.prev) {
+    const r = shift(
+      {
+        left: opts.prev.left,
+        top: opts.prev.top,
+        right: opts.prev.left + size.w,
+        bottom: opts.prev.top + size.h,
+      },
+      hub,
+    );
+    const end = free(r, opts.strict, true);
+    if (end) return take(r, end);
+  }
+
   const prefer = opts.prefer ?? UP;
   const angles = anglesFrom(prefer);
-  const centers: Point[] = [];
-  const pts = (opts.points ?? []).map(([x, y]) => around(x, y, 8));
-  const others = opts.segments ?? [];
-  const blocked = (r: Rect) =>
-    placed.some((p) => overlaps(p, r, GAP)) ||
-    local.some((p) => overlaps(p, r, GAP)) ||
-    others.some(([a, b]) => segmentHitsRect(a, b, grow(r, BAND_SPACE)));
-  /** The line to this plate would cross another plate, tray or line (its own included). */
-  const lineCrosses = (end: Point) =>
-    placed.some((p) => segmentHitsRect(hub, end, p)) ||
-    local.slice(1).some((p) => segmentHitsRect(hub, end, grow(p, TRAY_PAD))) ||
-    others.some(([a, b]) => segmentsCross(hub, end, a, b)) ||
-    (opts.hubs ?? []).some(([x, y]) => segmentHitsRect(hub, end, around(x, y, HUB_KEEP_OUT)));
-
-  for (const size of sizes) {
-    let best: { c: Point; r: Rect } | null = null;
-    // Each pass takes the cheapest spot: distance from the hub plus a cost for turning away
-    // from the preferred direction, so a fan keeps to its side. Passes relax in order:
-    //  1. free, on screen, off other buildings' points, its line crossing nothing
-    //  2. the same, but it may cover another building's point
-    //  3. free and its line crossing nothing, even partly off screen (a fan you opened)
-    //  4. just free
-    // Plates move farther out before a line is allowed to cut through another building.
-    for (const pass of [1, 2, 3, 4] as const) {
-      let bestCost = Infinity;
-      for (let rad = R_START; rad <= opts.reach && rad < bestCost; rad += R_STEP) {
-        for (const a of angles) {
-          const cost = rad + TURN_COST * Math.abs(a - prefer);
-          if (cost >= bestCost) continue;
-          const c: Point = [
-            Math.round(hub[0] + rad * Math.cos(a)),
-            Math.round(hub[1] + rad * Math.sin(a)),
-          ];
-          const r = centeredRect(c[0], c[1], size);
-          if (blocked(r)) continue;
-          // Automatic fans must always fit fully on screen
-          if ((pass <= 2 || opts.strict) && opts.view && !inside(r, opts.view, 4)) continue;
-          if (pass === 1 && pts.some((p) => overlaps(p, r, 0))) continue;
-          if (pass <= 3 && lineCrosses(lineEnd(hub, c, size))) continue;
-          best = { c, r };
+  /** The cheapest free spot within `reach`: distance plus a cost for turning away. */
+  const search = (reach: number, onScreen: boolean, lineRules: boolean) => {
+    let best: { r: Rect; end: Point } | null = null;
+    let bestCost = Infinity;
+    for (let d = CARD_GAP; d <= reach && d < bestCost; d += d < 200 ? 6 : Math.round(d * 0.04)) {
+      for (const a of angles) {
+        const cost = d + TURN_COST * Math.abs(a - prefer);
+        if (cost >= bestCost) continue;
+        const r = shift(cardAt(size, a, d), hub);
+        const end = free(r, onScreen, lineRules);
+        if (end) {
+          best = { r, end };
           bestCost = cost;
         }
       }
-      if (best) break;
     }
-    if (!best) {
-      if (opts.strict) return null;
-      // A fan you opened always opens: take the spot that covers the least.
-      let least = Infinity;
-      for (let rad = R_START; rad <= FORCED_REACH; rad += R_STEP * 2)
-        for (const a of angles) {
-          const c: Point = [
-            Math.round(hub[0] + rad * Math.cos(a)),
-            Math.round(hub[1] + rad * Math.sin(a)),
-          ];
-          const r = centeredRect(c[0], c[1], size);
-          const cover = [...placed, ...local].reduce((n, p) => n + overlapArea(p, r), 0);
-          if (cover < least) {
-            least = cover;
-            best = { c, r };
-          }
-        }
-    }
-    const chosen = best as { c: Point; r: Rect };
-    local.push(chosen.r);
-    lines.push([hub, lineEnd(hub, chosen.c, size)]);
-    centers.push([chosen.c[0] - hub[0], chosen.c[1] - hub[1]]);
-  }
-  // Others keep clear of the whole tray: its plates (grown by the tray) and its lines
-  placed.push(...local.map((r) => grow(r, TRAY_SPACE)));
-  others.push(...lines);
-  return centers;
+    return best;
+  };
+
+  // In order: close by on screen; then anywhere, off screen if need be (a card you opened);
+  // then, only if truly boxed in, letting its line cross something.
+  const found = opts.strict
+    ? search(AUTO_CARD_REACH, true, true)
+    : (search(ON_SCREEN_REACH, true, true) ??
+      search(MAX_REACH, false, true) ??
+      search(MAX_REACH, false, false));
+  if (found) return take(found.r, found.end);
+  if (opts.strict) return null;
+  const r = shift(cardAt(size, prefer, CARD_GAP), hub);
+  return take(r, nearestPoint(hub, r));
 }
 
 // ── The whole layout ───────────────────────────────────────────────────────
@@ -315,28 +353,32 @@ export interface LayoutBuilding {
   y: number;
   /** Its collapsed (or single-unit) pin, measured. */
   size: Size;
-  /** Plates of its units in fan order, when it can fan out. */
-  unitSizes?: Size[];
+  /** Its card, when it can open (a building with several units). */
+  cardSize?: Size;
   /** Open regardless (clicked, or holds the selected unit). */
   forced: boolean;
-  /** May open by itself (automatic fan-out on, zoomed in, not folded by hand). */
+  /** May open by itself (automatic opening on, zoomed in, not closed by hand). */
   auto: boolean;
   /** Always drawn in full (the selected pin). */
   keepFull: boolean;
+  /** Cards you opened are placed in the order you opened them. */
+  order?: number;
+  /** Where its card was in the last layout, relative to its point. */
+  prev?: { left: number; top: number };
 }
 
 export interface Layout {
-  /** Fanned buildings: each unit's plate center, relative to the building's point. */
-  fans: Map<string, Point[]>;
+  /** Open buildings' cards, relative to the building's point. */
+  cards: Map<string, Card>;
   /** Collapsed pins drawn in full; the rest are dots. */
   full: Set<string>;
-  /** Fans that opened by themselves. */
+  /** Cards that opened by themselves. */
   autoOpen: string[];
 }
 
 /**
  * Lays out the pins in view. `buildings` come in priority order (cheapest first): earlier
- * ones get their plate and their fan first.
+ * ones get their plate first.
  */
 export function layoutPins(
   buildings: readonly LayoutBuilding[],
@@ -348,86 +390,74 @@ export function layoutPins(
     reserved?: readonly Rect[];
   },
 ): Layout {
-  const placed: Rect[] = [...(opts.reserved ?? [])];
-  const fans = new Map<string, Point[]>();
+  const ctx: CardContext = {
+    placed: [...(opts.reserved ?? [])],
+    points: buildings.map((b) => [b.x, b.y] as Point),
+    segments: [],
+  };
+  const cards = new Map<string, Card>();
   const full = new Set<string>();
   const autoOpen: string[] = [];
-  const points: Point[] = buildings.map((b) => [b.x, b.y]);
-  const segments: Segment[] = [];
-  const pointsBut = (id: string) => points.filter((_, i) => buildings[i]?.id !== id);
+  const hubOf = (b: LayoutBuilding): Point => [b.x, b.y];
 
   // 1. The selected pin, when it's a single or collapsed one
   for (const b of buildings)
     if (b.keepFull && !b.forced) {
-      placed.push(pinRect(b.x, b.y, b.size));
+      ctx.placed.push(pinRect(b.x, b.y, b.size));
       full.add(b.id);
     }
 
-  // 2. Fans you opened (and the one holding the selected unit) always open, each growing
-  // away from the other open ones
-  const forcedHubs = buildings
-    .filter((b) => b.forced && b.unitSizes)
-    .map((b) => [b.x, b.y] as Point);
-  // Every open fan's center is taken before any plates go down, so an earlier fan's
-  // plates can't cover a later fan's hub
-  const hubKeep = (h: Point) => around(h[0], h[1], TRAY_HUB + TRAY_EDGE + 2);
-  const hubRects = forcedHubs.map(hubKeep);
-  placed.push(...hubRects);
-  for (const b of buildings) {
-    if (!b.forced || !b.unitSizes) continue;
-    const hub: Point = [b.x, b.y];
-    // Its own reserved center mustn't count against its own lines
-    const own = placed.findIndex((r) => r.left === hubKeep(hub).left && r.top === hubKeep(hub).top);
-    if (own >= 0) placed.splice(own, 1);
-    const c = placeFan(hub, b.unitSizes, placed, {
-      reach: FORCED_REACH,
+  // 2. Without shrinking, every pin shows in full, so cards make room for them
+  if (!opts.shrink)
+    for (const b of buildings)
+      if (!b.forced && !b.auto && !full.has(b.id)) ctx.placed.push(pinRect(b.x, b.y, b.size));
+
+  // 3. Cards you opened (and the one holding the selected unit) always open, in the order
+  // you opened them, each leaning away from the other open ones
+  const forced = buildings
+    .filter((b) => b.forced && b.cardSize)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const forcedHubs = forced.map(hubOf);
+  for (const b of forced) {
+    const card = placeCard(hubOf(b), b.cardSize as Size, ctx, {
       strict: false,
-      points: pointsBut(b.id),
       view: opts.view,
-      prefer: preferredAngle(hub, forcedHubs),
-      segments,
-      hubs: forcedHubs.filter(([x, y]) => x !== hub[0] || y !== hub[1]),
+      prefer: preferredAngle(hubOf(b), forcedHubs),
+      prev: b.prev,
     });
-    if (c) fans.set(b.id, c);
+    if (card) cards.set(b.id, card);
   }
 
-  // 3. Automatic fans, only where every unit fits
+  // 4. Automatic cards, only where they fit next to their building
   for (const b of buildings) {
-    if (!b.auto || b.forced || !b.unitSizes || fans.has(b.id)) continue;
-    // Its own collapsed pin isn't drawn when it fans out, but other plates must not cover
-    // the point, so the hub reserves it.
-    const hub: Point = [b.x, b.y];
-    const c = placeFan(hub, b.unitSizes, placed, {
-      reach: AUTO_FAN_REACH,
+    if (!b.auto || b.forced || !b.cardSize || cards.has(b.id)) continue;
+    const open = [...cards.keys()].map((id) => hubOf(buildings.find((x) => x.id === id)!));
+    const card = placeCard(hubOf(b), b.cardSize, ctx, {
       strict: true,
-      points: pointsBut(b.id),
       view: opts.view,
-      prefer: preferredAngle(
-        hub,
-        [...fans.keys()].map((id) => {
-          const o = buildings.find((x) => x.id === id)!;
-          return [o.x, o.y] as Point;
-        }),
-      ),
-      segments,
+      prefer: preferredAngle(hubOf(b), open),
+      prev: b.prev,
     });
-    if (c) {
-      fans.set(b.id, c);
+    if (card) {
+      cards.set(b.id, card);
       autoOpen.push(b.id);
     }
   }
 
-  // 4. Everything else: in full where it fits, a dot where it doesn't
+  // 5. Everything else: in full where it fits, a dot where it doesn't. A pin that would
+  // cover another building's point shrinks too, so no dot hides under a plate.
+  const pointRects = buildings.map((b) => ({ id: b.id, r: around(b.x, b.y, 4) }));
   for (const b of buildings) {
-    if (fans.has(b.id) || full.has(b.id)) continue;
+    if (cards.has(b.id) || full.has(b.id)) continue;
     const rect = pinRect(b.x, b.y, b.size);
     const fits =
-      !placed.some((p) => overlaps(p, rect)) &&
-      !segments.some(([a, c]) => segmentHitsRect(a, c, grow(rect, TRAY_BAND + TRAY_EDGE)));
+      !ctx.placed.some((p) => overlaps(p, rect)) &&
+      !ctx.segments.some(([a, c]) => segmentHitsRect(a, c, grow(rect, 2))) &&
+      !pointRects.some((p) => p.id !== b.id && overlaps(p.r, rect, 0));
     if (!opts.shrink || b.keepFull || (opts.zoom >= STREET_ZOOM && fits)) {
-      placed.push(rect);
+      ctx.placed.push(rect);
       full.add(b.id);
     }
   }
-  return { fans, full, autoOpen };
+  return { cards, full, autoOpen };
 }

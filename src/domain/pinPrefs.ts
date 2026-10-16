@@ -43,6 +43,9 @@ export type ColorBy = (typeof COLOR_BY)[number];
 
 export type PinView = 'units' | 'buildings';
 
+/** Pin size, in percent of the standard size (owner review 4): pins, dots and cards. */
+export const PIN_SIZE = { min: 70, max: 130, step: 5, normal: 100 } as const;
+
 const fields = z
   .array(z.string())
   .transform((list) => PIN_FIELDS.filter((f) => list.includes(f) && !PENDING_FIELDS[f]));
@@ -58,6 +61,7 @@ const pinPrefsSchema = (d: PinPrefs) =>
     autoFan: z.boolean().catch(d.autoFan),
     shrink: z.boolean().catch(d.shrink),
     bubbles: z.boolean().catch(d.bubbles),
+    size: z.number().int().min(PIN_SIZE.min).max(PIN_SIZE.max).catch(d.size),
   });
 
 export interface PinPrefs {
@@ -69,12 +73,14 @@ export interface PinPrefs {
   colorBy: ColorBy;
   newBadge: NewBadge;
   rejected: RejectedMode;
-  /** Units view: fan out every building with room for it at street zoom. */
+  /** Units view: open the card of every building with room for it at street zoom. */
   autoFan: boolean;
   /** Shrink pins to dots where they would overlap. */
   shrink: boolean;
   /** Group nearby buildings into bubbles when zoomed out. */
   bubbles: boolean;
+  /** Pin size in percent (`PIN_SIZE`). */
+  size: number;
 }
 
 export type BaseLayer = (typeof BASE_LAYERS)[number];
@@ -95,6 +101,7 @@ const base: Omit<PinPrefs, 'fields'> = {
   autoFan: true,
   shrink: true,
   bubbles: true,
+  size: PIN_SIZE.normal,
 };
 
 export function defaultMapMemory(): MapMemory {

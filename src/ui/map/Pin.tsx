@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
+import { accessibleName } from '../../domain/pins';
 import type { PinContent } from '../../domain/pins';
 import type { PinStyle } from '../../domain/pinPrefs';
 import type { UnitType } from '../../model';
@@ -39,8 +40,6 @@ export interface PinProps {
   faded: boolean;
   /** Shrunk to a dot because the map is zoomed out or crowded. */
   dot: boolean;
-  /** In a fan: centered on its spot, no tail (a leader line joins it to the hub). */
-  inFan?: boolean;
   /** Its card is under the pointer: outlined. */
   hot?: boolean;
   newMark: 'dot' | 'tag' | null;
@@ -70,7 +69,7 @@ function ring(colors: readonly string[]): string {
     .join(', ')})`;
 }
 
-function Segments({ content }: { content: PinContent }) {
+export function Segments({ content }: { content: PinContent }) {
   return (
     <>
       {content.typeIcon && (
@@ -117,7 +116,6 @@ export function Pin(p: PinProps) {
   if (p.selected) cls.push(styles.sel);
   if (p.rejected) cls.push(styles.rej);
   if (p.faded) cls.push(styles.faded);
-  if (p.inFan) cls.push(styles.inFan);
   if (p.hot) cls.push(styles.hot);
   const empty = !p.content.typeIcon && !p.content.segments.length;
 
@@ -162,12 +160,14 @@ export function Pin(p: PinProps) {
 
   // The accessible name starts with what the pin visibly says (WCAG 2.5.3, label in name),
   // so "click $1,650" works with voice control; the description follows.
-  const visible = [
-    ...(asDot ? [] : p.content.segments.map((s) => s.text)),
-    multi ? String(p.count) : null,
-    p.newMark === 'tag' ? 'New' : null,
-  ].filter(Boolean);
-  const name = visible.length ? `${visible.join(' ')}, ${p.label}` : p.label;
+  const name = accessibleName(
+    [
+      ...(asDot ? [] : p.content.segments.map((s) => s.text)),
+      multi ? String(p.count) : null,
+      p.newMark === 'tag' ? 'New' : null,
+    ],
+    p.label,
+  );
 
   return (
     <button

@@ -61,6 +61,7 @@ describe('pin preferences', () => {
       autoFan: true,
       shrink: true,
       bubbles: true,
+      size: 100,
     });
     expect(defaultMapMemory().pins.buildings.autoFan).toBe(false);
   });
@@ -97,6 +98,15 @@ describe('pin preferences', () => {
     expect(parseMapMemory(null).sharperRaster).toBe(false);
     expect(parseMapMemory({ sharperRaster: true }).sharperRaster).toBe(true);
     expect(parseMapMemory({ sharperRaster: 'yes' }).sharperRaster).toBe(false);
+  });
+
+  it('keeps a pin size within 70–130%, defaulting older saved choices to 100%', () => {
+    const size = (v: unknown) => parseMapMemory({ pins: { units: { size: v } } }).pins.units.size;
+    expect(size(85)).toBe(85);
+    expect(size(undefined)).toBe(100);
+    expect(size(300)).toBe(100);
+    expect(size(12.5)).toBe(100);
+    expect(parseMapMemory({ pins: { units: { style: 'dot' } } }).pins.units.size).toBe(100);
   });
 });
 

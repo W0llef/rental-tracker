@@ -42,12 +42,14 @@ browser for that exact web address. That means:
   rating, unit type icon); the New badge; the colors; and whether rejected units show, fade or
   hide. The color legend is in this panel too.
 - A building with several units shows one pin with what's true of all of them: rent range, a
-  count, a stripe per unit, and New if any unit is new. Click it to **fan out** its units; fans
-  stay open, and you can open several. The × at a fan's center folds it; **Collapse all** or
-  `Esc` folds them all. Zoomed in to street level, buildings fan out by themselves where there's
-  room (you can turn that off). Each open building's units sit in their own outlined tray, colored
-  to stand out on the current map; plates find free space so trays don't overlap. Point at a fan to
-  fade the others.
+  count, a stripe per unit, and New if any unit is new. Click it to **open its card**: one row
+  per unit with the same details, joined to the building's marker by a short line. Cards stay
+  open, and you can open several; they never cover each other, other pins or dots (they move
+  further out, even past the edge of the map, instead). Close one with its ✕ or by clicking its
+  marker; **Collapse all** or `Esc` closes them all. The building's name on the card opens the
+  building. Zoomed in to street level, buildings open by themselves where their card fits (you
+  can turn that off). Point at a card to fade the others; with photo pins, point at a thumbnail
+  for a bigger picture. **Pin size** in the Pins panel makes pins and cards smaller or larger.
 - Zoomed out, nearby buildings merge into round **bubbles** with a unit count, and crowded pins
   shrink to **dots**; both can be turned off. Point at a card to see its pin in full, or at a pin
   to highlight its cards.

@@ -181,6 +181,12 @@ export const segmentsText = (c: PinContent): string => c.segments.map((s) => s.t
 
 // ── Spoken names ───────────────────────────────────────────────────────────
 
+/** "$1,650 New, Riverlight, Unit 1504, …": what's visible first (WCAG 2.5.3, label in name). */
+export function accessibleName(visible: readonly (string | null)[], label: string): string {
+  const shown = visible.filter(Boolean);
+  return shown.length ? `${shown.join(' ')}, ${label}` : label;
+}
+
 /** "Riverlight, Unit 1504, $1,650 rent, Shortlisted". */
 export function unitPinLabel(row: PinUnit): string {
   const u = row.unit;

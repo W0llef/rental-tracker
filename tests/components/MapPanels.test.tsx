@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { legendFor } from '../../src/domain/pins';
@@ -83,17 +83,37 @@ describe('PinsPanel', () => {
     render(<PinsHarness log={[]} />);
     expect(screen.getByText(/For the Units view/)).toBeInTheDocument();
     expect(
-      screen.getByRole('checkbox', { name: 'Fan out buildings when zoomed in' }),
+      screen.getByRole('checkbox', {
+        name: 'Open buildings’ cards when zoomed in, where they fit',
+      }),
     ).toBeChecked();
     expect(screen.queryByRole('group', { name: 'Settings for' })).toBeNull();
   });
 
-  it('in the Buildings view: building name, no fan-out option', async () => {
+  it('sizes pins with a slider, and resets it', async () => {
+    const user = userEvent.setup();
+    const log: PinPrefs[] = [];
+    render(<PinsHarness log={log} />);
+    const slider = screen.getByRole('slider', { name: 'Pin size' });
+    expect(slider).toHaveValue('100');
+    expect(screen.queryByRole('button', { name: 'Reset to 100%' })).toBeNull();
+    fireEvent.change(slider, { target: { value: '80' } });
+    expect(log.at(-1)?.size).toBe(80);
+    expect(slider).toHaveAttribute('aria-valuetext', '80%');
+    await user.click(screen.getByRole('button', { name: 'Reset to 100%' }));
+    expect(log.at(-1)?.size).toBe(100);
+  });
+
+  it('in the Buildings view: building name, no automatic opening', async () => {
     const user = userEvent.setup();
     const log: PinPrefs[] = [];
     render(<PinsHarness view="buildings" log={log} />);
     expect(screen.getByText(/For the Buildings view/)).toBeInTheDocument();
-    expect(screen.queryByRole('checkbox', { name: 'Fan out buildings when zoomed in' })).toBeNull();
+    expect(
+      screen.queryByRole('checkbox', {
+        name: 'Open buildings’ cards when zoomed in, where they fit',
+      }),
+    ).toBeNull();
     await user.click(screen.getByRole('checkbox', { name: 'Building name' }));
     expect(log.at(-1)?.fields).toEqual(['rent', 'unit']);
   });
