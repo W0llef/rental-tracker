@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import type { PinContent } from '../../domain/pins';
 import type { PinStyle } from '../../domain/pinPrefs';
@@ -93,6 +94,23 @@ function Segments({ content }: { content: PinContent }) {
  * colored stripes (one per unit), a tail pointing at the building, and navy when selected.
  */
 export function Pin(p: PinProps) {
+  // A pin can disappear under the pointer (clicking a building swaps it for its fan) without
+  // a "pointer left" event; let go of the hover then, or its card would stay highlighted.
+  const hovered = useRef(false);
+  const onHover = useRef(p.onHover);
+  useEffect(() => {
+    onHover.current = p.onHover;
+  });
+  useEffect(
+    () => () => {
+      if (hovered.current) onHover.current(false);
+    },
+    [],
+  );
+  const hover = (on: boolean) => {
+    hovered.current = on;
+    p.onHover(on);
+  };
   const multi = p.count > 1;
   const asDot = p.dot || p.style === 'dot';
   const cls = [styles.pin];
@@ -165,10 +183,10 @@ export function Pin(p: PinProps) {
         e.stopPropagation();
         p.onClick();
       }}
-      onMouseEnter={() => p.onHover(true)}
-      onMouseLeave={() => p.onHover(false)}
-      onFocus={() => p.onHover(true)}
-      onBlur={() => p.onHover(false)}
+      onMouseEnter={() => hover(true)}
+      onMouseLeave={() => hover(false)}
+      onFocus={() => hover(true)}
+      onBlur={() => hover(false)}
     >
       {inner}
       {p.newMark === 'dot' && <span className={styles.newb} aria-hidden="true" />}

@@ -190,10 +190,12 @@ test.describe('map (preview/dev build)', () => {
       .click();
     await expect(fans).toHaveCount(2);
 
-    // Clicking empty map leaves them open
+    // Clicking empty map leaves them open, and nothing stays highlighted or dimmed
     await map(page)
       .locator('canvas')
       .click({ position: { x: 20, y: 300 } });
+    await expect(page.getByRole('list', { name: 'Units' }).locator('[data-hover]')).toHaveCount(0);
+    await expect(map(page).locator('[data-fan][class*="dimFan"]')).toHaveCount(0);
     await expect(fans).toHaveCount(2);
 
     // The hub folds one; Collapse all folds the rest
