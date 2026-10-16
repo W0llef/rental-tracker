@@ -20,6 +20,18 @@ browser for that exact web address. That means:
   **Restore** (arrives in milestone M5).
 - Clearing "site data" for the page erases your units. Keep backups.
 
+### Browsing your units
+
+- The list shows every unit with its rent, size, status and markers. **Units / Buildings** switches
+  to one card per building.
+- **Search** (top bar, or press `/`) matches unit numbers, floor plans, building names, addresses,
+  neighborhoods and notes.
+- **Sort** by rent, available date, size, bedrooms, rating, listing age and more; the arrow flips
+  the direction. Units with an unknown value always sort last. The app remembers your sort.
+- Click a card to open its details; **Back**, `Esc` or the × closes them. On a phone the details
+  open in the **Unit** tab.
+- Keys: `↓`/`J` and `↑`/`K` move through the list, `B` switches Units / Buildings.
+
 ## Running it on your computer (for development)
 
 You need [Node.js](https://nodejs.org) 22 or newer.
