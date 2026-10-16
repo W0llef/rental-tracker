@@ -33,14 +33,13 @@
 }
 
 .pin {
-  --edge: var(--st-reviewing);
   position: absolute;
   left: 0;
   top: 0;
   transform: translate(-50%, calc(-100% - 7px));
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 0;
   height: 26px;
   padding: 0 9px 0 13px;
   margin: 0;
@@ -53,18 +52,6 @@
   white-space: nowrap;
   box-shadow: 0 1px 2px rgba(15, 46, 68, 0.28);
   cursor: pointer;
-}
-
-/* Status (or label, or price) edge */
-.pin::before {
-  content: '';
-  position: absolute;
-  left: -1px;
-  top: -1px;
-  bottom: -1px;
-  width: 6px;
-  background: var(--edge);
-  border-radius: 5px 0 0 5px;
 }
 
 /* Tail pointing at the building */
@@ -86,6 +73,55 @@
   outline-offset: 2px;
 }
 
+/* Status (or label, or price) edge: one stripe per unit */
+.edge {
+  position: absolute;
+  left: -1px;
+  top: -1px;
+  bottom: -1px;
+  width: 6px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 5px 0 0 5px;
+  overflow: hidden;
+}
+
+.edge i,
+.bar i {
+  flex: 1;
+}
+
+.sel .edge {
+  width: 7px;
+}
+
+/* Fields: one segment each, divided by hairlines; price reads first */
+.pseg {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  padding: 2px 0 0;
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--slate);
+}
+
+.pseg + .pseg {
+  margin-left: 7px;
+  padding-left: 7px;
+  border-left: 1px solid var(--ice);
+}
+
+.ico + .pseg {
+  margin-left: 5px;
+}
+
+.f-rent {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--ink);
+}
+
 .txt {
   padding-top: 2px;
 }
@@ -100,25 +136,21 @@
   height: 15px;
 }
 
-.sx {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--slate);
-  padding-top: 2px;
-}
-
 .cnt {
   display: inline-grid;
   place-items: center;
   min-width: 17px;
   height: 16px;
+  margin-left: 6px;
   padding: 1px 4px 0;
   border-radius: 8px;
   background: var(--river);
   color: var(--on-river);
   font-size: 11px;
+  font-weight: 800;
 }
 
+/* New: a dot, or a tag that says so */
 .newb {
   position: absolute;
   top: -6px;
@@ -130,37 +162,53 @@
   border: 2.5px solid var(--surface);
 }
 
+.newTag {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  padding: 2px 4px 1px;
+  border-radius: 3px;
+  background: var(--plow);
+  color: #3a2a00;
+  border: 1.5px solid var(--surface);
+  font: 800 10px/1 var(--font);
+  letter-spacing: 0.01em;
+}
+
 /* Selected: navy sign plate */
 .sel {
   height: 34px;
-  font-size: 17px;
   background: var(--river);
   color: var(--on-river);
   border-color: var(--river);
   padding-left: 15px;
 }
 
-.sel::before {
-  width: 7px;
-}
-
-.sel .ico,
-.sel .sx {
+.sel .pseg,
+.sel .f-rent,
+.sel .ico {
   color: var(--on-river);
 }
 
-/* Rejected: dashed, struck through, no edge; faded when "Fade rejected units" is on */
+.sel .f-rent {
+  font-size: 17px;
+}
+
+.sel .pseg + .pseg {
+  border-left-color: color-mix(in srgb, var(--on-river) 35%, transparent);
+}
+
+/* Rejected: dashed, struck through, no edge; faded when "Fade" is chosen */
 .rej {
   border-style: dashed;
   box-shadow: none;
 }
 
-.rej .txt {
+.rej .pseg {
   text-decoration: line-through;
-  font-weight: 600;
 }
 
-.rej::before {
+.rej .edge {
   display: none;
 }
 
@@ -168,28 +216,43 @@
   opacity: 0.55;
 }
 
-/* Photo pins: a frame with the edge as a bar under the photo */
+/* Photo pins: the photo, a stripe bar under it, the fields as a caption */
 .photo {
   height: auto;
   padding: 3px;
   flex-direction: column;
-  gap: 0;
+  align-items: stretch;
 }
 
-.photo::before {
-  left: 3px;
-  right: 3px;
-  top: auto;
-  bottom: 3px;
-  width: auto;
+.bar {
+  display: flex;
   height: 5px;
+  margin-top: 2px;
   border-radius: 0 0 3px 3px;
+  overflow: hidden;
+}
+
+.caption {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3px 4px 1px;
+  height: 20px;
+}
+
+.caption .pseg {
+  font-size: 11.5px;
+}
+
+.caption .f-rent {
+  font-size: 12px;
 }
 
 .photo .cnt {
   position: absolute;
   top: -7px;
-  right: -7px;
+  left: -7px;
+  margin: 0;
 }
 
 .photo.sel {
@@ -199,6 +262,7 @@
 .noph {
   width: 46px;
   height: 46px;
+  align-self: center;
   display: grid;
   place-items: center;
   background: var(--frost);
@@ -216,22 +280,12 @@
   height: 64px;
 }
 
-.iconOnly {
-  padding: 0 8px 0 12px;
-}
-
-.iconOnly .ico svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* Dots: "Dot only", or shrunk when crowded */
+/* Dots: the "Dot" style, or shrunk when crowded; the ring shows each unit's color */
 .dot {
   width: 16px;
   height: 16px;
   padding: 0;
   border-radius: 50%;
-  background: var(--edge);
   border: 2.5px solid var(--surface);
   transform: translate(-50%, -50%);
   justify-content: center;
@@ -239,7 +293,6 @@
   font-size: 11px;
 }
 
-.dot::before,
 .dot::after {
   display: none;
 }
@@ -251,14 +304,14 @@
 
 .dot.multi .txt {
   padding-top: 1px;
-  text-shadow: 0 0 2px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.7);
 }
 
 .dot.sel {
   width: 22px;
   height: 22px;
+  padding: 0;
   box-shadow: 0 0 0 3px var(--river);
-  background: var(--edge);
 }
 
 .dot .newb {
@@ -267,6 +320,11 @@
   width: 9px;
   height: 9px;
   border-width: 2px;
+}
+
+.dot .newTag {
+  top: -12px;
+  right: -16px;
 }
 
 .dot.rej {
@@ -300,10 +358,31 @@
   opacity: 0.7;
 }
 
-.fanHub {
-  fill: var(--river);
-  stroke: var(--surface);
-  stroke-width: 3;
+.hub {
+  position: absolute;
+  left: -11px;
+  top: -11px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--river);
+  color: var(--on-river);
+  border: 3px solid var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 46, 68, 0.35);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.hub svg {
+  width: 10px;
+  height: 10px;
+}
+
+.hub:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: 2px;
 }
 
 .fanned {
@@ -506,7 +585,7 @@
   font-size: 12px;
 }
 
-.legend ul {
+.legendRows {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -514,7 +593,7 @@
   gap: 3px;
 }
 
-.legend li {
+.legendRows li {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -896,4 +975,82 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ── Pins panel extras, base-map keys, Collapse all ── */
+
+.lsub {
+  margin: 10px 0 2px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.lsub.off {
+  color: var(--slate);
+}
+
+.inlineLegend {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  font-size: 12px;
+  display: grid;
+  gap: 3px;
+}
+
+.keyRows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  font-size: 12.5px;
+}
+
+.keyRows li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.keySwatch {
+  width: 18px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid var(--ice);
+  flex: none;
+}
+
+.lnote a {
+  color: var(--lake);
+}
+
+.collapseBtn {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 12.5px var(--font);
+  cursor: pointer;
+}
+
+.collapseBtn:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: 1px;
+}
+
+.btnRow {
+  display: flex;
+  gap: var(--s2);
+}
+
+@media (max-width: 759px) {
+  .collapseBtn {
+    height: 44px;
+  }
 }

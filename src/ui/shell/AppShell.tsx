@@ -34,7 +34,7 @@ export function AppShell() {
   const navigate = useNavigate();
 
   const data = useDataset();
-  const { query, unitSort, buildingSort, view, toggleView, toggleLayers } = useUi();
+  const { query, unitSort, buildingSort, view, toggleView, togglePanel } = useUi();
   const listView = useMemo(
     () => (data ? deriveListView(data, query, unitSort, buildingSort) : undefined),
     [data, query, unitSort, buildingSort],
@@ -53,15 +53,15 @@ export function AppShell() {
   const search = useRef<HTMLInputElement>(null);
   useListKeys({
     focusSearch: () => search.current?.focus(),
-    // Esc: close the layers panel, then a fan-out opened by clicking, then the details
+    // Esc: close a map panel, then fold the fans you opened, then close the details
     close: () => {
       const ui = useUi.getState();
-      if (ui.layersOpen) ui.setLayersOpen(false);
-      else if (ui.fannedId) ui.setFanned(null);
+      if (ui.panel) ui.setPanel(null);
+      else if (ui.openFans.length) ui.collapseFans();
       else if (selectedKey) navigate('/');
     },
     toggleView,
-    toggleLayers,
+    toggleLayers: () => togglePanel('layers'),
     move: (delta) => {
       if (!listView) return;
       const keys =

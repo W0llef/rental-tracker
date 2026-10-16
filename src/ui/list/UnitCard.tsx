@@ -17,9 +17,12 @@ export function UnitCard({
   row,
   selected,
   settings,
+  hovered = false,
 }: {
   row: UnitRow;
   selected: boolean;
+  /** Its pin is under the pointer on the map. */
+  hovered?: boolean;
   settings: Settings;
 }) {
   const { unit: u, building: b } = row;
@@ -34,6 +37,7 @@ export function UnitCard({
       className={styles.card}
       data-dim={rejected || undefined}
       aria-current={selected ? 'true' : undefined}
+      data-hover={hovered || undefined}
       data-key={`unit:${u.id}`}
     >
       <span className={styles.thumb}>

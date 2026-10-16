@@ -1,18 +1,7 @@
 import { useEffect, useRef } from 'react';
-import {
-  PIN_SHOW_LABELS,
-  PIN_SHOW_PENDING,
-  PRICE_COLOR_LABEL,
-  effectivePinShow,
-} from '../../domain/pins';
-import type { ColorBy } from '../../domain/pins';
-import { PIN_CONTENTS } from '../../model';
-import type { MapPrefs, PinContent } from '../../model';
+import type { BaseLayer } from '../../domain/pinPrefs';
 import { BASE_MAPS } from './baseMaps';
 import styles from './map.module.css';
-
-/** A change to the map preferences, with the words the change log records. */
-export type MapPrefsChange = (prefs: MapPrefs) => MapPrefs;
 
 const OVERLAYS = [
   'Skyway routes',
@@ -24,42 +13,98 @@ const OVERLAYS = [
   'Reachable within N minutes',
 ];
 
-const COLOR_OPTIONS: { id: ColorBy; label: string }[] = [
-  { id: 'status', label: 'Status' },
-  { id: 'label', label: 'Label' },
-  { id: 'price', label: PRICE_COLOR_LABEL },
-];
+function ExtLink({ href, children }: { href: string; children: string }) {
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer">
+      {children}
+      <span className={styles.vh}> (opens in a new tab)</span>
+    </a>
+  );
+}
 
-const PENDING_TITLE: Record<string, string> = {
-  M8: 'Arrives with total cost (M8)',
-  'Phase 2': 'Needs destinations (Phase 2)',
-};
+/** Wayfinding uses our own colors (DESIGN.md §2.5), so its key is drawn from the tokens. */
+const WAYFINDING_KEY = [
+  ['--map-water', 'Water'],
+  ['--map-park', 'Parks'],
+  ['--map-bldg', 'Buildings'],
+  ['--map-hwy', 'Highways'],
+  ['--map-road', 'Streets'],
+] as const;
+
+/** The key for the chosen base map: our own for Wayfinding, the publisher's for the rest. */
+function BaseKey({ base }: { base: BaseLayer }) {
+  switch (base) {
+    case 'wayfinding':
+      return (
+        <ul className={styles.keyRows} aria-label="Wayfinding colors">
+          {WAYFINDING_KEY.map(([token, label]) => (
+            <li key={token}>
+              <i
+                className={styles.keySwatch}
+                style={{ background: `var(${token})` }}
+                aria-hidden="true"
+              />
+              {label}
+            </li>
+          ))}
+        </ul>
+      );
+    case 'streets':
+      return (
+        <p className={styles.lnote}>
+          Shops, transit stations, parks and other places are named on the map with their icons, so
+          this map needs no separate key.
+        </p>
+      );
+    case 'osm':
+      return (
+        <p className={styles.lnote}>
+          The OpenStreetMap key:{' '}
+          <ExtLink href="https://wiki.openstreetmap.org/wiki/OpenStreetMap_Carto/Lines">
+            roads, paths and rail
+          </ExtLink>{' '}
+          and{' '}
+          <ExtLink href="https://wiki.openstreetmap.org/wiki/OpenStreetMap_Carto/Symbols">
+            map symbols
+          </ExtLink>
+          .
+        </p>
+      );
+    case 'cycle':
+      return (
+        <p className={styles.lnote}>
+          Bike lanes, trails and parking colors are explained in the{' '}
+          <ExtLink href="https://www.cyclosm.org/legend.html">CyclOSM legend</ExtLink>.
+        </p>
+      );
+    case 'aerial':
+      return (
+        <p className={styles.lnote}>
+          Photographs: 2025 seven-county metro imagery (1 ft), with 2025 statewide imagery outside
+          the metro. From MnGeo and the Metropolitan Council.
+        </p>
+      );
+  }
+}
 
 /**
- * The Map layers panel (DESIGN.md §4.7): base map, what pins show, extras, pin color,
- * shrink-to-dots and fade-rejected. Choices apply at once and are saved in Settings.
- * Phase 2 overlays are shown disabled so nothing moves when they arrive.
+ * The Map layers panel (M3 review): the base map with its key, and the Phase 2 overlays,
+ * shown disabled so nothing moves when they arrive. Pin options live in the Pins panel.
  */
 export function LayersPanel({
-  prefs,
-  onChange,
+  base,
+  onBase,
   onClose,
 }: {
-  prefs: MapPrefs;
-  onChange: (change: MapPrefsChange, label: string) => void;
+  base: BaseLayer;
+  onBase: (base: BaseLayer) => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLElement>(null);
-  const show = effectivePinShow(prefs.pins.show);
-
   useEffect(() => {
     ref.current?.focus();
   }, []);
-
-  const pins = (patch: Partial<MapPrefs['pins']>, label: string) =>
-    onChange((m) => ({ ...m, pins: { ...m.pins, ...patch } }), label);
-  const extras = (patch: Partial<MapPrefs['pins']['extras']>, label: string) =>
-    onChange((m) => ({ ...m, pins: { ...m.pins, extras: { ...m.pins.extras, ...patch } } }), label);
+  const current = BASE_MAPS.find((b) => b.id === base);
 
   return (
     <section
@@ -86,8 +131,8 @@ export function LayersPanel({
               key={b.id}
               type="button"
               className={styles.base}
-              aria-pressed={prefs.baseLayer === b.id}
-              onClick={() => onChange((m) => ({ ...m, baseLayer: b.id }), `Base map: ${b.name}`)}
+              aria-pressed={base === b.id}
+              onClick={() => onBase(b.id)}
             >
               <span className={`${styles.bt} ${styles[`bt-${b.id}`]}`} aria-hidden="true" />
               <span className={styles.bn}>{b.name}</span>
@@ -97,109 +142,12 @@ export function LayersPanel({
         </div>
       </fieldset>
 
-      <fieldset className={styles.lsec}>
-        <legend className={styles.lt}>Pins show</legend>
-        <div className={styles.chipset}>
-          {PIN_CONTENTS.map((c: PinContent) => {
-            const pending = PIN_SHOW_PENDING[c];
-            return (
-              <button
-                key={c}
-                type="button"
-                disabled={!!pending}
-                title={pending ? PENDING_TITLE[pending] : undefined}
-                aria-pressed={pending ? undefined : show === c}
-                onClick={() => pins({ show: c }, `Pins show: ${PIN_SHOW_LABELS[c]}`)}
-              >
-                {PIN_SHOW_LABELS[c]}
-                {pending && <span className={styles.tag}>{pending}</span>}
-              </button>
-            );
-          })}
-        </div>
-      </fieldset>
-
-      <fieldset className={styles.lsec}>
-        <legend className={styles.lt}>Also on pins</legend>
-        <label className={styles.chk}>
-          <input
-            type="checkbox"
-            checked={prefs.pins.extras.typeIcon}
-            onChange={(e) =>
-              extras(
-                { typeIcon: e.target.checked },
-                `Pins: unit type icon ${onOff(e.target.checked)}`,
-              )
-            }
-          />
-          Unit type icon
-        </label>
-        <label className={styles.chk}>
-          <input
-            type="checkbox"
-            checked={prefs.pins.extras.stars}
-            onChange={(e) =>
-              extras({ stars: e.target.checked }, `Pins: star rating ${onOff(e.target.checked)}`)
-            }
-          />
-          Star rating
-        </label>
-        <label className={styles.chk}>
-          <input
-            type="checkbox"
-            checked={prefs.pins.extras.newBadge}
-            onChange={(e) =>
-              extras({ newBadge: e.target.checked }, `Pins: new badge ${onOff(e.target.checked)}`)
-            }
-          />
-          New badge
-        </label>
-      </fieldset>
-
-      <fieldset className={styles.lsec}>
-        <legend className={styles.lt}>Pin color</legend>
-        <div className={styles.seg}>
-          {COLOR_OPTIONS.map((o) => (
-            <button
-              key={o.id}
-              type="button"
-              aria-pressed={prefs.pins.colorBy === o.id}
-              onClick={() => pins({ colorBy: o.id }, `Pin color: ${o.label}`)}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-        {prefs.pins.colorBy === 'price' && (
-          <p className={styles.lnote}>Uses rent until total cost arrives (M8).</p>
-        )}
-        <label className={styles.chk} style={{ marginTop: 8 }}>
-          <input
-            type="checkbox"
-            checked={prefs.pins.simplifyWhenCrowded}
-            onChange={(e) =>
-              pins(
-                { simplifyWhenCrowded: e.target.checked },
-                `Shrink pins when crowded ${onOff(e.target.checked)}`,
-              )
-            }
-          />
-          Shrink pins to dots when zoomed out or crowded
-        </label>
-        <label className={styles.chk}>
-          <input
-            type="checkbox"
-            checked={prefs.pins.fadeRejected}
-            onChange={(e) =>
-              pins(
-                { fadeRejected: e.target.checked },
-                `Fade rejected units ${onOff(e.target.checked)}`,
-              )
-            }
-          />
-          Fade rejected units
-        </label>
-      </fieldset>
+      <section className={styles.lsec} aria-labelledby="base-key-title">
+        <h4 id="base-key-title" className={styles.lt}>
+          Key: {current?.name}
+        </h4>
+        <BaseKey base={base} />
+      </section>
 
       <fieldset className={styles.lsec} disabled>
         <legend className={styles.lt}>
@@ -210,10 +158,11 @@ export function LayersPanel({
             <input type="checkbox" disabled /> {o}
           </label>
         ))}
-        <p className={styles.lnote}>Shown here for reference; these arrive with Phase 2.</p>
+        <p className={styles.lnote}>
+          Coming in Phase 2, each with its own key. You’ll be able to click a trail, stop or route
+          to see what it is.
+        </p>
       </fieldset>
     </section>
   );
 }
-
-const onOff = (on: boolean) => (on ? 'on' : 'off');

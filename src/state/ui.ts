@@ -7,6 +7,8 @@ import {
   isUnitSortKey,
 } from '../domain/sort';
 import type { SortSpec } from '../model';
+import { defaultMapMemory, parseMapMemory } from '../domain/pinPrefs';
+import type { BaseLayer, MapMemory, PinPrefs, PinView } from '../domain/pinPrefs';
 
 /**
  * UI-only state (PLAN.md §4.2): never data. Selection lives in the URL (#/unit/:id,
@@ -23,14 +25,20 @@ interface Remembered {
   buildingSort: SortSpec;
 }
 
-/** Map-only UI state (M3); not remembered. Keys look like `unit:<id>` or `building:<id>`. */
+export type MapPanel = 'layers' | 'pins';
+
+/** Map-only UI state (M3). Keys look like `unit:<id>` or `building:<id>`. */
 interface MapUi {
-  /** The card or pin under the pointer, so its pin can show in full. */
+  /** The card or pin under the pointer: its pin shows in full and its card is highlighted. */
   hoverKey: string | null;
-  /** The Map layers panel. */
-  layersOpen: boolean;
-  /** Building whose units are fanned out around it (opened by clicking a grouped pin). */
-  fannedId: string | null;
+  /** The open map panel, if any. */
+  panel: MapPanel | null;
+  /** Buildings fanned out by clicking (stay open until folded). */
+  openFans: string[];
+  /** Buildings folded by hand that would otherwise fan out by themselves. */
+  foldedFans: string[];
+  /** Base map and pin choices, remembered per database (PLAN.md §4.3). */
+  map: MapMemory;
 }
 
 export interface UiState extends Remembered, MapUi {
@@ -41,12 +49,45 @@ export interface UiState extends Remembered, MapUi {
   setUnitSort: (sort: SortSpec) => void;
   setBuildingSort: (sort: SortSpec) => void;
   setHover: (key: string | null) => void;
-  setLayersOpen: (open: boolean) => void;
-  toggleLayers: () => void;
-  setFanned: (buildingId: string | null) => void;
+  setPanel: (panel: MapPanel | null) => void;
+  togglePanel: (panel: MapPanel) => void;
+  openFan: (buildingId: string) => void;
+  foldFan: (buildingId: string) => void;
+  /** Lets a folded building open again (e.g. one of its units was just selected). */
+  unfoldFan: (buildingId: string) => void;
+  /** Folds every fan; `autoOpen` lists the ones that opened by themselves. */
+  collapseFans: (autoOpen?: readonly string[]) => void;
+  /** Zoomed out to bubble level: clicked fans fold; below street zoom the folded list resets. */
+  forgetFans: (opts: { clicked: boolean; folded: boolean }) => void;
+  setBaseLayer: (base: BaseLayer) => void;
+  setPinPrefs: (view: PinView, prefs: PinPrefs) => void;
 }
 
-const mapUiDefaults: MapUi = { hoverKey: null, layersOpen: false, fannedId: null };
+const MAP_KEY = `${dbName}.mapPrefs`;
+
+export function loadMapMemory(): MapMemory {
+  try {
+    return parseMapMemory(JSON.parse(localStorage.getItem(MAP_KEY) ?? 'null'));
+  } catch {
+    return defaultMapMemory();
+  }
+}
+
+function rememberMap(map: MapMemory) {
+  try {
+    localStorage.setItem(MAP_KEY, JSON.stringify(map));
+  } catch {
+    // Storage blocked or full: the choice still applies for this visit.
+  }
+}
+
+const mapUiStart = (): MapUi => ({
+  hoverKey: null,
+  panel: null,
+  openFans: [],
+  foldedFans: [],
+  map: loadMapMemory(),
+});
 
 const STORAGE_KEY = `${dbName}.list`;
 
@@ -99,19 +140,52 @@ export const useUi = create<UiState>()((set, get) => {
     setQuery: (query) => set({ query }),
     setUnitSort: (unitSort) => update({ unitSort }),
     setBuildingSort: (buildingSort) => update({ buildingSort }),
-    ...mapUiDefaults,
+    ...mapUiStart(),
     setHover: (hoverKey) => {
       if (get().hoverKey !== hoverKey) set({ hoverKey });
     },
-    setLayersOpen: (layersOpen) => set({ layersOpen }),
-    toggleLayers: () => set({ layersOpen: !get().layersOpen }),
-    setFanned: (fannedId) => set({ fannedId }),
+    setPanel: (panel) => set({ panel }),
+    togglePanel: (panel) => set({ panel: get().panel === panel ? null : panel }),
+    openFan: (id) =>
+      set({
+        openFans: [...get().openFans.filter((f) => f !== id), id],
+        foldedFans: get().foldedFans.filter((f) => f !== id),
+      }),
+    foldFan: (id) =>
+      set({
+        openFans: get().openFans.filter((f) => f !== id),
+        foldedFans: [...get().foldedFans.filter((f) => f !== id), id],
+      }),
+    unfoldFan: (id) => {
+      if (get().foldedFans.includes(id))
+        set({ foldedFans: get().foldedFans.filter((f) => f !== id) });
+    },
+    collapseFans: (autoOpen = []) =>
+      set({ openFans: [], foldedFans: [...new Set([...get().foldedFans, ...autoOpen])] }),
+    forgetFans: ({ clicked, folded }) => {
+      const s = get();
+      if ((clicked && s.openFans.length) || (folded && s.foldedFans.length))
+        set({
+          openFans: clicked ? [] : s.openFans,
+          foldedFans: folded ? [] : s.foldedFans,
+        });
+    },
+    setBaseLayer: (baseLayer) => {
+      const map = { ...get().map, baseLayer };
+      set({ map });
+      rememberMap(map);
+    },
+    setPinPrefs: (view, prefs) => {
+      const map = { ...get().map, pins: { ...get().map.pins, [view]: prefs } };
+      set({ map });
+      rememberMap(map);
+    },
   };
 });
 
 /** Back to the starting state (tests). */
 export function resetUi() {
-  useUi.setState({ ...defaults, ...mapUiDefaults, query: '' });
+  useUi.setState({ ...defaults, ...mapUiStart(), query: '' });
 }
 
 // ── Map viewport memory (PLAN.md §4.2: "Map viewport … remembered in localStorage") ──

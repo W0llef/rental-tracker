@@ -1,67 +1,29 @@
-import type {
-  Building,
-  LabelColor,
-  MapPrefs,
-  PinContent,
-  Unit,
-  UnitStatus,
-  UnitType,
-} from '../model';
+import type { Building, LabelColor, Unit, UnitStatus, UnitType } from '../model';
 import { LABEL_COLORS, UNIT_STATUSES } from '../model';
-import { sortBy } from './sort';
 import {
   STATUS_COLOR_VAR,
   STATUS_LABELS,
-  UNIT_TYPE_LABELS,
   bedsLabel,
   buildingName,
   money,
   num,
   unitTitle,
 } from './format';
+import type { ColorBy, PinField, PinPrefs, RejectedMode } from './pinPrefs';
+import { activeFields } from './pinPrefs';
+import { sortBy } from './sort';
 
 /**
  * What a map pin shows and how it's colored (PLAN.md §4.3, DESIGN.md §2.4). Pure: the map
  * component only turns these values into markup.
+ *
+ * A building with several units, when collapsed (and every pin in the Buildings view),
+ * shows only what's true of all of its units: ranges for numbers, the type icon only if
+ * they share a type, one edge stripe per unit, and the New badge if any unit is new.
  */
-
-// ── Which "Pins show" options work yet ─────────────────────────────────────
-
-/**
- * Total cost and cost per ft² need the cost profile (M8); travel time needs destinations
- * (Phase 2). Until then their chips are disabled and pins fall back to rent, the same rule
- * the list follows (PLAN.md §12, M2).
- */
-export const PIN_SHOW_PENDING: Partial<Record<PinContent, string>> = {
-  total: 'M8',
-  psf: 'M8',
-  travel: 'Phase 2',
-};
-
-export const PIN_SHOW_LABELS: Record<PinContent, string> = {
-  total: 'Total cost',
-  rent: 'Rent',
-  psf: 'Cost per ft²',
-  photo: 'Photo',
-  type: 'Unit type',
-  beds: 'Beds and size',
-  rating: 'Rating',
-  unit: 'Unit number',
-  dot: 'Dot only',
-  travel: 'Travel time',
-};
-
-/** The option pins actually use: a pending option falls back to rent. */
-export function effectivePinShow(show: PinContent): PinContent {
-  return PIN_SHOW_PENDING[show] ? 'rent' : show;
-}
-
-export type ColorBy = MapPrefs['pins']['colorBy'];
 
 /** The price color option scales on rent until total cost exists (M8). */
 export const PRICE_COLOR_LABEL = 'Rent';
-
-// ── Units on pins ──────────────────────────────────────────────────────────
 
 export interface PinUnit {
   unit: Unit;
@@ -74,15 +36,6 @@ export const isNew = (u: Pick<Unit, 'status'>): boolean => u.status === 'new';
 const rentValue = (r: PinUnit) => r.unit.rent;
 const tiebreak = (r: PinUnit) => r.unit.id;
 
-/**
- * The unit a grouped building pin shows: the cheapest one that isn't rejected (unknown
- * rents last); if every unit is rejected, the cheapest of them.
- */
-export function leadUnit<T extends PinUnit>(units: readonly T[]): T | undefined {
-  const live = units.filter((u) => !isRejected(u.unit));
-  return sortBy(live.length ? live : units, rentValue, 'asc', tiebreak)[0];
-}
-
 /** Units of one building in fan-out order: cheapest first, rejected last. */
 export function fanOrder<T extends PinUnit>(units: readonly T[]): T[] {
   const sorted = sortBy(units, rentValue, 'asc', tiebreak);
@@ -92,53 +45,149 @@ export function fanOrder<T extends PinUnit>(units: readonly T[]): T[] {
   ];
 }
 
-export const starText = (rating: number): string => (rating > 0 ? `★${rating}` : '☆');
-
-/** "$1,650", "from $2,560"; "?" when unknown. */
-function rentText(u: Unit): string {
-  if (u.rent === null) return '?';
-  return `${u.rentIsFrom ? 'from ' : ''}${money(u.rent)}`;
+/** Lowest known rent among the units, for ranking pins; Infinity when none is known. */
+export function lowestRent(units: readonly PinUnit[]): number {
+  const rents = units.map((u) => u.unit.rent).filter((r): r is number => r !== null);
+  return rents.length ? Math.min(...rents) : Infinity;
 }
 
-/** "1 bd 720 ft²", "Studio 480 ft²", with "?" for an unknown part. */
+// ── Rejected units ─────────────────────────────────────────────────────────
+
+/**
+ * The units a building's pin stands for. "Hide" drops rejected units from the map
+ * (a selected one always stays); "Fade" and "Hide" leave them out of a group's ranges and
+ * stripes unless every unit is rejected; "Show" counts them like any other.
+ */
+export function pinnedUnits<T extends PinUnit>(
+  units: readonly T[],
+  mode: RejectedMode,
+  selectedUnitId: string | null = null,
+): T[] {
+  if (mode !== 'hide') return [...units];
+  return units.filter((u) => !isRejected(u.unit) || u.unit.id === selectedUnitId);
+}
+
+export function summarizedUnits<T extends PinUnit>(units: readonly T[], mode: RejectedMode): T[] {
+  if (mode === 'show') return [...units];
+  const live = units.filter((u) => !isRejected(u.unit));
+  return live.length ? live : [...units];
+}
+
+/** Every unit counted is rejected: the pin gets the rejected look. */
+export const allRejected = (units: readonly PinUnit[]): boolean =>
+  units.length > 0 && units.every((u) => isRejected(u.unit));
+
+// ── Text segments ──────────────────────────────────────────────────────────
+
+export const starText = (rating: number): string => (rating > 0 ? `★${rating}` : '☆');
+
+/** "1 bd · 720 ft²", "Studio · 480 ft²", with "?" for an unknown part. */
 export function bedsSizeText(u: Pick<Unit, 'bedrooms' | 'squareFeet'>): string {
   const beds = u.bedrooms === null ? '? bd' : bedsLabel(u.bedrooms);
   const size = u.squareFeet === null ? '? ft²' : `${num(u.squareFeet)} ft²`;
-  return `${beds} ${size}`;
+  return `${beds}\u00a0·\u00a0${size}`;
+}
+
+function range<T>(values: readonly T[], fmt: (v: T) => string, byNumber: (v: T) => number): string {
+  const sorted = [...values].sort((a, b) => byNumber(a) - byNumber(b));
+  const lo = sorted[0] as T;
+  const hi = sorted[sorted.length - 1] as T;
+  return byNumber(lo) === byNumber(hi) ? fmt(lo) : `${fmt(lo)}–${fmt(hi)}`;
+}
+
+const known = (values: readonly (number | null)[]): number[] =>
+  values.filter((v): v is number => v !== null);
+
+export interface Segment {
+  field: Exclude<PinField, 'type'>;
+  text: string;
+}
+
+export interface PinContent {
+  /** Unit-type icon to draw first, or null (field off, or the units differ). */
+  typeIcon: UnitType | null;
+  segments: Segment[];
 }
 
 /**
- * The text on a unit pin for an option; null for options that show no text (photo, unit
- * type, dot). A grouped pin adds "+" to prices and shows the building name for "Unit number".
+ * What a pin prints, field by field. `asBuilding` is true for a collapsed group and for
+ * every Buildings-view pin: numbers become ranges and "unit" becomes the building's name.
  */
-export function pinText(row: PinUnit, show: PinContent, grouped: boolean): string | null {
-  const u = row.unit;
-  switch (effectivePinShow(show)) {
-    case 'rent': {
-      const t = rentText(u);
-      return grouped && u.rent !== null ? `${t}+` : t;
+export function pinContent(
+  units: readonly PinUnit[],
+  prefs: Pick<PinPrefs, 'style' | 'fields' | 'priceMode'>,
+  asBuilding: boolean,
+): PinContent {
+  const fields = activeFields(prefs);
+  const first = units[0];
+  if (!first) return { typeIcon: null, segments: [] };
+  const many = asBuilding && units.length > 1;
+  const types = new Set(units.map((u) => u.unit.type));
+  const typeIcon = fields.includes('type') && types.size === 1 ? first.unit.type : null;
+
+  const segments: Segment[] = [];
+  for (const field of fields) {
+    switch (field) {
+      case 'rent': {
+        const rents = known(units.map((u) => u.unit.rent));
+        let text: string;
+        if (!rents.length) text = '?';
+        else if (!many)
+          text = `${first.unit.rentIsFrom ? 'from ' : ''}${money(first.unit.rent as number)}`;
+        else if (prefs.priceMode === 'lowest') text = `${money(Math.min(...rents))}+`;
+        else text = range(rents, money, (n) => n);
+        segments.push({ field, text });
+        break;
+      }
+      case 'beds': {
+        if (!many) {
+          segments.push({ field, text: bedsSizeText(first.unit) });
+          break;
+        }
+        const beds = known(units.map((u) => u.unit.bedrooms));
+        const sizes = known(units.map((u) => u.unit.squareFeet));
+        const b = beds.length ? range(beds, bedsLabel, (n) => n) : '? bd';
+        const s = sizes.length ? `${range(sizes, num, (n) => n)} ft²` : '? ft²';
+        segments.push({ field, text: `${b}\u00a0·\u00a0${s}` });
+        break;
+      }
+      case 'unit': {
+        const name = first.building ? buildingName(first.building) : 'Unit';
+        const text = asBuilding
+          ? name
+          : (first.unit.unitNumber ?? first.unit.floorPlanName ?? name);
+        segments.push({ field, text });
+        break;
+      }
+      case 'rating': {
+        const rated = units.map((u) => u.unit.rating as number).filter((r) => r > 0);
+        const text = !rated.length
+          ? '☆'
+          : many
+            ? `★${range(rated, String, (n) => n)}`
+            : starText(first.unit.rating);
+        segments.push({ field, text });
+        break;
+      }
+      default:
+        break; // type is the icon; pending fields never reach here
     }
-    case 'beds':
-      return bedsSizeText(u);
-    case 'rating':
-      return starText(u.rating);
-    case 'unit':
-      if (grouped && row.building) return buildingName(row.building);
-      return (
-        u.unitNumber ?? u.floorPlanName ?? (row.building ? buildingName(row.building) : 'Unit')
-      );
-    default:
-      return null;
   }
+  return { typeIcon, segments };
 }
 
-/** Spoken name of a unit pin: "Riverlight, Unit 1504, $1,650 rent, Shortlisted". */
+/** The text a pin visibly shows, for its accessible name: "$1,650, 1 bd · 720 ft²". */
+export const segmentsText = (c: PinContent): string => c.segments.map((s) => s.text).join(', ');
+
+// ── Spoken names ───────────────────────────────────────────────────────────
+
+/** "Riverlight, Unit 1504, $1,650 rent, Shortlisted". */
 export function unitPinLabel(row: PinUnit): string {
   const u = row.unit;
   const parts = [
     row.building ? buildingName(row.building) : null,
     unitTitle(u, row.building),
-    u.rent === null ? 'rent unknown' : `${rentText(u)} rent`,
+    u.rent === null ? 'rent unknown' : `${u.rentIsFrom ? 'from ' : ''}${money(u.rent)} rent`,
     STATUS_LABELS[u.status],
     isRejected(u) ? 'rejected' : null,
   ];
@@ -146,25 +195,25 @@ export function unitPinLabel(row: PinUnit): string {
   return [...new Set(parts.filter((p): p is string => p !== null))].join(', ');
 }
 
-/** Spoken name of a grouped pin: "3 units at Riverlight, from $1,575". */
-export function groupPinLabel(building: Building | undefined, units: readonly PinUnit[]): string {
+/** "4 units at Lowertown Flats, $1,090 to $1,815" (Buildings view: "4 of your units"). */
+export function buildingPinLabel(
+  building: Building | undefined,
+  units: readonly PinUnit[],
+  view: 'units' | 'buildings',
+  /** Units the pin stands for, if more than the ones its prices summarize. */
+  count: number = units.length,
+): string {
   const name = building ? buildingName(building) : 'this building';
-  const lead = leadUnit(units);
-  const price = lead && lead.unit.rent !== null ? `, from ${money(lead.unit.rent)}` : '';
-  return `${units.length} units at ${name}${price}`;
-}
-
-/** Text on a Buildings-view pin: the rent range of its units. */
-export function buildingRangeText(units: readonly PinUnit[]): string {
-  const rents = units.map((u) => u.unit.rent).filter((r): r is number => r !== null);
-  if (!rents.length) return '?';
-  const lo = Math.min(...rents);
-  const hi = Math.max(...rents);
-  return lo === hi ? money(lo) : `${money(lo)}–${money(hi)}`;
-}
-
-export function typeLabel(type: UnitType | null): string {
-  return type === null ? 'Type unknown' : UNIT_TYPE_LABELS[type];
+  const rents = known(units.map((u) => u.unit.rent));
+  const price = !rents.length
+    ? ''
+    : Math.min(...rents) === Math.max(...rents)
+      ? `, ${money(rents[0] as number)}`
+      : `, ${money(Math.min(...rents))} to ${money(Math.max(...rents))}`;
+  const n = count;
+  return view === 'buildings'
+    ? `${name}, ${n} of your units${price}`
+    : `${n} units at ${name}${price}`;
 }
 
 // ── Pin color ──────────────────────────────────────────────────────────────
@@ -191,9 +240,7 @@ export interface PriceScale {
  */
 export function priceScale(units: readonly Pick<Unit, 'rent' | 'flag'>[]): PriceScale | null {
   const live = units.filter((u) => !isRejected(u));
-  const rents = (live.length ? live : units)
-    .map((u) => u.rent)
-    .filter((r): r is number => r !== null);
+  const rents = known((live.length ? live : units).map((u) => u.rent));
   if (!rents.length) return null;
   return { min: Math.min(...rents), max: Math.max(...rents) };
 }
@@ -205,13 +252,37 @@ export function priceStep(value: number, scale: PriceScale): number {
   return Math.max(0, Math.min(PRICE_STEPS.length - 1, step));
 }
 
-/** CSS color for a unit pin's edge. */
+/** CSS color for one unit's edge. */
 export function edgeColor(u: Unit, colorBy: ColorBy, scale: PriceScale | null): string {
   if (colorBy === 'status') return `var(${STATUS_COLOR_VAR[u.status]})`;
   if (colorBy === 'label')
     return u.colorLabel ? `var(${LABEL_COLOR_VAR[u.colorLabel]})` : 'var(--ice)';
   if (u.rent === null || !scale) return 'var(--ice)';
   return PRICE_STEPS[priceStep(u.rent, scale)] as string;
+}
+
+const statusOrder = new Map(UNIT_STATUSES.map((s, i) => [s, i]));
+const labelOrder = new Map<LabelColor | null, number>([
+  ...LABEL_COLORS.map((c, i) => [c, i] as const),
+  [null, 99],
+]);
+
+/**
+ * One edge stripe per unit (a single unit has one), ordered so the same colors sit
+ * together: pipeline order for status, label order, cheapest first for price.
+ */
+export function edgeStripes(
+  units: readonly PinUnit[],
+  colorBy: ColorBy,
+  scale: PriceScale | null,
+): string[] {
+  const key = (r: PinUnit): number =>
+    colorBy === 'status'
+      ? (statusOrder.get(r.unit.status) ?? 0)
+      : colorBy === 'label'
+        ? (labelOrder.get(r.unit.colorLabel) ?? 99)
+        : (r.unit.rent ?? Infinity);
+  return [...units].sort((a, b) => key(a) - key(b)).map((r) => edgeColor(r.unit, colorBy, scale));
 }
 
 // ── Legend ────────────────────────────────────────────────────────────────
@@ -223,8 +294,8 @@ export type Legend =
   | { kind: 'price-empty'; title: string; text: string };
 
 /**
- * What the legend in the map corner says (DESIGN.md §2.4): only the colors on the map,
- * named. Label names come from Settings.
+ * What the legend says (DESIGN.md §2.4): only the colors on the map, named. Label names
+ * come from Settings.
  */
 export function legendFor(
   units: readonly Unit[],

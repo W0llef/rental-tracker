@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react';
-import type { PinContent, UnitType } from '../../model';
+import type { PinContent } from '../../domain/pins';
+import type { PinStyle } from '../../domain/pinPrefs';
+import type { UnitType } from '../../model';
 import styles from './map.module.css';
 
 /** 16 px unit-type glyphs for pins (DESIGN.md §2.4): apartment, condo, townhome, house, room. */
@@ -21,101 +23,137 @@ export function TypeGlyph({ type }: { type: UnitType | null }) {
 }
 
 export interface PinProps {
-  /** Effective "Pins show" option (pending options already resolved to rent). */
-  show: PinContent;
-  text: string | null;
+  pinKey: string;
+  style: PinStyle;
+  content: PinContent;
+  /** Placeholder for the photo until photos arrive (M11), and the icon of an empty plate. */
   type: UnitType | null;
-  /** Star text for the "Star rating" extra, or null when that extra is off. */
-  stars: string | null;
-  showTypeIcon: boolean;
-  /** Units behind a grouped pin; 1 for a single unit. */
+  /** Units behind the pin; more than 1 shows a count. */
   count: number;
-  edge: string;
+  /** One color per unit (one for a single unit). */
+  stripes: readonly string[];
   selected: boolean;
   rejected: boolean;
   faded: boolean;
   /** Shrunk to a dot because the map is zoomed out or crowded. */
   dot: boolean;
-  newBadge: boolean;
+  newMark: 'dot' | 'tag' | null;
+  /** Spoken description after the visible text. */
   label: string;
   expanded?: boolean;
-  pinKey: string;
   onClick: () => void;
   onHover: (on: boolean) => void;
 }
 
+/** Vertical stripes for a plate's edge, a bar under a photo, a ring for a dot. */
+function Stripes({ colors, horizontal }: { colors: readonly string[]; horizontal?: boolean }) {
+  return (
+    <span className={horizontal ? styles.bar : styles.edge} aria-hidden="true">
+      {colors.map((c, i) => (
+        <i key={i} style={{ background: c }} />
+      ))}
+    </span>
+  );
+}
+
+function ring(colors: readonly string[]): string {
+  if (colors.length <= 1) return colors[0] ?? 'var(--ice)';
+  const step = 100 / colors.length;
+  return `conic-gradient(${colors
+    .map((c, i) => `${c} ${(i * step).toFixed(2)}% ${((i + 1) * step).toFixed(2)}%`)
+    .join(', ')})`;
+}
+
+function Segments({ content }: { content: PinContent }) {
+  return (
+    <>
+      {content.typeIcon && (
+        <span className={styles.ico}>
+          <TypeGlyph type={content.typeIcon} />
+        </span>
+      )}
+      {content.segments.map((s, i) => (
+        <span key={s.field} className={`${styles.pseg} ${styles[`f-${s.field}`] ?? ''}`}>
+          {i > 0 && ' '}
+          {s.text}
+        </span>
+      ))}
+    </>
+  );
+}
+
 /**
- * One sign-plate pin (DESIGN.md §2.4). Every variant keeps the same cues: a colored edge,
- * a tail pointing at the building, and navy when selected.
+ * One pin (DESIGN.md §2.4, reworked in M3 review): a sign plate with one segment per field,
+ * a dot, or a photo with the fields printed underneath. Every style keeps the same cues:
+ * colored stripes (one per unit), a tail pointing at the building, and navy when selected.
  */
 export function Pin(p: PinProps) {
   const multi = p.count > 1;
-  const asDot = p.dot || p.show === 'dot';
+  const asDot = p.dot || p.style === 'dot';
   const cls = [styles.pin];
   if (p.selected) cls.push(styles.sel);
   if (p.rejected) cls.push(styles.rej);
   if (p.faded) cls.push(styles.faded);
+  const empty = !p.content.typeIcon && !p.content.segments.length;
 
-  // The accessible name starts with what the pin visibly says (WCAG 2.5.3, label in name),
-  // so "click $1,650" works with voice control; the description follows.
-  const visible: (string | number | null)[] = [];
   let inner;
+  let style: CSSProperties | undefined;
   if (asDot) {
     cls.push(styles.dot);
     if (multi) cls.push(styles.multi);
+    style = p.rejected ? undefined : { background: ring(p.stripes) };
     inner = multi ? <span className={styles.txt}>{p.count}</span> : null;
-    if (multi) visible.push(p.count);
-  } else if (p.show === 'photo') {
-    // Photos arrive in M11; until then the frame holds the unit-type icon.
+  } else if (p.style === 'photo') {
     cls.push(styles.photo);
     inner = (
       <>
         <span className={styles.noph}>
           <TypeGlyph type={p.type} />
         </span>
-        {multi && <span className={styles.cnt}>{p.count}</span>}
+        <Stripes colors={p.stripes} horizontal />
+        {!empty && (
+          <span className={styles.caption}>
+            <Segments content={p.content} />
+          </span>
+        )}
+        {multi && <span className={styles.cnt}> {p.count}</span>}
       </>
     );
-    if (multi) visible.push(p.count);
-  } else if (p.show === 'type') {
-    cls.push(styles.iconOnly);
-    inner = (
-      <>
-        <span className={styles.ico}>
-          <TypeGlyph type={p.type} />
-        </span>
-        {p.stars && <span className={styles.sx}>{p.stars}</span>}{' '}
-        {multi && <span className={styles.cnt}>{p.count}</span>}
-      </>
-    );
-    visible.push(p.stars, multi ? p.count : null);
   } else {
     inner = (
       <>
-        {p.showTypeIcon && (
+        <Stripes colors={p.stripes} />
+        {empty ? (
           <span className={styles.ico}>
             <TypeGlyph type={p.type} />
           </span>
+        ) : (
+          <Segments content={p.content} />
         )}
-        <span className={styles.txt}>{p.text}</span>{' '}
-        {p.stars && p.show !== 'rating' && <span className={styles.sx}>{p.stars}</span>}{' '}
-        {multi && <span className={styles.cnt}>{p.count}</span>}
+        {multi && <span className={styles.cnt}> {p.count}</span>}
       </>
     );
-    visible.push(p.text, p.stars && p.show !== 'rating' ? p.stars : null, multi ? p.count : null);
   }
-  const shown = visible.filter((v) => v !== null && v !== '').join(' ');
+
+  // The accessible name starts with what the pin visibly says (WCAG 2.5.3, label in name),
+  // so "click $1,650" works with voice control; the description follows.
+  const visible = [
+    ...(asDot ? [] : p.content.segments.map((s) => s.text)),
+    multi ? String(p.count) : null,
+    p.newMark === 'tag' ? 'New' : null,
+  ].filter(Boolean);
+  const name = visible.length ? `${visible.join(' ')}, ${p.label}` : p.label;
 
   return (
     <button
       type="button"
       className={cls.join(' ')}
-      style={{ '--edge': p.edge } as CSSProperties}
-      aria-label={shown ? `${shown}, ${p.label}` : p.label}
+      style={style}
+      aria-label={name}
       aria-pressed={p.expanded === undefined ? p.selected : undefined}
       aria-expanded={p.expanded}
       data-pin={p.pinKey}
-      data-shape={asDot ? 'dot' : 'plate'}
+      data-shape={asDot ? 'dot' : p.style}
       onClick={(e) => {
         e.stopPropagation();
         p.onClick();
@@ -126,7 +164,8 @@ export function Pin(p: PinProps) {
       onBlur={() => p.onHover(false)}
     >
       {inner}
-      {p.newBadge && <span className={styles.newb} aria-hidden="true" />}
+      {p.newMark === 'dot' && <span className={styles.newb} aria-hidden="true" />}
+      {p.newMark === 'tag' && <span className={styles.newTag}> New</span>}
     </button>
   );
 }

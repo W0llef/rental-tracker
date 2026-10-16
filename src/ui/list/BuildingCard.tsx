@@ -5,7 +5,16 @@ import { Tag, TypeIcon } from '../common/Markers';
 import styles from './list.module.css';
 
 /** One building in the Buildings view (DESIGN.md §4.1, last bullet). */
-export function BuildingCard({ row, selected }: { row: BuildingRow; selected: boolean }) {
+export function BuildingCard({
+  row,
+  selected,
+  hovered = false,
+}: {
+  row: BuildingRow;
+  selected: boolean;
+  /** Its pin is under the pointer on the map. */
+  hovered?: boolean;
+}) {
   const b = row.building;
   const name = buildingName(b);
   const meta = [
@@ -23,6 +32,7 @@ export function BuildingCard({ row, selected }: { row: BuildingRow; selected: bo
       to={`/building/${b.id}`}
       className={styles.card}
       aria-current={selected ? 'true' : undefined}
+      data-hover={hovered || undefined}
       data-key={`building:${b.id}`}
     >
       <span className={styles.thumb}>

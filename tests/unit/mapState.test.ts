@@ -1,7 +1,7 @@
 import { defaultSettings } from '../../src/model';
 import { makeAddress, newBuilding, newUnit } from '../../src/model/factories';
 import { deriveDataset, deriveListView, deriveMapItems } from '../../src/state/derive';
-import { loadViewport, resetUi, saveViewport, useUi } from '../../src/state/ui';
+import { loadMapMemory, loadViewport, resetUi, saveViewport, useUi } from '../../src/state/ui';
 
 const at = { lat: 44.98, lng: -93.26, source: 'import' as const, precision: 'address' as const };
 const riverlight = newBuilding({
@@ -79,16 +79,47 @@ describe('map viewport memory', () => {
 });
 
 describe('map UI state', () => {
-  beforeEach(() => resetUi());
-
-  it('toggles the layers panel and tracks hover and fan-out', () => {
-    const ui = useUi.getState();
-    ui.toggleLayers();
-    expect(useUi.getState().layersOpen).toBe(true);
-    ui.setHover('unit:a');
-    ui.setFanned('b1');
-    expect(useUi.getState()).toMatchObject({ hoverKey: 'unit:a', fannedId: 'b1' });
+  beforeEach(() => {
+    localStorage.clear();
     resetUi();
-    expect(useUi.getState()).toMatchObject({ layersOpen: false, hoverKey: null, fannedId: null });
+  });
+
+  it('opens one panel at a time and tracks hover', () => {
+    const ui = useUi.getState();
+    ui.togglePanel('layers');
+    expect(useUi.getState().panel).toBe('layers');
+    ui.togglePanel('pins');
+    expect(useUi.getState().panel).toBe('pins');
+    ui.togglePanel('pins');
+    expect(useUi.getState().panel).toBeNull();
+    ui.setHover('unit:a');
+    expect(useUi.getState().hoverKey).toBe('unit:a');
+  });
+
+  it('keeps several fans open until folded, collapsed or zoomed out', () => {
+    const ui = useUi.getState();
+    ui.openFan('b1');
+    ui.openFan('b2');
+    expect(useUi.getState().openFans).toEqual(['b1', 'b2']);
+    ui.foldFan('b1');
+    expect(useUi.getState()).toMatchObject({ openFans: ['b2'], foldedFans: ['b1'] });
+    ui.openFan('b1');
+    expect(useUi.getState().foldedFans).toEqual([]);
+    // Collapse all also folds the ones that opened by themselves
+    ui.collapseFans(['b3']);
+    expect(useUi.getState()).toMatchObject({ openFans: [], foldedFans: ['b3'] });
+    ui.openFan('b4');
+    ui.forgetFans({ clicked: true, folded: true });
+    expect(useUi.getState()).toMatchObject({ openFans: [], foldedFans: [] });
+  });
+
+  it('remembers pin choices per view and the base map, per database', () => {
+    const ui = useUi.getState();
+    ui.setBaseLayer('cycle');
+    ui.setPinPrefs('buildings', { ...ui.map.pins.buildings, style: 'dot' });
+    expect(useUi.getState().map.pins.units.style).toBe('plate');
+    const stored = JSON.parse(localStorage.getItem('rental-tracker-preview.mapPrefs') ?? '{}');
+    expect(stored).toMatchObject({ baseLayer: 'cycle', pins: { buildings: { style: 'dot' } } });
+    expect(loadMapMemory().pins.buildings.style).toBe('dot');
   });
 });

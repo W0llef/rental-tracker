@@ -1,0 +1,162 @@
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
+import { legendFor } from '../../src/domain/pins';
+import { defaultMapMemory } from '../../src/domain/pinPrefs';
+import type { BaseLayer, PinPrefs, PinView } from '../../src/domain/pinPrefs';
+import { defaultSettings } from '../../src/model';
+import { newUnit } from '../../src/model/factories';
+import { LayersPanel } from '../../src/ui/map/LayersPanel';
+import { Legend } from '../../src/ui/map/Legend';
+import { PinsPanel } from '../../src/ui/map/PinsPanel';
+
+/** M3 review: the Pins panel, the Map layers panel with base-map keys, and the legend. */
+
+const group = (name: string) => screen.getByRole('group', { name });
+
+function PinsHarness({ view = 'units' as PinView, log }: { view?: PinView; log: PinPrefs[] }) {
+  const [prefs, setPrefs] = useState(defaultMapMemory().pins);
+  return (
+    <PinsPanel
+      view={view}
+      prefsFor={prefs}
+      onChange={(v, p) => {
+        log.push(p);
+        setPrefs({ ...prefs, [v]: p });
+      }}
+      onClose={() => {}}
+      legend={null}
+    />
+  );
+}
+
+describe('PinsPanel', () => {
+  it('greys out text fields for dots and brings them back for plates', async () => {
+    const user = userEvent.setup();
+    render(<PinsHarness log={[]} />);
+    const rent = screen.getByRole('checkbox', { name: 'Rent' });
+    expect(rent).toBeChecked();
+    await user.click(within(group('Pin style')).getByRole('button', { name: 'Dot' }));
+    expect(rent).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: 'Beds and size' })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: /Range/ })).toBeDisabled();
+    await user.click(within(group('Pin style')).getByRole('button', { name: 'Photo' }));
+    expect(rent).toBeEnabled();
+    expect(rent).toBeChecked();
+  });
+
+  it('combines fields and keeps pending ones disabled', async () => {
+    const user = userEvent.setup();
+    const log: PinPrefs[] = [];
+    render(<PinsHarness log={log} />);
+    await user.click(screen.getByRole('checkbox', { name: 'Rating' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Unit type icon' }));
+    expect(log.at(-1)?.fields).toEqual(['type', 'rent', 'rating']);
+    expect(screen.getByRole('checkbox', { name: /Total cost/ })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: /Cost per ft²/ })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: /Travel time/ })).toBeDisabled();
+  });
+
+  it('changes the New badge, rejected units and crowding', async () => {
+    const user = userEvent.setup();
+    const log: PinPrefs[] = [];
+    render(<PinsHarness log={log} />);
+    expect(within(group('New units')).getByRole('button', { name: '“New” tag' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await user.click(within(group('New units')).getByRole('button', { name: 'Dot' }));
+    await user.click(within(group('Rejected units')).getByRole('button', { name: 'Hide' }));
+    await user.click(
+      screen.getByRole('checkbox', { name: 'Group nearby buildings when zoomed out' }),
+    );
+    await user.click(screen.getByRole('radio', { name: /Lowest/ }));
+    expect(log.at(-1)).toMatchObject({
+      newBadge: 'dot',
+      rejected: 'hide',
+      bubbles: false,
+      priceMode: 'lowest',
+    });
+  });
+
+  it('edits the other view separately, which has no fan-out option', async () => {
+    const user = userEvent.setup();
+    const log: PinPrefs[] = [];
+    render(<PinsHarness log={log} />);
+    expect(
+      screen.getByRole('checkbox', { name: 'Fan out buildings when zoomed in' }),
+    ).toBeChecked();
+    await user.click(within(group('Settings for')).getByRole('button', { name: 'Buildings view' }));
+    expect(screen.queryByRole('checkbox', { name: 'Fan out buildings when zoomed in' })).toBeNull();
+    expect(screen.getByRole('checkbox', { name: 'Building name' })).not.toBeChecked();
+    await user.click(screen.getByRole('checkbox', { name: 'Building name' }));
+    expect(log.at(-1)?.fields).toEqual(['rent', 'unit']);
+    await user.click(within(group('Settings for')).getByRole('button', { name: 'Units view' }));
+    expect(screen.getByRole('checkbox', { name: 'Unit number' })).not.toBeChecked();
+  });
+});
+
+describe('LayersPanel', () => {
+  function LayersHarness() {
+    const [base, setBase] = useState<BaseLayer>('wayfinding');
+    return <LayersPanel base={base} onBase={setBase} onClose={() => {}} />;
+  }
+
+  it('shows the five base maps and a key for the chosen one', async () => {
+    const user = userEvent.setup();
+    render(<LayersHarness />);
+    const bases = within(group('Base map')).getAllByRole('button');
+    expect(bases.map((b) => b.querySelector('[class*="bn"]')?.textContent)).toEqual([
+      'Wayfinding',
+      'Detailed streets',
+      'OpenStreetMap',
+      'Cycle map',
+      'Aerial photo',
+    ]);
+    expect(screen.getByRole('list', { name: 'Wayfinding colors' })).toHaveTextContent('Water');
+
+    await user.click(screen.getByRole('button', { name: /Cycle map/ }));
+    expect(screen.getByRole('link', { name: /CyclOSM legend/ })).toHaveAttribute(
+      'href',
+      'https://www.cyclosm.org/legend.html',
+    );
+    await user.click(screen.getByRole('button', { name: /^OpenStreetMap/ }));
+    expect(screen.getByRole('link', { name: /roads, paths and rail/ })).toHaveAttribute(
+      'href',
+      'https://wiki.openstreetmap.org/wiki/OpenStreetMap_Carto/Lines',
+    );
+  });
+
+  it('shows Phase 2 overlays disabled', () => {
+    render(<LayersHarness />);
+    const overlays = within(group('Overlays Phase 2')).getAllByRole('checkbox');
+    expect(overlays).toHaveLength(7);
+    for (const o of overlays) expect(o).toBeDisabled();
+    // Pin options moved to their own panel
+    expect(screen.queryByRole('group', { name: 'Pins show' })).toBeNull();
+  });
+});
+
+describe('Legend', () => {
+  it('names each status color on the map', () => {
+    const units = [newUnit({ buildingId: 'b', status: 'toured' }), newUnit({ buildingId: 'b' })];
+    render(<Legend legend={legendFor(units, 'status', defaultSettings().labelNames)} />);
+    const legend = screen.getByRole('region', { name: 'Pin color: status' });
+    expect(
+      within(legend)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['New', 'Toured']);
+  });
+
+  it('gives the rent range for price colors', () => {
+    const units = [
+      newUnit({ buildingId: 'b', rent: 1200 }),
+      newUnit({ buildingId: 'b', rent: 2400 }),
+    ];
+    render(<Legend legend={legendFor(units, 'price', defaultSettings().labelNames)} />);
+    expect(screen.getByRole('region', { name: 'Pin color: rent' })).toHaveTextContent(
+      'Lightest $1,200to darkest $2,400',
+    );
+  });
+});

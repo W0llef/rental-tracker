@@ -121,7 +121,14 @@ export function ListPanel({
     buildingSort,
     setBuildingSort,
     setHover,
+    hoverKey,
   } = useUi();
+  // A pin under the pointer highlights its card; a grouped pin highlights all its units.
+  const hoverBuilding = hoverKey?.startsWith('building:')
+    ? hoverKey.slice(9)
+    : hoverKey?.startsWith('unit:')
+      ? (data?.unitById.get(hoverKey.slice(5))?.unit.buildingId ?? null)
+      : null;
   // Pointing at a card (or focusing it) shows its pin in full on the map (M3).
   const hoverFrom = (e: { target: EventTarget }) => {
     const card = e.target instanceof Element ? e.target.closest('[data-key]') : null;
@@ -213,6 +220,10 @@ export function ListPanel({
                       row={row}
                       settings={data.settings}
                       selected={selectedKey === `unit:${row.unit.id}`}
+                      hovered={
+                        hoverKey === `unit:${row.unit.id}` ||
+                        hoverKey === `building:${row.unit.buildingId}`
+                      }
                     />
                   </li>
                 ))
@@ -221,6 +232,7 @@ export function ListPanel({
                     <BuildingCard
                       row={row}
                       selected={selectedKey === `building:${row.building.id}`}
+                      hovered={hoverBuilding === row.building.id}
                     />
                   </li>
                 ))}

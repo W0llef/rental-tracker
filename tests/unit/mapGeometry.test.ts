@@ -1,24 +1,31 @@
 import fc from 'fast-check';
 import { boundsOf, contains, distanceMeters } from '../../src/domain/geo';
 import { mapLinks, googleMapsUrl, streetViewUrl } from '../../src/domain/links';
-import { estimatePinSize, fanOffsets, fullPins, STREET_ZOOM } from '../../src/domain/pinLayout';
-import type { PinBox } from '../../src/domain/pinLayout';
+import {
+  autoFans,
+  estimatePinSize,
+  fanOffsets,
+  fanRect,
+  fullPins,
+  overlaps,
+  pinRect,
+  STREET_ZOOM,
+} from '../../src/domain/pinLayout';
+import type { PinBox, Rect } from '../../src/domain/pinLayout';
 import { makeAddress, newBuilding } from '../../src/model/factories';
 
 const box = (id: string, x: number, y: number, priority = 0, keepFull = false): PinBox => ({
   id,
-  x,
-  y,
-  w: 60,
-  h: 33,
+  rect: pinRect(x, y, 60, 33),
   priority,
   keepFull,
 });
 
 describe('fullPins (shrink to dots when crowded)', () => {
-  it('shows every pin in full when shrinking is off', () => {
+  it('shows every pin in full when shrinking is off, at any zoom', () => {
     const boxes = [box('a', 0, 0), box('b', 1, 1)];
     expect(fullPins(boxes, 10, false)).toEqual(new Set(['a', 'b']));
+    expect(fullPins(boxes, 4, false)).toEqual(new Set(['a', 'b']));
   });
 
   it('shows only kept pins in full below street zoom', () => {
@@ -36,6 +43,12 @@ describe('fullPins (shrink to dots when crowded)', () => {
     expect(fullPins(boxes, 15, true)).toEqual(new Set(['selected']));
   });
 
+  it('shrinks pins under an open fan', () => {
+    const fan: Rect = { left: 50, right: 300, top: 0, bottom: 120 };
+    const boxes = [box('under', 100, 100, 1), box('clear', 500, 500, 2)];
+    expect(fullPins(boxes, 15, true, [fan])).toEqual(new Set(['clear']));
+  });
+
   it('never leaves two full, unkept pins overlapping', () => {
     const arb = fc.array(
       fc.record({ x: fc.integer({ min: 0, max: 400 }), y: fc.integer({ min: 0, max: 400 }) }),
@@ -46,23 +59,58 @@ describe('fullPins (shrink to dots when crowded)', () => {
         const boxes = pts.map((p, i) => box(String(i), p.x, p.y, i));
         const full = boxes.filter((b) => fullPins(boxes, 16, true).has(b.id));
         for (let i = 0; i < full.length; i++)
-          for (let j = i + 1; j < full.length; j++) {
-            const a = full[i] as PinBox;
-            const b = full[j] as PinBox;
-            const apart = Math.abs(a.x - b.x) >= 60 + 2 || Math.abs(a.y - b.y) >= 33 + 2;
-            expect(apart).toBe(true);
-          }
+          for (let j = i + 1; j < full.length; j++)
+            expect(overlaps((full[i] as PinBox).rect, (full[j] as PinBox).rect)).toBe(false);
       }),
     );
   });
 });
 
+describe('autoFans (fan out when zoomed in, where there is room)', () => {
+  const r = (left: number): Rect => ({ left, right: left + 200, top: 0, bottom: 150 });
+
+  it('opens fans in priority order, skipping ones that would overlap', () => {
+    const cands = [
+      { id: 'b', rect: r(150), priority: 2 },
+      { id: 'a', rect: r(0), priority: 1 },
+      { id: 'c', rect: r(400), priority: 3 },
+    ];
+    expect(autoFans(cands, [])).toEqual(new Set(['a', 'c']));
+  });
+
+  it('leaves room for fans you opened yourself', () => {
+    expect(autoFans([{ id: 'a', rect: r(0), priority: 1 }], [r(100)])).toEqual(new Set());
+  });
+
+  it('measures a fan around all of its plates and the hub', () => {
+    const rect = fanRect(
+      100,
+      100,
+      [
+        [-80, -40],
+        [80, -40],
+      ],
+      60,
+      33,
+    );
+    expect(rect).toEqual({ left: -10, right: 210, top: 27, bottom: 108 });
+  });
+});
+
 describe('estimatePinSize', () => {
-  it('grows with text and extras', () => {
-    const plain = estimatePinSize('rent', '$1,650', { icon: false, stars: false, count: false });
-    const more = estimatePinSize('rent', '$1,650', { icon: true, stars: true, count: true });
+  it('grows with text and extras, and is small for dots', () => {
+    const plain = estimatePinSize('plate', ['$1,650'], { icon: false, count: false, tag: false });
+    const more = estimatePinSize('plate', ['$1,650', '1 bd · 720 ft²'], {
+      icon: true,
+      count: true,
+      tag: true,
+    });
     expect(more.w).toBeGreaterThan(plain.w);
-    expect(estimatePinSize('photo', null, { icon: false, stars: false, count: false }).h).toBe(62);
+    expect(estimatePinSize('dot', ['x'], { icon: true, count: true, tag: true }).w).toBe(24);
+    expect(estimatePinSize('photo', [], { icon: false, count: false, tag: false }).h).toBe(62);
+    expect(estimatePinSize('photo', ['$1,650'], { icon: false, count: false, tag: false }).h).toBe(
+      80,
+    );
   });
 });
 
