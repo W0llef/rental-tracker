@@ -4,7 +4,7 @@ Status: **Draft 3** · Oct 15, 2026 · covers spec Draft v1 (`SPEC.md`)
 
 This plan covers Phase 1 only (spec §12: "track and compare"). The data model, however, contains every field from spec §3 now, plus the few supporting fields later phases need, so Phases 2–4 add screens and services without reshaping stored data.
 
-**Status:** approved in principle; Q11 answered (fast data entry is in Phase 1). M0–M2 done. Next: M3. Workflow, versions and progress: §13–§14 and `CLAUDE.md`.
+**Status:** approved in principle; Q11 answered (fast data entry is in Phase 1). M0–M2 done. M3 in review. Workflow, versions and progress: §13–§14 and `CLAUDE.md`.
 
 **Draft 2 changes:** design direction C (Wayfinding) chosen; your answers to Q1–Q10 applied (§11); lease length for spreading one-time costs (§5.3); switchable base maps and customizable pins (§4.3); a fast data-entry and AI-import section (§5.7) with revised milestones (§9). One new scope question, Q11, is in §11.
 
@@ -26,10 +26,10 @@ The spec §11 stack is confirmed with four changes and a few additions. Everythi
 | Validation + types | **zod** (4.x) — every record type is a zod schema; TS types are inferred | Addition | One source of truth for: backup import validation, the AI research prompt and import format (zod exports JSON Schema), and migrations. Commands validate every record before writing it. |
 | Storage | IndexedDB via Dexie 4 + `dexie-react-hooks` (`useLiveQuery`) | Same | |
 | Photo originals | File System Access API folder; fallback **Origin Private File System (OPFS)**, then IndexedDB blobs | Refines spec §7 | OPFS is still "browser storage" (spec's fallback) but handles multi-GB files far better than IndexedDB blobs. |
-| Map | MapLibre GL JS via `react-map-gl/maplibre` | Same | |
+| Map | MapLibre GL JS via `react-map-gl/maplibre` | Same | maplibre-gl 6 and react-map-gl 8 (M3). The map code loads on demand after the list (≈ 290 kB gzip), so the first download doesn't grow. MapLibre 6 needs its worker file pointed at explicitly (`setWorkerUrl`, `MapView.tsx`). |
 | Map tiles (default) | **OpenFreeMap** (Positron restyled as "Wayfinding", light and dark) | Picks one | No key, no signup, no request limits. Style URL is a setting so a MapTiler key can be swapped in if OpenFreeMap is ever down. |
 | Other base maps | OpenFreeMap Liberty; OpenStreetMap Standard and CyclOSM raster tiles; MnGeo aerial imagery (WMS) | Addition | All free and keyless. The raster servers are donation-funded, so the app loads only on-screen tiles, never caches them offline, and shows their attribution (see §4.3). |
-| Pins | **HTML markers** (React) + `supercluster` for low-zoom groups | Addition | Pins can show photos, icons or text (your pin options). Only pins inside the visible map are mounted, which stays fast at 500 units. |
+| Pins | **HTML markers** (React) + `supercluster` for low-zoom groups | Addition | Pins can show photos, icons or text (your pin options). Only pins inside the visible map are mounted, which stays fast at 500 units. supercluster 9 ships its own types. |
 | Geocoding | **Photon (komoot) for as-you-type suggestions**, Nominatim only as a single on-submit fallback | **Changed** | Nominatim's usage policy forbids client-side autocomplete; Photon is built for search-as-you-type and allows fair use. Both need no key. |
 | Zip (backup with photos) | fflate (streaming zip/unzip) | Addition | Streams large archives instead of building them in memory. |
 | Offline / install | `vite-plugin-pwa` | Same | |
@@ -612,6 +612,8 @@ Phone width: list and map become tabs; detail opens as a full-screen sheet; edit
 - **Shrink to dots when crowded** (on by default): below street zoom, or where pins would overlap, pins become dots; hovering one shows its full pin, and the selected unit always shows in full.
 - **Fade rejected units** (on by default).
 
+*As built in M3:* pins use the list's own rows, so search and the Units/Buildings switch drive the map too. Neighborhood bubbles appear at zoom 10 and below; below zoom 11 the rest are dots; from 11 up pins shrink only where they'd overlap (cheaper units keep their plate first). Zoom 11 fits Minneapolis–St. Paul on a laptop, so "Fit all units" shows price plates. A selected unit in a grouped building opens its fan automatically; selecting a card or opening a fan pans it into view. Until total cost exists (M8), *Total cost* and *Cost per ft²* are shown disabled with an "M8" tag, pins show rent, and the price color option is labeled *Rent* and scales on rent. Photo pins show the unit-type icon until photos arrive (M11). "Place on map" for units without a location arrives with quick-add (M4); the map only counts them for now.
+
 **Base maps** (one at a time; all keyless)
 
 | Base map | Source | Notes |
@@ -836,7 +838,7 @@ Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 14
 | HEIC photos from iPhone | Can't be shown in Chrome/Firefox | Clear message; iPhone "Most Compatible" setting or convert to JPEG |
 | Listing URL formats change | Pre-fill stops working | It's a convenience only; field still saves the link |
 | Raster tile servers (OSM, CyclOSM) are donation-funded and can block heavy users | A base map stops loading | Normal on-screen use only, no offline caching or prefetch, attribution always shown; Wayfinding stays the default |
-| MnGeo aerial service may not allow web-page access (CORS) or the web-map projection | No aerial base map | Checked first thing in M3; fallback is a keyed aerial layer, or drop it |
+| MnGeo aerial service may not allow web-page access (CORS) or the web-map projection | No aerial base map | M3: MnGeo documents Web Mercator (EPSG:3857) on its `wmsll` endpoint, which the app uses (2025 metro imagery over 2025 statewide). Cross-origin access couldn't be checked from the build workspace (its network only reaches package registries), so the map says "Aerial photos couldn't load" if tiles fail; the owner checks it on the preview. Fallback: a keyed aerial layer, or drop it |
 | AI replies can be wrong or invented | Bad data in your list | Nothing replaces your values without review; source link per value; "no source" and implausible-value flags; AI mark until confirmed |
 | Listing-text and table formats vary by site | Paste recognizes less | Recognized values are confirmed, not trusted; fixture library grows as you hit new sites |
 | Photo pins with many units | Cluttered map | Shrink-to-dots when crowded; photos load from small thumbnails only |
@@ -891,6 +893,7 @@ None. New questions will be added here as they come up.
 | 2026-10-15 | Draft 3: Q11 decided (fast entry in Phase 1); workflow, versions and backups (§13) and progress tracking (§14) added; `CLAUDE.md` added; preview builds isolated from real data; backup download before migrations |
 | 2026-10-15 | M1: undo/redo stacks derived from the change log instead of stored (§5.6); writes outside a command are refused, with `systemWrite` for restore and tests; sample data is generated by `src/dev/sampleData.ts` (deterministic, always valid against the model) instead of `public/sample-data.json`; the data check page (`#/debug`) exists on every build but sample data and test changes only on preview/dev; the debug page loads on demand so the first download stays small; the pre-migration backup prompt is built in M5, before any v2; listing/destination/collection/note/photo/import schemas share `model/records.ts`. Workflow: `package.json` version is set per milestone (`0.N.0` on the branch); the owner creates tags and deletes merged branches on GitHub (this setup's GitHub access gets HTTP 403 for those) |
 | 2026-10-15 | Workflow: the next-chat prompt carries a `Model:` line (default Claude Opus 5.5); each chat checks it against its own model and, on approval, checks the owner's tag and branch cleanup (`CLAUDE.md`) |
+| 2026-10-15 | M3: the map. Pins, fan-out, neighborhood bubbles, dots when crowded, list ↔ map selection and hover, the Map layers panel (`L`), legend, Google Maps and Street View links. Zoom thresholds: bubbles at ≤ 10, all dots below 11, overlap-based above (§4.3). Total cost and cost per ft² pin options are disabled until M8 and pins show rent (extends the M2 rule); the price color is labeled *Rent* until then. Default pin extras corrected to DESIGN §4.7 (type icon and stars off, New badge on); only the built-in default changed, no stored data. Map choices are saved through `updateSettings`, so each one is an undoable change. Map viewport remembered per database in `localStorage`. The Wayfinding style is OpenFreeMap Positron recolored at load from the `--map-*` tokens (light and dark), with road shields hidden; unknown layers keep their colors. Aerial uses MnGeo `wmsll` (see §10). Browser tests answer all map-server requests locally (`tests/e2e/fixtures.ts`). Accessibility: each pin's name starts with its visible text (WCAG 2.5.3), and MapLibre's canvas landmark is named "Map view…" so it doesn't duplicate the Map region. MapLibre loads on demand (≈ 290 kB gzip); the first download is unchanged at ≈ 177 kB |
 | 2026-10-15 | M2: selection lives only in the URL (`#/unit/:id`, `#/building/:id`) rather than also in Zustand, so Back closes the panel and nothing can drift; Zustand holds view, search and sort, and the view and sorts are remembered in `localStorage` per database name (preview never changes the live app's choices). The list keys `/`, `↑↓`/`J K`, `Esc` and `B` are built now; the other shortcuts stay in M6. Until total cost exists (M8), rent is the headline number on cards and the detail plate, and the sorts are rent, available date, size, bedrooms, bathrooms, floor, rating, listing age, date added, status and building (total and $/ft² join in M8); buildings sort by lowest rent, name, number of your units or date added. Search sits in the top bar at every width (on phones the app name is visually hidden to make room). Rejected cards are dimmed by switching their text to slate and fading the thumbnail, not 50% opacity on the whole card, so text keeps AA contrast; new `--pick-ink`/`--reject-ink` tokens do the same for flag text on `--frost`. Buildings with none of your units are left out of the Buildings view (still reachable by link). TanStack Virtual is deferred to the M13 performance pass (a plain list is fine at current sizes) and Radix isn't needed yet (native select). Cards no longer show a separate amber "New" badge beside the "New" status pill (owner feedback: redundant). The main screen now loads Dexie and zod up front: first download ≈ 175 kB gzip (was ≈ 100 kB plus a 66 kB Data check chunk); revisit in M13 |
 
 ---
@@ -930,7 +933,7 @@ The full working agreement for every session is in `CLAUDE.md`; this is the summ
 | M0 Scaffold and deploys | Approved (fix v0.0.1) | v0.0.1 | 2026-10-15 |
 | M1 Data model, database, undo | Approved | v0.1.0 | 2026-10-15 |
 | M2 List and detail | Approved | v0.2.0 | 2026-10-15 |
-| M3 Map, pins, layers | Not started | — | — |
+| M3 Map, pins, layers | In review (`m3-map`) | 0.3.0 | — |
 | M4 Quick-add and paste text | Not started | — | — |
 | M5 Backup and restore | Not started | — | — |
 | M6 Triage and bulk edit | Not started | — | — |

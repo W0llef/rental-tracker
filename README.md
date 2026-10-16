@@ -32,6 +32,22 @@ browser for that exact web address. That means:
   open in the **Unit** tab.
 - Keys: `↓`/`J` and `↑`/`K` move through the list, `B` switches Units / Buildings.
 
+### The map
+
+- Each building with units in the list gets a pin; the map follows your search and the
+  **Units / Buildings** switch. Pins show rent until total cost arrives (M8).
+- A building with several units shows one pin with a count. Click it to **fan out** its units;
+  `Esc` or a click on the map folds them back. Selecting a card brings its pin into view.
+- Zoomed out, nearby buildings merge into round **bubbles** with a unit count; click one to zoom in.
+  Where pins would overlap they shrink to **dots**; point at a card (or a dot) to see it in full.
+- **Layers** (or `L`) picks the base map (Wayfinding, Detailed streets, OpenStreetMap, Cycle map,
+  Aerial photo), what pins show, pin color, and whether to shrink crowded pins and fade rejected
+  units. Choices are saved and can be undone like any change. **Fit** shows all your units.
+- The unit and building panels link to **Google Maps** and **Street View**.
+- Map pictures come from free services (OpenFreeMap, OpenStreetMap, CyclOSM and Minnesota's MnGeo
+  aerial photos). They load only while you look at the map and need an internet connection; if
+  one is down, the map says so and you can pick another in Layers.
+
 ## Running it on your computer (for development)
 
 You need [Node.js](https://nodejs.org) 22 or newer.
@@ -54,6 +70,8 @@ Other commands:
 | `npm run format`    | Fixes formatting                                                   |
 
 `localhost` uses a separate database from the live app, so development never touches real data.
+Browser tests answer the map servers' requests themselves (`tests/e2e/fixtures.ts`), so they run
+offline and never load real tiles.
 
 ### Checking the data
 

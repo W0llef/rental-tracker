@@ -122,8 +122,8 @@ Pins are sign plates by default, but what they show is your choice (Map layers p
 | Rejected | Dashed outline, struck-through text, 55% opacity, no edge (hidden when "Hide rejected" is on) |
 | Fails baseline criteria | 55% opacity, solid outline |
 | Unknown total | Falls back to rent with a "rent" suffix (`$1,650 rent`); unknown rent shows `?` |
-| Crowded or zoomed out | Shrinks to dots (if on); hover expands one; the selected pin always shows in full |
-| Low zoom | Neighborhood bubbles: navy circle with count |
+| Crowded or zoomed out | Shrinks to dots (if on): all of them below zoom 11, otherwise only where plates would overlap; hovering a pin or its card expands it; the selected pin always shows in full |
+| Low zoom (10 and below) | Neighborhood bubbles: navy circle with the number of units; click to zoom in |
 
 **Pin color** options: *Status* (§2.2), *Label* (§2.3, unlabeled = `--ice`), or *Total cost*, a five-step blue scale from your cheapest to your priciest unit:
 
@@ -388,7 +388,7 @@ Opens from the **Layers** button above the zoom controls (try it in the mockup).
 └──────────────────────────────────────────┘
 ```
 
-Choices apply instantly and are remembered (Settings → Display holds the same options as defaults).
+Choices apply instantly and are remembered (Settings → Display holds the same options as defaults). Until total cost exists (M8), *Total cost* and *Cost per ft²* show disabled with an "M8" tag, pins show rent, and the third pin color option reads *Rent*. On phones the Layers button is icon-only and the legend is hidden.
 
 ### 4.8 Batch add units (`#/building/:id/add`)
 
