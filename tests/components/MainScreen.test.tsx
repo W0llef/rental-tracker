@@ -243,6 +243,20 @@ describe('main screen with units', () => {
     );
   });
 
+  it('keeps up with keys pressed faster than the screen updates', async () => {
+    renderAt();
+    await waitFor(() => expect(cardTitles()).toHaveLength(4));
+    await act(async () => {}); // let the keyboard handler see the loaded list
+    // Three presses in one go, before React re-renders between them
+    act(() => {
+      for (let i = 0; i < 3; i++)
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true }));
+    });
+    await waitFor(() => expect(path()).not.toBe('/'));
+    const third = within(list()).getAllByRole('link')[2]?.getAttribute('href');
+    expect(path()).toBe(third);
+  });
+
   it('moves through the list with the keyboard', async () => {
     const user = userEvent.setup();
     renderAt();

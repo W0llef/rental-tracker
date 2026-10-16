@@ -12,6 +12,7 @@ import { sortUnits } from '../../domain/sort';
 import type { ISODate } from '../../model';
 import type { BuildingRow } from '../../state/derive';
 import { StatusPill, Value } from '../common/Markers';
+import { mapLinks } from '../../domain/links';
 import { Amenities, Facts, Links, Notes, Section } from './parts';
 import { fromLinkRecords, isWebUrl, petsText, tri } from './text';
 import styles from './detail.module.css';
@@ -31,6 +32,7 @@ export function BuildingPanel({ row, today }: { row: BuildingRow; today: ISODate
       ? [{ key: 'availability', label: 'Availability page', url: b.availabilityUrl }]
       : []),
     ...fromLinkRecords(b.links),
+    ...mapLinks(b),
   ];
 
   return (

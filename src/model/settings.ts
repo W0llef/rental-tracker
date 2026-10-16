@@ -39,6 +39,8 @@ export const PIN_CONTENTS = [
   'travel', // enabled in Phase 2
 ] as const;
 
+export type PinContent = (typeof PIN_CONTENTS)[number];
+
 export const BASE_LAYERS = ['wayfinding', 'streets', 'osm', 'cycle', 'aerial'] as const;
 
 export const mapPrefs = z.object({
@@ -172,7 +174,7 @@ export function defaultSettings(): Settings {
       baseLayer: 'wayfinding',
       pins: {
         show: 'total',
-        extras: { typeIcon: true, stars: true, newBadge: true },
+        extras: { typeIcon: false, stars: false, newBadge: true }, // DESIGN.md §4.7
         colorBy: 'status',
         simplifyWhenCrowded: true,
         fadeRejected: true,

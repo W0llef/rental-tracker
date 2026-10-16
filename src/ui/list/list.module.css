@@ -110,7 +110,8 @@
   position: relative;
 }
 
-.card:hover {
+.card:hover,
+.card[data-hover] {
   background: var(--frost);
 }
 
@@ -146,6 +147,7 @@
 }
 
 .card[aria-current='true'] .thumb,
+.card[data-hover] .thumb,
 .card:hover .thumb {
   background: var(--surface);
 }

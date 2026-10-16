@@ -22,6 +22,7 @@ import type { ISODate, Settings, Unit } from '../../model';
 import type { UnitRow } from '../../state/derive';
 import { FlagMark, LabelSwatch, Stars, StatusPill, Tag, Value } from '../common/Markers';
 import { Compass } from './Compass';
+import { mapLinks } from '../../domain/links';
 import { Amenities, Facts, Links, Notes, Rows, Section } from './parts';
 import { fromLinkRecords, isWebUrl, petsText, structureText, tri } from './text';
 import type { ExternalLink } from './text';
@@ -287,6 +288,7 @@ export function UnitPanel({
     ...(b && isWebUrl(b.website)
       ? [{ key: 'website', label: 'Building website', url: b.website }]
       : []),
+    ...(b ? mapLinks(b) : []),
   ];
 
   return (

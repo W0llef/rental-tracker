@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 /**
  * The live app has no banner above the top bar. Layout must not depend on it
@@ -59,4 +59,23 @@ test('live data check page uses the real database and offers no sample data', as
     page.getByTestId('record-counts').getByRole('row', { name: /^Units/ }),
   ).toContainText('0');
   await expect(page.getByRole('button', { name: 'Nothing to undo' })).toBeDisabled();
+});
+
+test('live map starts on downtown with no pins and working controls', async ({
+  page,
+  mapNet,
+}, info) => {
+  await page.goto('/');
+  if (info.project.name.includes('phone'))
+    await page
+      .getByRole('navigation', { name: 'Views' })
+      .getByRole('button', { name: 'Map' })
+      .click();
+  const map = page.getByRole('region', { name: 'Map' });
+  await expect(map.getByRole('button', { name: 'Layers', exact: true })).toBeVisible();
+  await expect(map.locator('canvas.maplibregl-canvas')).toBeAttached();
+  await expect(map.locator('[data-pin]')).toHaveCount(0);
+  await expect(map.getByRole('button', { name: 'Fit all units' })).toBeDisabled();
+  // The live build asks for the Wayfinding style like any other build
+  await expect.poll(() => mapNet.requests.includes('tiles.openfreemap.org')).toBe(true);
 });

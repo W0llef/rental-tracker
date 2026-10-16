@@ -1,0 +1,1451 @@
+/* The map (DESIGN.md §2.4, §2.5, §4.7; mockups/c-wayfinding.html) */
+
+.root {
+  position: absolute;
+  inset: 0;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+}
+
+/* MapLibre's attribution, restyled to the small-print role (DESIGN.md §2.6) */
+.root :global(.maplibregl-ctrl-attrib) {
+  font: 500 11px/16px var(--font);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  color: var(--slate);
+}
+
+.root :global(.maplibregl-ctrl-attrib a) {
+  color: var(--slate);
+}
+
+.root :global(.maplibregl-ctrl-attrib-button) {
+  background-color: var(--surface);
+}
+
+/* ── Pins: HTML markers; the marker element is a 0×0 anchor at the building ── */
+
+.anchor {
+  width: 0;
+  height: 0;
+}
+
+.pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, calc(-100% - 7px));
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  height: 26px;
+  padding: 0 9px 0 13px;
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
+  border-radius: 5px;
+  font: 800 13px/1 var(--font);
+  font-feature-settings: 'tnum' 1;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(15, 46, 68, 0.28);
+  cursor: pointer;
+}
+
+/* Tail pointing at the building */
+.pin::after {
+  content: '';
+  position: absolute;
+  left: calc(50% - 5px);
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  border-right: inherit;
+  border-bottom: inherit;
+  transform: rotate(45deg);
+}
+
+.pin:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: 2px;
+}
+
+/* Status (or label, or price) edge: one stripe per unit */
+.edge {
+  position: absolute;
+  left: -1px;
+  top: -1px;
+  bottom: -1px;
+  width: 6px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 5px 0 0 5px;
+  overflow: hidden;
+}
+
+.edge i,
+.bar i {
+  flex: 1;
+}
+
+.sel .edge {
+  width: 7px;
+}
+
+/* Fields: one segment each, divided by hairlines; price reads first */
+.pseg {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  padding: 2px 0 0;
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--slate);
+}
+
+.pseg + .pseg {
+  margin-left: 7px;
+  padding-left: 7px;
+  border-left: 1px solid var(--ice);
+}
+
+.ico + .pseg {
+  margin-left: 5px;
+}
+
+.f-rent {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.txt {
+  padding-top: 2px;
+}
+
+.ico {
+  display: inline-grid;
+  color: var(--slate);
+}
+
+.ico svg {
+  width: 15px;
+  height: 15px;
+}
+
+.cnt {
+  display: inline-grid;
+  place-items: center;
+  min-width: 17px;
+  height: 16px;
+  margin-left: 6px;
+  padding: 1px 4px 0;
+  border-radius: 8px;
+  background: var(--river);
+  color: var(--on-river);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* New: a dot, or a tag that says so */
+.newb {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--plow);
+  border: 2.5px solid var(--surface);
+}
+
+.newTag {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  padding: 2px 4px 1px;
+  border-radius: 3px;
+  background: var(--plow);
+  color: #3a2a00;
+  border: 1.5px solid var(--surface);
+  font: 800 10px/1 var(--font);
+  letter-spacing: 0.01em;
+}
+
+/* Selected: navy sign plate */
+.sel {
+  height: 34px;
+  background: var(--river);
+  color: var(--on-river);
+  border-color: var(--river);
+  padding-left: 15px;
+}
+
+.sel .pseg,
+.sel .f-rent,
+.sel .ico {
+  color: var(--on-river);
+}
+
+.sel .f-rent {
+  font-size: 17px;
+}
+
+.sel .pseg + .pseg {
+  border-left-color: color-mix(in srgb, var(--on-river) 35%, transparent);
+}
+
+/* Rejected: dashed, struck through, no edge; faded when "Fade" is chosen */
+.rej {
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.rej .pseg {
+  text-decoration: line-through;
+}
+
+.rej .edge {
+  display: none;
+}
+
+.faded {
+  opacity: 0.55;
+}
+
+/* Photo pins: the photo, a stripe bar under it, the fields as a caption */
+.photo {
+  height: auto;
+  padding: 3px;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.bar {
+  display: flex;
+  height: 5px;
+  margin-top: 2px;
+  border-radius: 0 0 3px 3px;
+  overflow: hidden;
+}
+
+.caption {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3px 4px 1px;
+  height: 20px;
+}
+
+.caption .pseg {
+  font-size: 11.5px;
+}
+
+.caption .f-rent {
+  font-size: 12px;
+}
+
+.photo .cnt {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  margin: 0;
+}
+
+.photo.sel {
+  padding: 4px;
+}
+
+.noph {
+  width: 46px;
+  height: 46px;
+  align-self: center;
+  display: grid;
+  place-items: center;
+  background: var(--frost);
+  color: var(--slate);
+  border-radius: 3px;
+}
+
+.noph svg {
+  width: 24px;
+  height: 24px;
+}
+
+.photo.sel .noph {
+  width: 64px;
+  height: 64px;
+}
+
+/* Dots: the "Dot" style, or shrunk when crowded; the ring shows each unit's color */
+.dot {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2.5px solid var(--surface);
+  transform: translate(-50%, -50%);
+  justify-content: center;
+  color: #fff;
+  font-size: 11px;
+}
+
+.dot::after {
+  display: none;
+}
+
+.dot.multi {
+  width: 24px;
+  height: 24px;
+}
+
+.dot.multi .txt {
+  padding-top: 1px;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.7);
+}
+
+.dot.sel {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  box-shadow: 0 0 0 3px var(--river);
+}
+
+.dot .newb {
+  top: -5px;
+  right: -5px;
+  width: 9px;
+  height: 9px;
+  border-width: 2px;
+}
+
+.dot .newTag {
+  top: -12px;
+  right: -16px;
+}
+
+.dot.rej {
+  background: transparent;
+  border: 2px dashed var(--slate);
+}
+
+/* Aerial: a stronger outline so pins read over photos (DESIGN.md §2.5) */
+.root[data-base='aerial'] .pin:not(.dot) {
+  border: 1px solid rgba(0, 0, 0, 0.75);
+}
+
+.root[data-base='aerial'] .dot {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.75);
+}
+
+/* ── Open buildings: one card each (owner review 4, DESIGN.md §2.4) ──
+   The card, its line and its marker use the theme's navy with a halo of the surface color,
+   so they read on every base map. */
+
+/* Pins and dots scale with the Pin size setting, about the building's point */
+.scaled {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+}
+
+.cardAt {
+  position: absolute;
+  transform-origin: 0 0;
+}
+
+.card {
+  position: relative;
+  width: max-content;
+  min-width: 150px;
+  max-width: 360px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1.5px solid var(--river);
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--surface) 80%, transparent),
+    0 2px 8px rgba(15, 46, 68, 0.28);
+  font: 600 12.5px/1.2 var(--font);
+  font-feature-settings: 'tnum' 1;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 3px 3px 8px;
+  border-bottom: 1px solid var(--ice);
+}
+
+/* The building's marker: a navy ring with a center dot, on the map and in the header */
+.cardMark,
+.mark {
+  flex: none;
+  border-radius: 50%;
+  border: 2.5px solid var(--river);
+  background: radial-gradient(circle, var(--river) 0 32%, var(--surface) 36%);
+}
+
+.cardMark {
+  width: 14px;
+  height: 14px;
+}
+
+.mark {
+  position: absolute;
+  left: -11px;
+  top: -11px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-width: 3px;
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 1px 3px rgba(15, 46, 68, 0.45);
+  cursor: pointer;
+}
+
+.mark:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: 3px;
+}
+
+.cardName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 3px 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 800 12.5px/1.2 var(--font);
+  text-align: left;
+  cursor: pointer;
+}
+
+.cardName:hover {
+  text-decoration: underline;
+}
+
+.cardName:focus-visible,
+.cardClose:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+.cardCount {
+  color: var(--slate);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.cardClose {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.cardClose:hover {
+  background: var(--frost);
+}
+
+.cardClose svg {
+  width: 10px;
+  height: 10px;
+}
+
+.cardRows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cardRows li + li {
+  border-top: 1px solid var(--ice);
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 30px;
+  margin: 0;
+  padding: 3px 8px 3px 13px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cardRows li:last-child .row {
+  border-radius: 0 0 9px 9px;
+}
+
+.row:hover {
+  background: var(--frost);
+}
+
+.row:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: -3px;
+}
+
+.row.hot {
+  outline-offset: -2px;
+}
+
+.rowEdge {
+  position: absolute;
+  left: 4px;
+  top: 5px;
+  bottom: 5px;
+  width: 4px;
+  border-radius: 2px;
+}
+
+.rowText {
+  display: inline-flex;
+  align-items: center;
+  flex: 1;
+  min-height: 20px;
+}
+
+.rowSel,
+.rowSel:hover {
+  background: var(--river);
+  color: var(--on-river);
+}
+
+.rowSel .pseg,
+.rowSel .f-rent,
+.rowSel .ico {
+  color: var(--on-river);
+}
+
+.rowSel .pseg + .pseg {
+  border-left-color: color-mix(in srgb, var(--on-river) 35%, transparent);
+}
+
+.rowRej .pseg {
+  text-decoration: line-through;
+}
+
+.rowRej .rowEdge {
+  display: none;
+}
+
+/* "Fade": quieter text that still reads (a see-through row would fail contrast) */
+.rowFaded .pseg,
+.rowFaded .f-rent {
+  color: var(--slate);
+  font-weight: 600;
+}
+
+.rowFaded .thumb,
+.rowFaded .ico {
+  opacity: 0.55;
+}
+
+.rowNew {
+  padding: 2px 4px 1px;
+  border-radius: 3px;
+  background: var(--plow);
+  color: #3a2a00;
+  font: 800 10px/1 var(--font);
+}
+
+.rowNewDot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--plow);
+}
+
+.thumb {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 4px;
+  background: var(--frost);
+  color: var(--slate);
+  cursor: zoom-in;
+}
+
+.thumb svg {
+  width: 18px;
+  height: 18px;
+}
+
+.rowSel .thumb {
+  background: color-mix(in srgb, var(--on-river) 18%, transparent);
+  color: var(--on-river);
+}
+
+/* The larger photo beside a card row or single photo pin: the top layer of the map */
+.preview {
+  position: absolute;
+  z-index: 30;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 3px solid var(--surface);
+  background: var(--frost);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--ink) 18%, transparent),
+    var(--shadow-float);
+  pointer-events: none;
+}
+
+.previewPhoto {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  height: 100%;
+  color: var(--slate);
+}
+
+.previewPhoto svg {
+  width: 52px;
+  height: 52px;
+}
+
+.previewPhoto small {
+  font-size: 12px;
+}
+
+.previewTitle {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  color: var(--ink);
+  font: 800 12.5px/1.2 var(--font);
+}
+
+/* The line from the marker to its card: navy over a halo */
+.cardLine {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.lineHalo {
+  stroke: var(--surface);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+
+.lineInk {
+  stroke: var(--river);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+}
+
+.lineEnd {
+  fill: var(--river);
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+/* Pointing at a card: its marker grows, its line thickens, the other cards fade */
+.cardHot .mark {
+  transform: scale(1.3);
+}
+
+.cardHot .lineInk {
+  stroke-width: 3.5;
+}
+
+.cardHot .lineHalo {
+  stroke-width: 9;
+}
+
+.dimCard {
+  opacity: 0.4;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .card,
+  .cardLine {
+    transition: opacity 120ms;
+  }
+
+  .mark {
+    transition: transform 120ms;
+  }
+
+  .cardAt {
+    animation: fade-in 160ms ease-out both;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ── Neighborhood bubbles (low zoom) ── */
+
+.bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 17px;
+  background: var(--river);
+  color: var(--on-river);
+  border: 3px solid var(--surface);
+  font: 800 13px/1 var(--font);
+  font-feature-settings: 'tnum' 1;
+  box-shadow: 0 1px 3px rgba(15, 46, 68, 0.35);
+  cursor: pointer;
+}
+
+.bubble span {
+  padding-top: 2px;
+}
+
+.bubble:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: 2px;
+}
+
+/* ── Controls: Layers, zoom, fit (top right) ── */
+
+.controls {
+  position: absolute;
+  right: var(--s4);
+  top: var(--s4);
+  display: grid;
+  gap: var(--s2);
+  justify-items: end;
+  z-index: 4;
+}
+
+.layersBtn {
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 13px var(--font);
+  cursor: pointer;
+}
+
+.layersBtn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.layersBtn[aria-expanded='true'] {
+  background: var(--river);
+  color: var(--on-river);
+  border-color: var(--river);
+}
+
+.kbd {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--slate);
+  border: 1px solid var(--ice);
+  border-radius: 3px;
+  padding: 1px 4px 0;
+}
+
+.layersBtn[aria-expanded='true'] .kbd {
+  color: var(--on-river);
+  border-color: color-mix(in srgb, var(--on-river) 40%, transparent);
+}
+
+.grp {
+  display: grid;
+  background: var(--surface);
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.grp button {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-bottom: 1px solid var(--ice);
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 16px var(--font);
+  cursor: pointer;
+}
+
+.grp button:last-child {
+  border-bottom: 0;
+}
+
+.grp .fit {
+  font-size: 12px;
+}
+
+.layersBtn:focus-visible,
+.grp button:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: -3px;
+}
+
+/* ── Notes (top left): needs location, base map problems ── */
+
+.notes {
+  position: absolute;
+  left: var(--s4);
+  top: var(--s4);
+  right: 120px;
+  display: grid;
+  gap: var(--s2);
+  justify-items: start;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.note {
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  padding: 6px 10px 5px;
+  font-size: 12.5px;
+  color: var(--ink);
+  pointer-events: auto;
+}
+
+.warn {
+  border-color: var(--plow);
+}
+
+/* ── Legend (bottom left) ── */
+
+.legend {
+  position: absolute;
+  left: var(--s4);
+  bottom: var(--s4);
+  z-index: 3;
+  background: var(--surface);
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  padding: var(--s2) var(--s3);
+  font-size: 12px;
+  display: grid;
+  gap: 3px;
+  max-height: calc(100% - 120px);
+  overflow: auto;
+}
+
+.legendTitle {
+  font-weight: 700;
+  color: var(--slate);
+  margin: 0 0 2px;
+  font-size: 12px;
+}
+
+.legendRows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 3px;
+}
+
+.legendRows li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 4px;
+  height: 12px;
+  border-radius: 2px;
+  display: inline-block;
+  flex: none;
+}
+
+.scale {
+  display: flex;
+  gap: 2px;
+}
+
+.scale i {
+  width: 18px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.range {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s3);
+  font-feature-settings: 'tnum' 1;
+}
+
+/* ── Map layers panel (DESIGN.md §4.7) ── */
+
+.layers {
+  position: absolute;
+  top: 60px;
+  right: var(--s4);
+  width: 316px;
+  max-height: calc(100% - 76px);
+  overflow: auto;
+  z-index: 6;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  box-shadow: 0 8px 28px rgba(15, 46, 68, 0.18);
+}
+
+.lh {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  padding: var(--s3) var(--s4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--ice);
+  z-index: 1;
+}
+
+.lh h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.lh button {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--slate);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.lh button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.lsec {
+  margin: 0;
+  padding: var(--s3) var(--s4);
+  border: 0;
+  border-bottom: 1px solid var(--ice);
+  min-width: 0;
+}
+
+.lsec:last-child {
+  border-bottom: 0;
+}
+
+.lt {
+  float: left;
+  width: 100%;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--slate);
+  margin-bottom: var(--s2);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.lt + * {
+  clear: both;
+}
+
+.tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px 0;
+  border-radius: 3px;
+  background: var(--frost);
+  color: var(--slate);
+}
+
+.bases {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s2);
+}
+
+.base {
+  display: grid;
+  gap: 4px;
+  padding: 4px 4px 6px;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.base[aria-pressed='true'] {
+  border-color: var(--river);
+  box-shadow: inset 0 0 0 1px var(--river);
+}
+
+.bt {
+  height: 54px;
+  border-radius: 5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.bn {
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 0 2px;
+}
+
+.bs {
+  font-size: 11px;
+  color: var(--slate);
+  padding: 0 2px;
+  line-height: 1.25;
+}
+
+/* Preview swatches (drawn, not tiles: nothing loads until a base map is chosen) */
+.bt-wayfinding {
+  background: linear-gradient(140deg, #eef2f3 0 42%, #b9d3e4 42% 58%, #e3e9ec 58%);
+}
+
+.bt-streets {
+  background: linear-gradient(
+    140deg,
+    #f4f1ea 0 30%,
+    #f6d58c 30% 34%,
+    #efeadf 34% 48%,
+    #a3cce6 48% 62%,
+    #ddefd2 62%
+  );
+}
+
+.bt-osm {
+  background: linear-gradient(
+    140deg,
+    #f2efe9 0 30%,
+    #f7b9a2 30% 35%,
+    #f2efe9 35% 46%,
+    #aad3df 46% 61%,
+    #cdebb0 61%
+  );
+}
+
+.bt-cycle {
+  background:
+    repeating-linear-gradient(50deg, transparent 0 14px, #3b68c9 14px 16px),
+    linear-gradient(140deg, #f4f4f0 0 44%, #9fc6e2 44% 58%, #d9e7c9 58%);
+}
+
+.bt-aerial {
+  background:
+    radial-gradient(circle at 30% 40%, #6e7a63 0 12%, transparent 13%),
+    radial-gradient(circle at 70% 70%, #59684f 0 16%, transparent 17%),
+    linear-gradient(140deg, #8a8c82 0 40%, #33505e 40% 56%, #707867 56%);
+}
+
+.chipset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chipset button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--ice);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 600 12.5px var(--font);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chipset button[aria-pressed='true'] {
+  background: var(--river);
+  border-color: var(--river);
+  color: var(--on-river);
+}
+
+.chipset button:disabled {
+  color: var(--slate);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+.chipset button:disabled .tag {
+  padding: 0 4px;
+}
+
+.seg {
+  display: flex;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.seg button {
+  flex: 1;
+  min-height: 32px;
+  border: 0;
+  border-right: 1px solid var(--ice);
+  background: var(--surface);
+  color: var(--ink);
+  font: 600 12.5px var(--font);
+  cursor: pointer;
+}
+
+.seg button:last-child {
+  border-right: 0;
+}
+
+.seg button[aria-pressed='true'] {
+  background: var(--river);
+  color: var(--on-river);
+}
+
+.chk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 3px 0;
+  min-height: 28px;
+}
+
+.chk input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--lake);
+  margin: 0;
+}
+
+.off {
+  color: var(--slate);
+}
+
+.lnote {
+  font-size: 12px;
+  color: var(--slate);
+  margin: 6px 0 0;
+}
+
+.base:focus-visible,
+.chipset button:focus-visible,
+.seg button:focus-visible,
+.lh button:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: 1px;
+}
+
+/* ── Fallback when the map can't start ── */
+
+.fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--s5);
+  background: var(--map-land);
+}
+
+.fallback p {
+  margin: 0;
+  max-width: 34ch;
+  padding: var(--s3) var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  color: var(--ink);
+  font-size: 13px;
+}
+
+@media (max-width: 759px) {
+  /* Phone: the layers panel is a bottom sheet over the map */
+  .layers {
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    width: auto;
+    max-height: 70%;
+    border-radius: 12px 12px 0 0;
+    border-bottom: 0;
+  }
+
+  .kbd,
+  .legend {
+    display: none;
+  }
+
+  /* Icon-only on phones; the word stays for screen readers and voice control */
+  .layersLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .grp button,
+  .layersBtn {
+    min-width: 44px;
+    height: 44px;
+    justify-content: center;
+  }
+
+  .chipset button,
+  .seg button,
+  .chk {
+    min-height: 44px;
+  }
+
+  .notes {
+    right: 76px;
+  }
+}
+
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Pins panel extras, base-map keys, Collapse all ── */
+
+.lsub {
+  margin: 10px 0 2px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.lsub.off {
+  color: var(--slate);
+}
+
+.inlineLegend {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  font-size: 12px;
+  display: grid;
+  gap: 3px;
+}
+
+.keyRows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  font-size: 12.5px;
+}
+
+.keyRows li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.keySwatch {
+  width: 18px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid var(--ice);
+  flex: none;
+}
+
+.lnote a {
+  color: var(--lake);
+}
+
+.collapseBtn {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 12.5px var(--font);
+  cursor: pointer;
+}
+
+.collapseBtn:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: 1px;
+}
+
+.btnRow {
+  display: flex;
+  gap: var(--s2);
+}
+
+@media (max-width: 759px) {
+  .collapseBtn {
+    height: 44px;
+  }
+}
+
+/* ── Hover, measuring (M3 review 2) ── */
+
+/* Its card is under the pointer */
+.hot {
+  outline: 2px solid var(--lake);
+  outline-offset: 2px;
+}
+
+/* Preview over a dot: drawn on top, never catches the pointer, so it can't flicker */
+.peek {
+  position: absolute;
+  left: 0;
+  top: -6px;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.peek .pin {
+  box-shadow: var(--shadow-float);
+}
+
+/* Invisible copies of pins, measured to lay out the real ones */
+.measurer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+  contain: layout;
+}
+
+.measurer > div {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.lfor {
+  margin: 0;
+  padding: var(--s2) var(--s4);
+  border-bottom: 1px solid var(--ice);
+  background: var(--frost);
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+/* Pins panel: the Pin size slider */
+.sizeRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.sizeRow input {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--river);
+}
+
+.sizeRow output {
+  min-width: 40px;
+  text-align: right;
+  font-feature-settings: 'tnum' 1;
+  color: var(--slate);
+}
+
+.linkBtn {
+  margin-top: 2px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--lake);
+  font: 600 12px/1.3 var(--font);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.linkBtn:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Phones: bigger touch targets in cards */
+@media (max-width: 759px) {
+  .row {
+    min-height: 40px;
+  }
+
+  .cardClose {
+    width: 36px;
+    height: 36px;
+  }
+}

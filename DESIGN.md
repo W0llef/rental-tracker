@@ -35,7 +35,7 @@ The spec models flags, stars and color labels on Lightroom Classic, so this take
 Minneapolis in winter, read like a sign system: snow-white surfaces, lake-ice greys, a deep Mississippi navy for anything "you are here," and snowplow amber for anything new. Type is **Overpass**, an open-source typeface descended from the Highway Gothic lettering on US road signs. The one bold idea: **every pin is a small sign plate showing that unit's total monthly cost**, with a colored edge for its status, so the map itself answers "what does it really cost to live there?". The selected unit's plate and the detail header are the same navy sign. Everything else stays quiet: hairlines, white panels, no decorative shadows.
 
 - **Good at:** the cost-first pins make the map useful at a glance (the spec's core complaint is bait pricing); three plain columns follow the spec's Google Maps–style layout; scales cleanly to the edit form, compare table and phone; equally good in light and dark.
-- **Weak at:** price plates take more room than dots, so dense areas rely on building grouping and the fan-out (which the spec requires anyway); less photo-forward than B.
+- **Weak at:** price plates take more room than dots, so dense areas rely on building grouping and opening a building (the spec's fan-out, built as a card per building: PLAN Q12); less photo-forward than B.
 
 **Why C.** It serves the decisions the app exists for (total cost, status, where) on the map itself; it's the most legible for long sessions; and it carries into every Phase 1 screen without special cases. Two ideas from B are folded in: keyboard hints printed on the controls they trigger, and a compare tray that collects units while you browse.
 
@@ -97,41 +97,37 @@ Names are set in Settings ("Blue = roommate likes") and shown in tooltips, filte
 
 ### 2.4 Pins
 
-Pins are sign plates by default, but what they show is your choice (Map layers panel, §4.7). Every variant keeps the same three cues: a **colored edge** (status, label or price), a **tail** pointing at the building, and **navy for the selected unit**.
+*Reworked in the M3 review; this section describes what's built.* A pin has one **style** and any number of **fields** (Pins panel, §4.7). Every style keeps the same cues: a **colored edge** (status, label or price; one stripe per unit), a **tail** pointing at the building, and **navy for the selected unit**.
 
-| "Pins show" | Plate content | Size |
+| Style | Look | Size |
 | --- | --- | --- |
-| Total cost (default) | `$1,932`; floor plan `from $2,560` | 26 px tall, 13 px/800 |
-| Rent | `$1,650` | 26 px |
-| Cost per ft² | `$2.68/ft²` | 26 px |
-| Photo | 46 px thumbnail in a 3 px white frame; the edge becomes a 5 px bar under the photo; type icon when there's no photo yet | 52 px square |
-| Unit type | 18 px icon: apartment, condo, townhome, house, room | 26 px |
-| Beds and size | `1 bd 720 ft²`, `Studio 480 ft²` | 26 px |
-| Rating | `★4`, unrated `☆` | 26 px |
-| Unit number | `1504`; a grouped building shows its name | 26 px |
-| Dot only | 16 px dot filled with the edge color, white ring; grouped = 24 px with the count | 16–24 px |
-| Travel time (Phase 2) | `18 min` with the mode icon | 26 px |
+| Sign plate (default) | The fields in order, each a segment divided by a 1 px `--ice` hairline: type icon · **rent** (13/800, `--ink`) · beds and size · unit number (building name for a building) · rating (12.5/600, `--slate`). Example: `$1,650 │ 1 bd · 720 ft² │ 1504 │ ★4` | 26 px tall |
+| Dot | 16 px dot filled with the edge color(s) as a pie ring, white ring; a building = 24 px with its count. No text | 16–24 px |
+| Photo | 46 px photo in a 3 px white frame, a 5 px stripe bar under it, and the fields as a caption below; the unit-type icon until photos arrive (M11) | 52 px wide |
 
-**Extras** (independent toggles): unit-type icon before the text; star rating after it (`★4` in 11 px slate); New badge (12 px amber dot, top-right corner).
+Pending fields: total cost and cost per ft² (M8), travel time (Phase 2). Until M8 the rent field stands in.
 
-| State | Look, in any mode |
+**A building with several units** (collapsed, or any Buildings-view pin) shows only what's true of all of them: rent as a range (`$1,090–$1,815`) or lowest with `+` (a setting), ranges for beds, size and rating (`★1–4`), the building's name for "unit number", the type icon only if the units share a type, a navy count badge, one stripe per unit (grouped by color), and the New badge if any unit is new.
+
+**New units**: off, a 12 px amber dot, or (default) an amber **New** tag (10/800, `#3A2A00` on `--plow`) at the top-right corner.
+
+| State | Look, in any style |
 | --- | --- |
-| Grouped building | Lead unit (cheapest not rejected) with `+` on prices and a navy count badge |
-| Fanned out | Units on dotted navy leader lines around a navy hub dot; Esc collapses |
-| Selected | Navy plate, 34 px tall, 17 px text (photo grows to 64 px with a navy frame); list row gets a navy left bar |
-| Rejected | Dashed outline, struck-through text, 55% opacity, no edge (hidden when "Hide rejected" is on) |
+| Open (a building with several units, clicked or automatic) | One **card** next to the building: 1.5 px `--river` border, 10 px corners, `--surface` fill with a 3 px surface-colored halo. Header: the building's marker (navy ring, center dot), its name (800, opens the building), the unit count and a ✕. One row per unit, cheapest first, rejected last: a 4 px stripe in the pin color, a 34 px thumbnail with photo pins, the fields with hairlines, the New tag or dot; selected row navy; rejected rows struck through (and slate, not see-through, when faded). The building's point shows a 22 px marker, joined to the card's nearest edge by a 2.25 px `--river` line over a 7 px surface halo (reads on every base map), with at least 32 px between them. Cards never cover other cards, pins, markers or dots; lines never cross. Pointing at a card: its marker grows 1.3×, its line thickens, other cards fade to 40%. Pointing at a thumbnail (or a single unit's photo pin): a 280 × 200 px photo with the unit's name in a small chip, beside the card or pin on the side with room, above everything else on the map. *Collapse all* sits with the map controls. Phones: 40 px rows, 36 px ✕ |
+| Selected | Navy plate, 34 px tall, rent 17 px (photo grows to 64 px); list row gets a navy left bar |
+| Rejected | Dashed outline, struck-through text, no edge; 55% opacity when "Fade" is chosen; gone when "Hide" is chosen |
 | Fails baseline criteria | 55% opacity, solid outline |
-| Unknown total | Falls back to rent with a "rent" suffix (`$1,650 rent`); unknown rent shows `?` |
-| Crowded or zoomed out | Shrinks to dots (if on); hover expands one; the selected pin always shows in full |
-| Low zoom | Neighborhood bubbles: navy circle with count |
+| Crowded or zoomed out | Shrinks to dots (if on): all of them below zoom 11, otherwise only where plates would overlap; pointing at a pin or its card expands it; the selected pin always shows in full |
+| Low zoom (10 and below) | Neighborhood bubbles (if on): navy circle with the number of units; click to zoom in |
+| Hovered | A plate gets a 2 px `--lake` outline; a dot shows a full preview above it (doesn't catch the pointer); its card(s) in the list get the `--frost` hover background |
 
-**Pin color** options: *Status* (§2.2), *Label* (§2.3, unlabeled = `--ice`), or *Total cost*, a five-step blue scale from your cheapest to your priciest unit:
+**Pin color** options: *Status* (§2.2), *Label* (§2.3, unlabeled = `--ice`), or *Total cost* (*Rent* until M8), a five-step blue scale from your cheapest to your priciest unit:
 
 | Step | 1 (cheapest) | 2 | 3 | 4 | 5 (priciest) |
 | --- | --- | --- | --- | --- | --- |
 | Color | `#BCD2F0` | `#8CB0E6` | `#5C8DD8` | `#2F67C0` | `#1A458C` |
 
-The legend in the map corner always says what the colors mean and, for cost, the dollar range.
+The legend in the map corner (laptop) and in the Pins panel (all widths) always says what the colors mean and, for cost, the dollar range.
 
 ### 2.5 Base maps
 
@@ -174,7 +170,7 @@ Sentence case everywhere; no all-caps labels. Numbers carry their unit in the sa
 
 ### 2.9 Motion
 
-Only in response to an action: the detail panel slides in (160 ms), the fan-out expands from its hub (180 ms), toasts slide up. Map fly-to on selection is 400 ms. All of it is removed under `prefers-reduced-motion`.
+Only in response to an action: the detail panel slides in (160 ms), an opened building's card fades in (160 ms), toasts slide up. Map fly-to on selection is 400 ms. All of it is removed under `prefers-reduced-motion`.
 
 ---
 
@@ -355,40 +351,31 @@ Sections:
 
 The paste box is collapsed to one line until you paste; anything it recognizes also fills the fields above it (highlighted until you move on). "Add another here" keeps the building, address and listing site.
 
-### 4.7 Map layers panel (L)
+### 4.7 Map layers (L) and Pins panels
 
-Opens from the **Layers** button above the zoom controls (try it in the mockup). Laptop: a 316 px panel anchored under the button. Phone: a bottom sheet over the map.
+*Split in the M3 review.* Two buttons sit above the zoom controls: **Pins** and **Layers** (`L`). Laptop: a 316 px panel anchored under the buttons. Phone: a bottom sheet over the map; the buttons are icon-only.
 
 ```
-┌ Map layers ─────────────────────────── × ┐
-│ Base map                                 │
-│ ┌──────────┐ ┌──────────┐                │  thumbnail + name + one line
-│ │▓▓ preview│ │▓▓ preview│                │  selected = navy outline
-│ │Wayfinding│ │Detailed  │                │
-│ └──────────┘ └──────────┘                │
-│ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
-│ │OpenStreet│ │Cycle map │ │Aerial    │   │
-│ └──────────┘ └──────────┘ └──────────┘   │
-├──────────────────────────────────────────┤
-│ Pins show                                │
-│ (Total cost) (Rent) (Cost per ft²)       │  single choice; chips
-│ (Photo) (Unit type) (Beds and size)      │
-│ (Rating) (Unit number) (Dot only)        │
-│ (Travel time) ← disabled until Phase 2   │
-├──────────────────────────────────────────┤
-│ Also on pins  ☐ Unit type icon           │
-│               ☐ Star rating   ☑ New badge│
-├──────────────────────────────────────────┤
-│ Pin color  [Status | Label | Total cost] │
-│ ☑ Shrink pins to dots when crowded       │
-│ ☑ Fade rejected units                    │
-├──────────────────────────────────────────┤
-│ Overlays                       Phase 2   │  Phase 1 shows this section
-│ ☐ Skyway routes  ☐ Transit  ☐ Bike …     │  disabled, so nothing moves later
-└──────────────────────────────────────────┘
+┌ Map layers ──────────────────────── × ┐   ┌ Pins ─────────────────────────────── × ┐
+│ Base map                              │   │ For the Units view. (band)              │
+│ [Wayfinding] [Detailed streets]       │   │ Pin style   [Sign plate | Dot | Photo]  │
+│ [OpenStreetMap] [Cycle map] [Aerial]  │   │ On the pin  ☐ Unit type icon  ☑ Rent    │
+├───────────────────────────────────────┤   │   ☐ Total cost M8  ☐ Cost per ft² M8    │
+│ Key: Wayfinding                       │   │   ☐ Beds and size  ☐ Unit number        │
+│ ▭ Water  ▭ Parks  ▭ Buildings …       │   │   ☐ Rating  ☐ Travel time Phase 2       │
+│ (other maps: link to their key)       │   │   Rent for a building: (•) Range ( ) Low│
+├───────────────────────────────────────┤   │ New units   [Off | Dot | “New” tag]      │
+│ Overlays                     Phase 2  │   │ Pin color   [Status | Label | Rent]     │
+│ ☐ Skyway routes  ☐ Transit …          │   │   (legend)                              │
+└───────────────────────────────────────┘   │ Rejected units [Show | Fade | Hide]     │
+                                            │ When crowded ☑ Group nearby buildings   │
+                                            │   ☑ Shrink crowded pins to dots         │
+                                            │   ☑ Open buildings’ cards when zoomed in│
+                                            │ Pin size  ──●──── 100%  (70–130%)       │
+                                            └─────────────────────────────────────────┘
 ```
 
-Choices apply instantly and are remembered (Settings → Display holds the same options as defaults).
+Choices apply instantly. Pin settings are kept separately for the Units and Buildings views: the Pins panel edits the view the list shows and says so in a band under its title ("For the Units view. The Buildings view keeps its own settings."). They're remembered in this browser (per database); options that don't apply are greyed out (fields for dots) or hidden (automatic opening in the Buildings view). *Pin size* sits under Pin style. The Layers panel adds *Sharper OpenStreetMap and Cycle maps* (off) when one of those maps is chosen. Settings → Display will later hold defaults.
 
 ### 4.8 Batch add units (`#/building/:id/add`)
 
@@ -461,7 +448,7 @@ Shortcuts act on the selected unit, or every selected unit when several are sele
 | `6` / `7` / `8` / `9` | Toggle red / yellow / green / blue label (purple from the menu, Q8) |
 | `↑` `↓` or `K` `J` | Previous / next unit in the list |
 | `⏎` | Open the selected unit's detail |
-| `Esc` | Close panel, collapse fan-out, or clear selection |
+| `Esc` | Close panel, close open buildings' cards, or clear selection |
 | `E` | Edit the selected unit |
 | `N` | Add a unit (quick-add) |
 | `C` | Add to / remove from compare |

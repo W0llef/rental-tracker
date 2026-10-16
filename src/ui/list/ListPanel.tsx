@@ -111,8 +111,29 @@ export function ListPanel({
   view: ListView | undefined;
   selectedKey: string | null;
 }) {
-  const { view, setView, query, setQuery, unitSort, setUnitSort, buildingSort, setBuildingSort } =
-    useUi();
+  const {
+    view,
+    setView,
+    query,
+    setQuery,
+    unitSort,
+    setUnitSort,
+    buildingSort,
+    setBuildingSort,
+    setHover,
+    hoverKey,
+  } = useUi();
+  // A pin under the pointer highlights its card; a grouped pin highlights all its units.
+  const hoverBuilding = hoverKey?.startsWith('building:')
+    ? hoverKey.slice(9)
+    : hoverKey?.startsWith('unit:')
+      ? (data?.unitById.get(hoverKey.slice(5))?.unit.buildingId ?? null)
+      : null;
+  // Pointing at a card (or focusing it) shows its pin in full on the map (M3).
+  const hoverFrom = (e: { target: EventTarget }) => {
+    const card = e.target instanceof Element ? e.target.closest('[data-key]') : null;
+    setHover(card?.getAttribute('data-key') ?? null);
+  };
   const scroller = useRef<HTMLDivElement>(null);
 
   // Keep the selected card in view (keyboard moves, or opening a link to a unit).
@@ -184,7 +205,14 @@ export function ListPanel({
           </div>
         )}
         {data && listView && (shown ?? 0) > 0 && (
-          <ul className={styles.cards} aria-label={view === 'units' ? 'Units' : 'Buildings'}>
+          <ul
+            className={styles.cards}
+            aria-label={view === 'units' ? 'Units' : 'Buildings'}
+            onMouseOver={hoverFrom}
+            onFocus={hoverFrom}
+            onMouseLeave={() => setHover(null)}
+            onBlur={() => setHover(null)}
+          >
             {view === 'units'
               ? listView.units.map((row) => (
                   <li key={row.unit.id}>
@@ -192,6 +220,10 @@ export function ListPanel({
                       row={row}
                       settings={data.settings}
                       selected={selectedKey === `unit:${row.unit.id}`}
+                      hovered={
+                        hoverKey === `unit:${row.unit.id}` ||
+                        hoverKey === `building:${row.unit.buildingId}`
+                      }
                     />
                   </li>
                 ))
@@ -200,6 +232,7 @@ export function ListPanel({
                     <BuildingCard
                       row={row}
                       selected={selectedKey === `building:${row.building.id}`}
+                      hovered={hoverBuilding === row.building.id}
                     />
                   </li>
                 ))}

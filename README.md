@@ -32,6 +32,38 @@ browser for that exact web address. That means:
   open in the **Unit** tab.
 - Keys: `↓`/`J` and `↑`/`K` move through the list, `B` switches Units / Buildings.
 
+### The map
+
+- Each building with units in the list gets a pin; the map follows your search and the
+  **Units / Buildings** switch. Pins show rent until total cost arrives (M8).
+- **Pins** (button on the map) sets how pins look for the view the list is showing (Units and
+  Buildings keep separate settings):
+  a sign plate, a dot or a photo; which details to print (rent, beds and size, unit number,
+  rating, unit type icon); the New badge; the colors; and whether rejected units show, fade or
+  hide. The color legend is in this panel too.
+- A building with several units shows one pin with what's true of all of them: rent range, a
+  count, a stripe per unit, and New if any unit is new. Click it to **open its card**: one row
+  per unit with the same details, joined to the building's marker by a short line. Cards stay
+  open, and you can open several; they never cover each other, other pins or dots (they move
+  further out, even past the edge of the map, instead). Close one with its ✕ or by clicking its
+  marker; **Collapse all** or `Esc` closes them all. The building's name on the card opens the
+  building. Zoomed in to street level, buildings open by themselves where their card fits (you
+  can turn that off). Point at a card to fade the others; with photo pins, point at a thumbnail (or a
+  single unit's photo pin) for a bigger picture. **Pin size** in the Pins panel makes pins and cards smaller or larger.
+- Zoomed out, nearby buildings merge into round **bubbles** with a unit count, and crowded pins
+  shrink to **dots**; both can be turned off. Point at a card to see its pin in full, or at a pin
+  to highlight its cards.
+- **Layers** (or `L`) picks the base map (Wayfinding, Detailed streets, OpenStreetMap, Cycle map,
+  Aerial photo) and shows its key. OpenStreetMap and Cycle map can look soft between zoom levels;
+  _Sharper OpenStreetMap and Cycle maps_ fixes that at the cost of about 4× the downloads.
+  **Fit** shows all your units.
+- **New** on a pin means the unit's status is still New, i.e. you haven't reviewed it yet.
+- Your pin and base-map choices are remembered in this browser. They aren't part of backups.
+- The unit and building panels link to **Google Maps** and **Street View**.
+- Map pictures come from free services (OpenFreeMap, OpenStreetMap, CyclOSM and Minnesota's MnGeo
+  aerial photos). They load only while you look at the map and need an internet connection; if
+  one is down, the map says so and you can pick another in Layers.
+
 ## Running it on your computer (for development)
 
 You need [Node.js](https://nodejs.org) 22 or newer.
@@ -54,6 +86,8 @@ Other commands:
 | `npm run format`    | Fixes formatting                                                   |
 
 `localhost` uses a separate database from the live app, so development never touches real data.
+Browser tests answer the map servers' requests themselves (`tests/e2e/fixtures.ts`), so they run
+offline and never load real tiles.
 
 ### Checking the data
 

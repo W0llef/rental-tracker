@@ -6,6 +6,7 @@ import { deriveListView } from '../../state/derive';
 import { useDataset } from '../../state/useDataset';
 import { useUi } from '../../state/ui';
 import { BuildingPanel } from '../detail/BuildingPanel';
+import { MapPanel } from '../map/MapPanel';
 import { UnitPanel } from '../detail/UnitPanel';
 import { ListPanel } from '../list/ListPanel';
 import { PreviewBanner } from './PreviewBanner';
@@ -33,7 +34,7 @@ export function AppShell() {
   const navigate = useNavigate();
 
   const data = useDataset();
-  const { query, unitSort, buildingSort, view, toggleView } = useUi();
+  const { query, unitSort, buildingSort, view, toggleView, togglePanel } = useUi();
   const listView = useMemo(
     () => (data ? deriveListView(data, query, unitSort, buildingSort) : undefined),
     [data, query, unitSort, buildingSort],
@@ -50,12 +51,18 @@ export function AppShell() {
   }
 
   const search = useRef<HTMLInputElement>(null);
+  const lastMove = useRef<{ from: string | null; to: string } | null>(null);
   useListKeys({
     focusSearch: () => search.current?.focus(),
+    // Esc: close a map panel, then fold the fans you opened, then close the details
     close: () => {
-      if (selectedKey) navigate('/');
+      const ui = useUi.getState();
+      if (ui.panel) ui.setPanel(null);
+      else if (ui.openFans.length) ui.collapseFans();
+      else if (selectedKey) navigate('/');
     },
     toggleView,
+    toggleLayers: () => togglePanel('layers'),
     move: (delta) => {
       if (!listView) return;
       const keys =
@@ -63,17 +70,22 @@ export function AppShell() {
           ? listView.units.map((r) => `unit:${r.unit.id}`)
           : listView.buildings.map((r) => `building:${r.building.id}`);
       if (!keys.length) return;
-      const at = selectedKey ? keys.indexOf(selectedKey) : -1;
+      // Keys pressed quickly can arrive before the screen shows the last move; until it
+      // does, continue from where that move went.
+      const pending = lastMove.current;
+      const current = pending && pending.from === selectedKey ? pending.to : selectedKey;
+      const at = current ? keys.indexOf(current) : -1;
       const next =
         at === -1
           ? delta === 1
             ? keys[0]
             : keys[keys.length - 1]
           : keys[Math.min(keys.length - 1, Math.max(0, at + delta))];
-      if (!next || next === selectedKey) return;
+      if (!next || next === current) return;
       const [kind, id] = next.split(':');
+      lastMove.current = { from: selectedKey, to: next };
       // Moving through the list replaces the history entry, so Back still closes the panel.
-      navigate(`/${kind}/${id}`, { replace: selectedKey !== null });
+      navigate(`/${kind}/${id}`, { replace: current !== null });
     },
   });
 
@@ -157,9 +169,11 @@ export function AppShell() {
           <h2 id="map-heading" className={styles.visuallyHidden}>
             Map
           </h2>
-          <div className={styles.mapPlaceholder}>
-            <p className={styles.mapNote}>The map arrives in the next step.</p>
-          </div>
+          {data && listView ? (
+            <MapPanel data={data} listView={listView} view={view} selectedKey={selectedKey} />
+          ) : (
+            <div className={styles.mapPlaceholder} aria-busy="true" />
+          )}
         </section>
       </main>
 
