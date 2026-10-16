@@ -97,41 +97,37 @@ Names are set in Settings ("Blue = roommate likes") and shown in tooltips, filte
 
 ### 2.4 Pins
 
-Pins are sign plates by default, but what they show is your choice (Map layers panel, §4.7). Every variant keeps the same three cues: a **colored edge** (status, label or price), a **tail** pointing at the building, and **navy for the selected unit**.
+*Reworked in the M3 review; this section describes what's built.* A pin has one **style** and any number of **fields** (Pins panel, §4.7). Every style keeps the same cues: a **colored edge** (status, label or price; one stripe per unit), a **tail** pointing at the building, and **navy for the selected unit**.
 
-| "Pins show" | Plate content | Size |
+| Style | Look | Size |
 | --- | --- | --- |
-| Total cost (default) | `$1,932`; floor plan `from $2,560` | 26 px tall, 13 px/800 |
-| Rent | `$1,650` | 26 px |
-| Cost per ft² | `$2.68/ft²` | 26 px |
-| Photo | 46 px thumbnail in a 3 px white frame; the edge becomes a 5 px bar under the photo; type icon when there's no photo yet | 52 px square |
-| Unit type | 18 px icon: apartment, condo, townhome, house, room | 26 px |
-| Beds and size | `1 bd 720 ft²`, `Studio 480 ft²` | 26 px |
-| Rating | `★4`, unrated `☆` | 26 px |
-| Unit number | `1504`; a grouped building shows its name | 26 px |
-| Dot only | 16 px dot filled with the edge color, white ring; grouped = 24 px with the count | 16–24 px |
-| Travel time (Phase 2) | `18 min` with the mode icon | 26 px |
+| Sign plate (default) | The fields in order, each a segment divided by a 1 px `--ice` hairline: type icon · **rent** (13/800, `--ink`) · beds and size · unit number (building name for a building) · rating (12.5/600, `--slate`). Example: `$1,650 │ 1 bd · 720 ft² │ 1504 │ ★4` | 26 px tall |
+| Dot | 16 px dot filled with the edge color(s) as a pie ring, white ring; a building = 24 px with its count. No text | 16–24 px |
+| Photo | 46 px photo in a 3 px white frame, a 5 px stripe bar under it, and the fields as a caption below; the unit-type icon until photos arrive (M11) | 52 px wide |
 
-**Extras** (independent toggles): unit-type icon before the text; star rating after it (`★4` in 11 px slate); New badge (12 px amber dot, top-right corner).
+Pending fields: total cost and cost per ft² (M8), travel time (Phase 2). Until M8 the rent field stands in.
 
-| State | Look, in any mode |
+**A building with several units** (collapsed, or any Buildings-view pin) shows only what's true of all of them: rent as a range (`$1,090–$1,815`) or lowest with `+` (a setting), ranges for beds, size and rating (`★1–4`), the building's name for "unit number", the type icon only if the units share a type, a navy count badge, one stripe per unit (grouped by color), and the New badge if any unit is new.
+
+**New units**: off, a 12 px amber dot, or (default) an amber **New** tag (10/800, `#3A2A00` on `--plow`) at the top-right corner.
+
+| State | Look, in any style |
 | --- | --- |
-| Grouped building | Lead unit (cheapest not rejected) with `+` on prices and a navy count badge |
-| Fanned out | Units on dotted navy leader lines around a navy hub dot; Esc collapses |
-| Selected | Navy plate, 34 px tall, 17 px text (photo grows to 64 px with a navy frame); list row gets a navy left bar |
-| Rejected | Dashed outline, struck-through text, 55% opacity, no edge (hidden when "Hide rejected" is on) |
+| Fanned out | Units on dotted navy leader lines around a navy hub button (×, folds the fan); several fans can be open; *Collapse all* appears with the map controls |
+| Selected | Navy plate, 34 px tall, rent 17 px (photo grows to 64 px); list row gets a navy left bar |
+| Rejected | Dashed outline, struck-through text, no edge; 55% opacity when "Fade" is chosen; gone when "Hide" is chosen |
 | Fails baseline criteria | 55% opacity, solid outline |
-| Unknown total | Falls back to rent with a "rent" suffix (`$1,650 rent`); unknown rent shows `?` |
-| Crowded or zoomed out | Shrinks to dots (if on): all of them below zoom 11, otherwise only where plates would overlap; hovering a pin or its card expands it; the selected pin always shows in full |
-| Low zoom (10 and below) | Neighborhood bubbles: navy circle with the number of units; click to zoom in |
+| Crowded or zoomed out | Shrinks to dots (if on): all of them below zoom 11, otherwise only where plates would overlap; pointing at a pin or its card expands it; the selected pin always shows in full |
+| Low zoom (10 and below) | Neighborhood bubbles (if on): navy circle with the number of units; click to zoom in |
+| Hovered | Its card(s) in the list get the `--frost` hover background |
 
-**Pin color** options: *Status* (§2.2), *Label* (§2.3, unlabeled = `--ice`), or *Total cost*, a five-step blue scale from your cheapest to your priciest unit:
+**Pin color** options: *Status* (§2.2), *Label* (§2.3, unlabeled = `--ice`), or *Total cost* (*Rent* until M8), a five-step blue scale from your cheapest to your priciest unit:
 
 | Step | 1 (cheapest) | 2 | 3 | 4 | 5 (priciest) |
 | --- | --- | --- | --- | --- | --- |
 | Color | `#BCD2F0` | `#8CB0E6` | `#5C8DD8` | `#2F67C0` | `#1A458C` |
 
-The legend in the map corner always says what the colors mean and, for cost, the dollar range.
+The legend in the map corner (laptop) and in the Pins panel (all widths) always says what the colors mean and, for cost, the dollar range.
 
 ### 2.5 Base maps
 
@@ -355,40 +351,30 @@ Sections:
 
 The paste box is collapsed to one line until you paste; anything it recognizes also fills the fields above it (highlighted until you move on). "Add another here" keeps the building, address and listing site.
 
-### 4.7 Map layers panel (L)
+### 4.7 Map layers (L) and Pins panels
 
-Opens from the **Layers** button above the zoom controls (try it in the mockup). Laptop: a 316 px panel anchored under the button. Phone: a bottom sheet over the map.
+*Split in the M3 review.* Two buttons sit above the zoom controls: **Pins** and **Layers** (`L`). Laptop: a 316 px panel anchored under the buttons. Phone: a bottom sheet over the map; the buttons are icon-only.
 
 ```
-┌ Map layers ─────────────────────────── × ┐
-│ Base map                                 │
-│ ┌──────────┐ ┌──────────┐                │  thumbnail + name + one line
-│ │▓▓ preview│ │▓▓ preview│                │  selected = navy outline
-│ │Wayfinding│ │Detailed  │                │
-│ └──────────┘ └──────────┘                │
-│ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
-│ │OpenStreet│ │Cycle map │ │Aerial    │   │
-│ └──────────┘ └──────────┘ └──────────┘   │
-├──────────────────────────────────────────┤
-│ Pins show                                │
-│ (Total cost) (Rent) (Cost per ft²)       │  single choice; chips
-│ (Photo) (Unit type) (Beds and size)      │
-│ (Rating) (Unit number) (Dot only)        │
-│ (Travel time) ← disabled until Phase 2   │
-├──────────────────────────────────────────┤
-│ Also on pins  ☐ Unit type icon           │
-│               ☐ Star rating   ☑ New badge│
-├──────────────────────────────────────────┤
-│ Pin color  [Status | Label | Total cost] │
-│ ☑ Shrink pins to dots when crowded       │
-│ ☑ Fade rejected units                    │
-├──────────────────────────────────────────┤
-│ Overlays                       Phase 2   │  Phase 1 shows this section
-│ ☐ Skyway routes  ☐ Transit  ☐ Bike …     │  disabled, so nothing moves later
-└──────────────────────────────────────────┘
+┌ Map layers ──────────────────────── × ┐   ┌ Pins ─────────────────────────────── × ┐
+│ Base map                              │   │ Settings for [Units view|Buildings view]│
+│ [Wayfinding] [Detailed streets]       │   │ Pin style   [Sign plate | Dot | Photo]  │
+│ [OpenStreetMap] [Cycle map] [Aerial]  │   │ On the pin  ☐ Unit type icon  ☑ Rent    │
+├───────────────────────────────────────┤   │   ☐ Total cost M8  ☐ Cost per ft² M8    │
+│ Key: Wayfinding                       │   │   ☐ Beds and size  ☐ Unit number        │
+│ ▭ Water  ▭ Parks  ▭ Buildings …       │   │   ☐ Rating  ☐ Travel time Phase 2       │
+│ (other maps: link to their key)       │   │   Rent for a building: (•) Range ( ) Low│
+├───────────────────────────────────────┤   │ New units   [Off | Dot | “New” tag]      │
+│ Overlays                     Phase 2  │   │ Pin color   [Status | Label | Rent]     │
+│ ☐ Skyway routes  ☐ Transit …          │   │   (legend)                              │
+└───────────────────────────────────────┘   │ Rejected units [Show | Fade | Hide]     │
+                                            │ When crowded ☑ Group nearby buildings   │
+                                            │   ☑ Shrink crowded pins to dots         │
+                                            │   ☑ Fan out buildings when zoomed in    │
+                                            └─────────────────────────────────────────┘
 ```
 
-Choices apply instantly and are remembered (Settings → Display holds the same options as defaults). Until total cost exists (M8), *Total cost* and *Cost per ft²* show disabled with an "M8" tag, pins show rent, and the third pin color option reads *Rent*. On phones the Layers button is icon-only and the legend is hidden.
+Choices apply instantly. Pin settings are kept separately for the Units and Buildings views and remembered in this browser (per database); options that don't apply are greyed out (fields for dots) or hidden (fan-out in the Buildings view). Settings → Display will later hold defaults.
 
 ### 4.8 Batch add units (`#/building/:id/add`)
 

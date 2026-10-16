@@ -36,13 +36,21 @@ browser for that exact web address. That means:
 
 - Each building with units in the list gets a pin; the map follows your search and the
   **Units / Buildings** switch. Pins show rent until total cost arrives (M8).
-- A building with several units shows one pin with a count. Click it to **fan out** its units;
-  `Esc` or a click on the map folds them back. Selecting a card brings its pin into view.
-- Zoomed out, nearby buildings merge into round **bubbles** with a unit count; click one to zoom in.
-  Where pins would overlap they shrink to **dots**; point at a card (or a dot) to see it in full.
+- **Pins** (button on the map) sets how pins look, separately for the Units and Buildings views:
+  a sign plate, a dot or a photo; which details to print (rent, beds and size, unit number,
+  rating, unit type icon); the New badge; the colors; and whether rejected units show, fade or
+  hide. The color legend is in this panel too.
+- A building with several units shows one pin with what's true of all of them: rent range, a
+  count, a stripe per unit, and New if any unit is new. Click it to **fan out** its units; fans
+  stay open, and you can open several. The × at a fan's center folds it; **Collapse all** or
+  `Esc` folds them all. Zoomed in to street level, buildings fan out by themselves where there's
+  room (you can turn that off).
+- Zoomed out, nearby buildings merge into round **bubbles** with a unit count, and crowded pins
+  shrink to **dots**; both can be turned off. Point at a card to see its pin in full, or at a pin
+  to highlight its cards.
 - **Layers** (or `L`) picks the base map (Wayfinding, Detailed streets, OpenStreetMap, Cycle map,
-  Aerial photo), what pins show, pin color, and whether to shrink crowded pins and fade rejected
-  units. Choices are saved and can be undone like any change. **Fit** shows all your units.
+  Aerial photo) and shows its key. **Fit** shows all your units.
+- Your pin and base-map choices are remembered in this browser. They aren't part of backups.
 - The unit and building panels link to **Google Maps** and **Street View**.
 - Map pictures come from free services (OpenFreeMap, OpenStreetMap, CyclOSM and Minnesota's MnGeo
   aerial photos). They load only while you look at the map and need an internet connection; if
