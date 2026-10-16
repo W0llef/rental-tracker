@@ -26,6 +26,7 @@ import {
   estimatePinSize,
   layoutPins,
   MARKER_R,
+  PHOTO_PREVIEW,
 } from '../../domain/pinLayout';
 import type { Card, LayoutBuilding, Size } from '../../domain/pinLayout';
 import {
@@ -57,6 +58,7 @@ import { Legend } from './Legend';
 import { MapCard } from './MapCard';
 import type { CardRow } from './MapCard';
 import { Pin } from './Pin';
+import { PhotoPreview } from './PhotoPreview';
 import { PinsPanel } from './PinsPanel';
 import styles from './map.module.css';
 
@@ -602,6 +604,32 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
   const select = (key: string) =>
     navigate(`/${key.replace(':', '/')}`, { replace: selectedKey !== null });
 
+  // ── The larger photo: beside the card (or single pin) on whichever side has room,
+  // level with the row, above everything else on the map ──
+  const [preview, setPreview] = useState<{ key: string; left: number; top: number } | null>(null);
+  const showPreview = useCallback(
+    (key: string | null, anchor?: { card: DOMRect; row: DOMRect }) => {
+      const root = rootRef.current?.getBoundingClientRect();
+      if (!key || !anchor || !root) {
+        setPreview(null);
+        return;
+      }
+      const { card, row } = anchor;
+      const { w, h, gap, margin } = PHOTO_PREVIEW;
+      const right = card.right + gap + w <= root.right - margin;
+      const left = right
+        ? card.right - root.left + gap
+        : Math.max(margin, card.left - root.left - gap - w);
+      const top = Math.min(
+        Math.max(margin, row.top + row.height / 2 - h / 2 - root.top),
+        root.height - h - margin,
+      );
+      setPreview({ key, left, top });
+    },
+    [],
+  );
+  const previewRow = preview ? data.unitById.get(preview.key.slice(5)) : undefined;
+
   // ── Rendering helpers ──
   // Pointing at a card (or one of its units' list cards) brings it forward and fades the
   // other cards
@@ -641,6 +669,11 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
         expanded={b.group ? false : undefined}
         onClick={() => (single ? select(key) : view === 'units' ? ui.openFan(b.id) : select(key))}
         onHover={(on) => setHover(on ? key : null)}
+        onPreview={
+          single && !opts.peek && prefs.style === 'photo'
+            ? (a) => showPreview(a ? key : null, a ? { card: a, row: a } : undefined)
+            : undefined
+        }
       />
     );
   };
@@ -694,6 +727,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
                 onOpenBuilding={() => select(`building:${b.id}`)}
                 onClose={() => ui.foldFan(b.id)}
                 onHover={setHover}
+                onPreview={showPreview}
               />
             </div>
             {/* The building's marker; the same ring starts the card's header */}
@@ -983,6 +1017,15 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
       )}
 
       {legend && <Legend legend={legend} />}
+
+      {preview && previewRow && (
+        <PhotoPreview
+          title={unitTitle(previewRow.unit, previewRow.building)}
+          type={previewRow.unit.type}
+          left={preview.left}
+          top={preview.top}
+        />
+      )}
 
       <div ref={measurer} className={styles.measurer} aria-hidden="true" inert>
         {[...toMeasure].map(([key, m]) => (

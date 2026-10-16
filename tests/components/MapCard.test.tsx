@@ -46,15 +46,29 @@ describe('MapCard', () => {
     expect(closed).toBe(1);
   });
 
-  it('shows a larger preview beside the card for a photo row', () => {
-    render(<MapCard id="b1" name="Riverlight" rows={[row('1601', '$2,395')]} photo />);
+  it('asks the map for the larger photo of a row, and hides it again', () => {
+    const calls: (string | null)[] = [];
+    const { unmount } = render(
+      <MapCard
+        id="b1"
+        name="Riverlight"
+        rows={[row('1601', '$2,395')]}
+        photo
+        onPreview={(k, anchor) => {
+          calls.push(k);
+          if (k) expect(anchor?.card).toBeDefined();
+        }}
+      />,
+    );
     const rowBtn = screen.getByRole('button', { name: /^\$2,395/ });
-    expect(document.querySelector('[data-preview]')).toBeNull();
     fireEvent.mouseEnter(rowBtn.querySelector('span') as Element);
-    const preview = document.querySelector('[data-preview]');
-    expect(preview).toHaveTextContent('Unit 1601');
+    expect(calls).toEqual(['unit:1601']);
     fireEvent.mouseLeave(rowBtn);
-    expect(document.querySelector('[data-preview]')).toBeNull();
+    expect(calls).toEqual(['unit:1601', null]);
+    // Closing the card while its photo shows hides the photo too
+    fireEvent.focus(rowBtn);
+    unmount();
+    expect(calls.at(-1)).toBeNull();
   });
 
   it('lets go of the hover when it closes under the pointer', () => {

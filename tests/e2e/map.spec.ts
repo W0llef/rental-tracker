@@ -306,9 +306,26 @@ test.describe('map (preview/dev build)', () => {
     await larkin.locator('[data-pin]').first().hover();
     await expect(map(page).locator('[data-card][class*="dimCard"]')).toHaveCount(2);
     await larkin.locator('[data-pin] [class*="thumb"]').first().hover();
-    await expect(map(page).locator('[data-preview]')).toBeVisible();
+    const preview = map(page).locator('[data-preview]');
+    await expect(preview).toBeVisible();
+    // Just the photo and the unit's name, drawn above the map's pins and markers
+    await expect(preview).not.toContainText('$');
+    expect(
+      await preview.evaluate(
+        (e) => !e.closest('.maplibregl-marker') && Number(getComputedStyle(e).zIndex) >= 10,
+      ),
+    ).toBe(true);
     await page.mouse.move(5, 5);
-    await expect(map(page).locator('[data-preview]')).toHaveCount(0);
+    await expect(preview).toHaveCount(0);
+
+    // A single unit's photo pin shows the larger photo too
+    const house = map(page).locator('[data-pin][aria-label*="3624 15th Ave S"]').first();
+    if (await house.count()) {
+      await house.locator('[class*="noph"]').hover();
+      await expect(preview).toContainText('3624 15th Ave S');
+      await page.mouse.move(5, 5);
+      await expect(preview).toHaveCount(0);
+    }
   });
 
   test('each card is joined to its marker by a line you can see', async ({ page }, info) => {

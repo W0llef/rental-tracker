@@ -39,6 +39,8 @@ export interface Size {
 export type Point = [number, number];
 
 export const PLATE_H = 26;
+/** The larger photo beside a card row or single photo pin, and its spacing (DESIGN.md §2.4). */
+export const PHOTO_PREVIEW = { w: 280, h: 200, gap: 10, margin: 8 } as const;
 export const TAIL = 7;
 
 /** Rough size of a full pin before it has been measured (plate only, no tail). */

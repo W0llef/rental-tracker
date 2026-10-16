@@ -48,8 +48,8 @@ browser for that exact web address. That means:
   further out, even past the edge of the map, instead). Close one with its ✕ or by clicking its
   marker; **Collapse all** or `Esc` closes them all. The building's name on the card opens the
   building. Zoomed in to street level, buildings open by themselves where their card fits (you
-  can turn that off). Point at a card to fade the others; with photo pins, point at a thumbnail
-  for a bigger picture. **Pin size** in the Pins panel makes pins and cards smaller or larger.
+  can turn that off). Point at a card to fade the others; with photo pins, point at a thumbnail (or a
+  single unit's photo pin) for a bigger picture. **Pin size** in the Pins panel makes pins and cards smaller or larger.
 - Zoomed out, nearby buildings merge into round **bubbles** with a unit count, and crowded pins
   shrink to **dots**; both can be turned off. Point at a card to see its pin in full, or at a pin
   to highlight its cards.

@@ -607,24 +607,18 @@
   color: var(--on-river);
 }
 
-/* The larger photo beside the card, while you point at a thumbnail */
+/* The larger photo beside a card row or single photo pin: the top layer of the map */
 .preview {
   position: absolute;
-  left: calc(100% + 10px);
-  width: 232px;
+  z-index: 30;
   overflow: hidden;
   border-radius: 10px;
-  background: var(--surface);
+  border: 3px solid var(--surface);
+  background: var(--frost);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--ink) 15%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--ink) 18%, transparent),
     var(--shadow-float);
   pointer-events: none;
-  z-index: 2;
-}
-
-.previewLeft {
-  left: auto;
-  right: calc(100% + 10px);
 }
 
 .previewPhoto {
@@ -632,32 +626,28 @@
   place-items: center;
   align-content: center;
   gap: 6px;
-  height: 150px;
-  background: var(--frost);
+  height: 100%;
   color: var(--slate);
 }
 
 .previewPhoto svg {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
 }
 
 .previewPhoto small {
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
-.previewCaption {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 7px 10px 8px;
-  white-space: normal;
-  color: var(--slate);
-}
-
-.previewCaption strong {
+.previewTitle {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
   color: var(--ink);
-  font-weight: 800;
+  font: 800 12.5px/1.2 var(--font);
 }
 
 /* The line from the marker to its card: navy over a halo */

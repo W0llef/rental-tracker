@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { accessibleName } from '../../domain/pins';
 import type { PinContent } from '../../domain/pins';
 import type { UnitType } from '../../model';
@@ -9,8 +9,8 @@ import styles from './map.module.css';
  * An open building's card on the map (owner review 4, DESIGN.md §2.4): a header with the
  * building's marker, name (opens its details), unit count and a close button, then one row
  * per unit with the same stripe, fields and New badge its pin would have. With photo pins
- * each row has a thumbnail; pointing at it (or focusing the row) shows a larger preview
- * beside the card.
+ * each row has a thumbnail; pointing at it (or focusing the row) asks the map for its larger
+ * preview beside the card (`onPreview`), drawn above everything else on the map.
  */
 
 export interface CardRow {
@@ -42,24 +42,25 @@ export interface MapCardProps {
   onOpenBuilding?: () => void;
   onClose?: () => void;
   onHover?: (key: string | null) => void;
+  /** Show a unit's larger photo beside `card`, level with `row`; null hides it. */
+  onPreview?: (key: string | null, anchor?: { card: DOMRect; row: DOMRect }) => void;
 }
-
-const PREVIEW_W = 232;
 
 export function MapCard(p: MapCardProps) {
   const root = useRef<HTMLDivElement>(null);
-  const [preview, setPreview] = useState<{ row: number; top: number; left: boolean } | null>(null);
 
   // A card can close under the pointer (its ✕, Esc) without a "pointer left" event; let go
   // of the hover then, or the list card would stay highlighted.
   const hovered = useRef(false);
-  const onHover = useRef(p.onHover);
+  const previewing = useRef(false);
+  const handlers = useRef({ onHover: p.onHover, onPreview: p.onPreview });
   useEffect(() => {
-    onHover.current = p.onHover;
+    handlers.current = { onHover: p.onHover, onPreview: p.onPreview };
   });
   useEffect(
     () => () => {
-      if (hovered.current) onHover.current?.(null);
+      if (hovered.current) handlers.current.onHover?.(null);
+      if (previewing.current) handlers.current.onPreview?.(null);
     },
     [],
   );
@@ -69,17 +70,16 @@ export function MapCard(p: MapCardProps) {
   };
   const buildingKey = `building:${p.id}`;
 
-  const showPreview = (row: number, el: HTMLElement) => {
+  const showPreview = (key: string, row: HTMLElement) => {
     const card = root.current;
     if (!p.photo || !card) return;
-    const box = card.getBoundingClientRect();
-    const map = card.closest('.maplibregl-map')?.getBoundingClientRect();
-    const scale = card.offsetWidth ? box.width / card.offsetWidth : 1;
-    // Beside the card, on whichever side has room on screen (right first)
-    const roomRight = map ? map.right - box.right : Infinity;
-    const roomLeft = map ? box.left - map.left : 0;
-    const left = roomRight < (PREVIEW_W + 16) * scale && roomLeft > roomRight;
-    setPreview({ row, top: Math.max(0, el.offsetTop - 50), left });
+    previewing.current = true;
+    p.onPreview?.(key, { card: card.getBoundingClientRect(), row: row.getBoundingClientRect() });
+  };
+  const hidePreview = () => {
+    if (!previewing.current) return;
+    previewing.current = false;
+    p.onPreview?.(null);
   };
 
   return (
@@ -91,7 +91,7 @@ export function MapCard(p: MapCardProps) {
       data-card={p.id}
       onMouseEnter={() => hover(buildingKey)}
       onMouseLeave={() => {
-        setPreview(null);
+        hidePreview();
         hover(null);
       }}
     >
@@ -126,7 +126,7 @@ export function MapCard(p: MapCardProps) {
         </button>
       </div>
       <ul className={styles.cardRows}>
-        {p.rows.map((r, i) => {
+        {p.rows.map((r) => {
           const cls = [styles.row];
           if (r.selected) cls.push(styles.rowSel);
           if (r.rejected) cls.push(styles.rowRej);
@@ -151,15 +151,15 @@ export function MapCard(p: MapCardProps) {
                 }}
                 onMouseEnter={() => hover(r.key)}
                 onMouseLeave={() => {
-                  setPreview(null);
+                  hidePreview();
                   hover(buildingKey);
                 }}
                 onFocus={(e) => {
                   hover(r.key);
-                  showPreview(i, e.currentTarget);
+                  showPreview(r.key, e.currentTarget);
                 }}
                 onBlur={() => {
-                  setPreview(null);
+                  hidePreview();
                   hover(null);
                 }}
               >
@@ -169,9 +169,9 @@ export function MapCard(p: MapCardProps) {
                     className={styles.thumb}
                     aria-hidden="true"
                     onMouseEnter={(e) =>
-                      showPreview(i, e.currentTarget.closest('button') as HTMLElement)
+                      showPreview(r.key, e.currentTarget.closest('button') as HTMLElement)
                     }
-                    onMouseLeave={() => setPreview(null)}
+                    onMouseLeave={hidePreview}
                   >
                     <TypeGlyph type={r.type} />
                   </span>
@@ -194,23 +194,6 @@ export function MapCard(p: MapCardProps) {
           );
         })}
       </ul>
-      {preview && p.rows[preview.row] && (
-        <div
-          className={`${styles.preview} ${preview.left ? styles.previewLeft : ''}`}
-          style={{ top: preview.top }}
-          aria-hidden="true"
-          data-preview
-        >
-          <span className={styles.previewPhoto}>
-            <TypeGlyph type={p.rows[preview.row]!.type} />
-            <small>No photo yet</small>
-          </span>
-          <span className={styles.previewCaption}>
-            <strong>{p.rows[preview.row]!.title}</strong>
-            <span>{p.rows[preview.row]!.content.segments.map((s) => s.text).join(' · ')}</span>
-          </span>
-        </div>
-      )}
     </div>
   );
 }

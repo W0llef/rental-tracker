@@ -48,6 +48,8 @@ export interface PinProps {
   expanded?: boolean;
   onClick: () => void;
   onHover: (on: boolean) => void;
+  /** Photo pins: show the larger photo beside this pin (its box), or hide it (null). */
+  onPreview?: (anchor: DOMRect | null) => void;
 }
 
 /** Vertical stripes for a plate's edge, a bar under a photo, a ring for a dot. */
@@ -96,19 +98,26 @@ export function Pin(p: PinProps) {
   // A pin can disappear under the pointer (clicking a building swaps it for its fan) without
   // a "pointer left" event; let go of the hover then, or its card would stay highlighted.
   const hovered = useRef(false);
-  const onHover = useRef(p.onHover);
+  const previewing = useRef(false);
+  const handlers = useRef({ onHover: p.onHover, onPreview: p.onPreview });
   useEffect(() => {
-    onHover.current = p.onHover;
+    handlers.current = { onHover: p.onHover, onPreview: p.onPreview };
   });
   useEffect(
     () => () => {
-      if (hovered.current) onHover.current(false);
+      if (hovered.current) handlers.current.onHover(false);
+      if (previewing.current) handlers.current.onPreview?.(null);
     },
     [],
   );
   const hover = (on: boolean) => {
     hovered.current = on;
     p.onHover(on);
+  };
+  const preview = (el: HTMLElement | null) => {
+    if (!p.onPreview || (!el && !previewing.current)) return;
+    previewing.current = !!el;
+    p.onPreview(el ? el.getBoundingClientRect() : null);
   };
   const multi = p.count > 1;
   const asDot = p.dot || p.style === 'dot';
@@ -130,7 +139,11 @@ export function Pin(p: PinProps) {
     cls.push(styles.photo);
     inner = (
       <>
-        <span className={styles.noph}>
+        <span
+          className={styles.noph}
+          onMouseEnter={(e) => preview(e.currentTarget.closest('button'))}
+          onMouseLeave={() => preview(null)}
+        >
           <TypeGlyph type={p.type} />
         </span>
         <Stripes colors={p.stripes} horizontal />
@@ -184,9 +197,18 @@ export function Pin(p: PinProps) {
         p.onClick();
       }}
       onMouseEnter={() => hover(true)}
-      onMouseLeave={() => hover(false)}
-      onFocus={() => hover(true)}
-      onBlur={() => hover(false)}
+      onMouseLeave={() => {
+        hover(false);
+        preview(null);
+      }}
+      onFocus={(e) => {
+        hover(true);
+        if (!asDot && p.style === 'photo') preview(e.currentTarget);
+      }}
+      onBlur={() => {
+        hover(false);
+        preview(null);
+      }}
     >
       {inner}
       {p.newMark === 'dot' && <span className={styles.newb} aria-hidden="true" />}
