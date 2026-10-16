@@ -37,3 +37,19 @@ for (const scheme of ['light', 'dark'] as const) {
     }
   });
 }
+
+test('live data check page uses the real database and offers no sample data', async ({ page }) => {
+  await page.goto('/#/debug');
+  await expect(page.getByRole('heading', { level: 1, name: 'Data check' })).toBeVisible();
+  await expect(page.locator('main code').first()).toHaveText('rental-tracker');
+  await expect(page.getByRole('button', { name: 'Load sample data' })).toHaveCount(0);
+  await expect(
+    page.getByText(
+      'Sample data and test changes are only available in preview and development builds.',
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId('record-counts').getByRole('row', { name: /^Units/ }),
+  ).toContainText('0');
+  await expect(page.getByRole('button', { name: 'Nothing to undo' })).toBeDisabled();
+});
