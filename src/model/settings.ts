@@ -39,6 +39,8 @@ export const PIN_CONTENTS = [
   'travel', // enabled in Phase 2
 ] as const;
 
+export type PinContent = (typeof PIN_CONTENTS)[number];
+
 export const BASE_LAYERS = ['wayfinding', 'streets', 'osm', 'cycle', 'aerial'] as const;
 
 export const mapPrefs = z.object({
