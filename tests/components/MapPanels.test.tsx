@@ -79,27 +79,39 @@ describe('PinsPanel', () => {
     });
   });
 
-  it('edits the other view separately, which has no fan-out option', async () => {
-    const user = userEvent.setup();
-    const log: PinPrefs[] = [];
-    render(<PinsHarness log={log} />);
+  it('edits the view the list shows, and says which', () => {
+    render(<PinsHarness log={[]} />);
+    expect(screen.getByText(/For the Units view/)).toBeInTheDocument();
     expect(
       screen.getByRole('checkbox', { name: 'Fan out buildings when zoomed in' }),
     ).toBeChecked();
-    await user.click(within(group('Settings for')).getByRole('button', { name: 'Buildings view' }));
+    expect(screen.queryByRole('group', { name: 'Settings for' })).toBeNull();
+  });
+
+  it('in the Buildings view: building name, no fan-out option', async () => {
+    const user = userEvent.setup();
+    const log: PinPrefs[] = [];
+    render(<PinsHarness view="buildings" log={log} />);
+    expect(screen.getByText(/For the Buildings view/)).toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: 'Fan out buildings when zoomed in' })).toBeNull();
-    expect(screen.getByRole('checkbox', { name: 'Building name' })).not.toBeChecked();
     await user.click(screen.getByRole('checkbox', { name: 'Building name' }));
     expect(log.at(-1)?.fields).toEqual(['rent', 'unit']);
-    await user.click(within(group('Settings for')).getByRole('button', { name: 'Units view' }));
-    expect(screen.getByRole('checkbox', { name: 'Unit number' })).not.toBeChecked();
   });
 });
 
 describe('LayersPanel', () => {
   function LayersHarness() {
     const [base, setBase] = useState<BaseLayer>('wayfinding');
-    return <LayersPanel base={base} onBase={setBase} onClose={() => {}} />;
+    const [sharper, setSharper] = useState(false);
+    return (
+      <LayersPanel
+        base={base}
+        onBase={setBase}
+        sharper={sharper}
+        onSharper={setSharper}
+        onClose={() => {}}
+      />
+    );
   }
 
   it('shows the five base maps and a key for the chosen one', async () => {
@@ -125,6 +137,20 @@ describe('LayersPanel', () => {
       'href',
       'https://wiki.openstreetmap.org/wiki/OpenStreetMap_Carto/Lines',
     );
+  });
+
+  it('offers sharper tiles only for the raster street maps, off by default', async () => {
+    const user = userEvent.setup();
+    render(<LayersHarness />);
+    const sharper = () =>
+      screen.queryByRole('checkbox', { name: 'Sharper OpenStreetMap and Cycle maps' });
+    expect(sharper()).toBeNull();
+    await user.click(screen.getByRole('button', { name: /^OpenStreetMap/ }));
+    expect(sharper()).not.toBeChecked();
+    await user.click(sharper()!);
+    expect(sharper()).toBeChecked();
+    await user.click(screen.getByRole('button', { name: /Aerial photo/ }));
+    expect(sharper()).toBeNull();
   });
 
   it('shows Phase 2 overlays disabled', () => {

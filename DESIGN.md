@@ -113,13 +113,13 @@ Pending fields: total cost and cost per ft² (M8), travel time (Phase 2). Until 
 
 | State | Look, in any style |
 | --- | --- |
-| Fanned out | Units on dotted navy leader lines around a navy hub button (×, folds the fan); several fans can be open; *Collapse all* appears with the map controls |
+| Fanned out | Each unit's plate in the nearest free spot around a navy hub button (×, folds the fan), joined by a dotted navy leader line to the plate's nearest edge (no tail); plates never cover each other or the map controls; fans grow away from each other; pointing at one fan fades the others to 35%; *Collapse all* sits with the map controls |
 | Selected | Navy plate, 34 px tall, rent 17 px (photo grows to 64 px); list row gets a navy left bar |
 | Rejected | Dashed outline, struck-through text, no edge; 55% opacity when "Fade" is chosen; gone when "Hide" is chosen |
 | Fails baseline criteria | 55% opacity, solid outline |
 | Crowded or zoomed out | Shrinks to dots (if on): all of them below zoom 11, otherwise only where plates would overlap; pointing at a pin or its card expands it; the selected pin always shows in full |
 | Low zoom (10 and below) | Neighborhood bubbles (if on): navy circle with the number of units; click to zoom in |
-| Hovered | Its card(s) in the list get the `--frost` hover background |
+| Hovered | A plate gets a 2 px `--lake` outline; a dot shows a full preview above it (doesn't catch the pointer); its card(s) in the list get the `--frost` hover background |
 
 **Pin color** options: *Status* (§2.2), *Label* (§2.3, unlabeled = `--ice`), or *Total cost* (*Rent* until M8), a five-step blue scale from your cheapest to your priciest unit:
 
@@ -357,7 +357,7 @@ The paste box is collapsed to one line until you paste; anything it recognizes a
 
 ```
 ┌ Map layers ──────────────────────── × ┐   ┌ Pins ─────────────────────────────── × ┐
-│ Base map                              │   │ Settings for [Units view|Buildings view]│
+│ Base map                              │   │ For the Units view. (band)              │
 │ [Wayfinding] [Detailed streets]       │   │ Pin style   [Sign plate | Dot | Photo]  │
 │ [OpenStreetMap] [Cycle map] [Aerial]  │   │ On the pin  ☐ Unit type icon  ☑ Rent    │
 ├───────────────────────────────────────┤   │   ☐ Total cost M8  ☐ Cost per ft² M8    │
@@ -374,7 +374,7 @@ The paste box is collapsed to one line until you paste; anything it recognizes a
                                             └─────────────────────────────────────────┘
 ```
 
-Choices apply instantly. Pin settings are kept separately for the Units and Buildings views and remembered in this browser (per database); options that don't apply are greyed out (fields for dots) or hidden (fan-out in the Buildings view). Settings → Display will later hold defaults.
+Choices apply instantly. Pin settings are kept separately for the Units and Buildings views: the Pins panel edits the view the list shows and says so in a band under its title ("For the Units view. The Buildings view keeps its own settings."). They're remembered in this browser (per database); options that don't apply are greyed out (fields for dots) or hidden (fan-out in the Buildings view). The Layers panel adds *Sharper OpenStreetMap and Cycle maps* (off) when one of those maps is chosen. Settings → Display will later hold defaults.
 
 ### 4.8 Batch add units (`#/building/:id/add`)
 

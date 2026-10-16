@@ -94,6 +94,9 @@ describe('pin preferences', () => {
     expect(m.pins.buildings).toEqual(defaultMapMemory().pins.buildings);
     expect(parseMapMemory(null)).toEqual(defaultMapMemory());
     expect(parseMapMemory({ baseLayer: 'moon' }).baseLayer).toBe('wayfinding');
+    expect(parseMapMemory(null).sharperRaster).toBe(false);
+    expect(parseMapMemory({ sharperRaster: true }).sharperRaster).toBe(true);
+    expect(parseMapMemory({ sharperRaster: 'yes' }).sharperRaster).toBe(false);
   });
 });
 

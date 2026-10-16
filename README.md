@@ -36,7 +36,8 @@ browser for that exact web address. That means:
 
 - Each building with units in the list gets a pin; the map follows your search and the
   **Units / Buildings** switch. Pins show rent until total cost arrives (M8).
-- **Pins** (button on the map) sets how pins look, separately for the Units and Buildings views:
+- **Pins** (button on the map) sets how pins look for the view the list is showing (Units and
+  Buildings keep separate settings):
   a sign plate, a dot or a photo; which details to print (rent, beds and size, unit number,
   rating, unit type icon); the New badge; the colors; and whether rejected units show, fade or
   hide. The color legend is in this panel too.
@@ -44,12 +45,16 @@ browser for that exact web address. That means:
   count, a stripe per unit, and New if any unit is new. Click it to **fan out** its units; fans
   stay open, and you can open several. The × at a fan's center folds it; **Collapse all** or
   `Esc` folds them all. Zoomed in to street level, buildings fan out by themselves where there's
-  room (you can turn that off).
+  room (you can turn that off). Plates find free space around their building, so they don't cover
+  each other; point at a fan to fade the others.
 - Zoomed out, nearby buildings merge into round **bubbles** with a unit count, and crowded pins
   shrink to **dots**; both can be turned off. Point at a card to see its pin in full, or at a pin
   to highlight its cards.
 - **Layers** (or `L`) picks the base map (Wayfinding, Detailed streets, OpenStreetMap, Cycle map,
-  Aerial photo) and shows its key. **Fit** shows all your units.
+  Aerial photo) and shows its key. OpenStreetMap and Cycle map can look soft between zoom levels;
+  _Sharper OpenStreetMap and Cycle maps_ fixes that at the cost of about 4× the downloads.
+  **Fit** shows all your units.
+- **New** on a pin means the unit's status is still New, i.e. you haven't reviewed it yet.
 - Your pin and base-map choices are remembered in this browser. They aren't part of backups.
 - The unit and building panels link to **Google Maps** and **Street View**.
 - Map pictures come from free services (OpenFreeMap, OpenStreetMap, CyclOSM and Minnesota's MnGeo

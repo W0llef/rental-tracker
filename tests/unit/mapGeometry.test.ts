@@ -2,133 +2,200 @@ import fc from 'fast-check';
 import { boundsOf, contains, distanceMeters } from '../../src/domain/geo';
 import { mapLinks, googleMapsUrl, streetViewUrl } from '../../src/domain/links';
 import {
-  autoFans,
+  AUTO_FAN_REACH,
+  centeredRect,
   estimatePinSize,
-  fanOffsets,
-  fanRect,
-  fullPins,
+  layoutPins,
+  lineEnd,
   overlaps,
   pinRect,
+  placeFan,
+  preferredAngle,
   STREET_ZOOM,
 } from '../../src/domain/pinLayout';
-import type { PinBox, Rect } from '../../src/domain/pinLayout';
+import type { LayoutBuilding, Rect, Size } from '../../src/domain/pinLayout';
 import { makeAddress, newBuilding } from '../../src/model/factories';
 
-const box = (id: string, x: number, y: number, priority = 0, keepFull = false): PinBox => ({
+const plate: Size = { w: 60, h: 26 };
+const b = (
+  id: string,
+  x: number,
+  y: number,
+  extra: Partial<LayoutBuilding> = {},
+): LayoutBuilding => ({
   id,
-  rect: pinRect(x, y, 60, 33),
-  priority,
-  keepFull,
+  x,
+  y,
+  size: plate,
+  forced: false,
+  auto: false,
+  keepFull: false,
+  ...extra,
 });
 
-describe('fullPins (shrink to dots when crowded)', () => {
+/** Every rectangle the layout drew in full: collapsed pins and fan plates. */
+function drawn(bs: LayoutBuilding[], l: ReturnType<typeof layoutPins>): Rect[] {
+  const out: Rect[] = [];
+  for (const x of bs) {
+    const fan = l.fans.get(x.id);
+    if (fan)
+      fan.forEach(([dx, dy], i) => out.push(centeredRect(x.x + dx, x.y + dy, x.unitSizes![i]!)));
+    else if (l.full.has(x.id)) out.push(pinRect(x.x, x.y, x.size));
+  }
+  return out;
+}
+
+describe('layoutPins: plates and dots', () => {
   it('shows every pin in full when shrinking is off, at any zoom', () => {
-    const boxes = [box('a', 0, 0), box('b', 1, 1)];
-    expect(fullPins(boxes, 10, false)).toEqual(new Set(['a', 'b']));
-    expect(fullPins(boxes, 4, false)).toEqual(new Set(['a', 'b']));
+    const bs = [b('a', 0, 0), b('b', 1, 1)];
+    expect(layoutPins(bs, { zoom: 4, shrink: false }).full).toEqual(new Set(['a', 'b']));
   });
 
-  it('shows only kept pins in full below street zoom', () => {
-    const boxes = [box('a', 0, 0), box('b', 500, 500, 1, true)];
-    expect(fullPins(boxes, STREET_ZOOM - 0.5, true)).toEqual(new Set(['b']));
+  it('shows only the selected pin in full below street zoom', () => {
+    const bs = [b('a', 0, 0), b('b', 500, 500, { keepFull: true })];
+    expect(layoutPins(bs, { zoom: STREET_ZOOM - 0.5, shrink: true }).full).toEqual(new Set(['b']));
   });
 
-  it('shrinks the lower-priority pin of an overlapping pair', () => {
-    const boxes = [box('cheap', 100, 100, 1), box('pricey', 120, 105, 2), box('far', 400, 400, 3)];
-    expect(fullPins(boxes, 15, true)).toEqual(new Set(['cheap', 'far']));
+  it('shrinks the later pin of an overlapping pair, and keeps the selected one', () => {
+    const bs = [b('cheap', 100, 100), b('pricey', 120, 105), b('far', 400, 400)];
+    expect(layoutPins(bs, { zoom: 15, shrink: true }).full).toEqual(new Set(['cheap', 'far']));
+    const sel = [b('cheap', 100, 100), b('selected', 110, 100, { keepFull: true })];
+    expect(layoutPins(sel, { zoom: 15, shrink: true }).full).toEqual(new Set(['selected']));
+  });
+});
+
+describe('layoutPins: fans', () => {
+  const units = (n: number, w = 150, h = 84): Size[] => Array.from({ length: n }, () => ({ w, h }));
+
+  it('places a fan you opened without plates covering each other or the hub', () => {
+    const big = b('big', 400, 400, { forced: true, unitSizes: units(5) });
+    const l = layoutPins([big], { zoom: 16, shrink: true });
+    const rects = drawn([big], l);
+    expect(rects).toHaveLength(5);
+    for (let i = 0; i < rects.length; i++) {
+      expect(overlaps(rects[i]!, { left: 387, right: 413, top: 387, bottom: 413 }, 0)).toBe(false);
+      for (let j = i + 1; j < rects.length; j++)
+        expect(overlaps(rects[i]!, rects[j]!, 0)).toBe(false);
+    }
+    // The first (cheapest) unit sits straight above the building
+    const [dx, dy] = l.fans.get('big')![0]!;
+    expect(dx).toBe(0);
+    expect(dy).toBeLessThan(0);
   });
 
-  it('always keeps the selected pin, even over a cheaper one', () => {
-    const boxes = [box('cheap', 100, 100, 1), box('selected', 110, 100, 9, true)];
-    expect(fullPins(boxes, 15, true)).toEqual(new Set(['selected']));
+  it('keeps two open fans clear of each other', () => {
+    const bs = [
+      b('a', 300, 300, { forced: true, unitSizes: units(4, 120, 30) }),
+      b('b', 380, 320, { forced: true, unitSizes: units(4, 120, 30) }),
+    ];
+    const rects = drawn(bs, layoutPins(bs, { zoom: 16, shrink: true }));
+    expect(rects).toHaveLength(8);
+    for (let i = 0; i < rects.length; i++)
+      for (let j = i + 1; j < rects.length; j++)
+        expect(overlaps(rects[i]!, rects[j]!, 0)).toBe(false);
   });
 
-  it('shrinks pins under an open fan', () => {
-    const fan: Rect = { left: 50, right: 300, top: 0, bottom: 120 };
-    const boxes = [box('under', 100, 100, 1), box('clear', 500, 500, 2)];
-    expect(fullPins(boxes, 15, true, [fan])).toEqual(new Set(['clear']));
+  it('opens an automatic fan only if every unit fits nearby', () => {
+    const roomy = [b('a', 300, 300, { auto: true, unitSizes: units(3, 80, 30) })];
+    expect(layoutPins(roomy, { zoom: 16, shrink: true }).autoOpen).toEqual(['a']);
+    // A fan already open next door leaves no room for a big one within reach
+    const crowded = [
+      b('open', 300, 300, { forced: true, unitSizes: units(12, 140, 40) }),
+      b('auto', 330, 310, { auto: true, unitSizes: units(12, 140, 40) }),
+    ];
+    const l = layoutPins(crowded, { zoom: 16, shrink: true });
+    expect(l.fans.has('open')).toBe(true);
+    expect(l.autoOpen).toEqual([]);
+    expect(AUTO_FAN_REACH).toBeLessThan(400);
   });
 
-  it('never leaves two full, unkept pins overlapping', () => {
+  it('prefers spots on screen', () => {
+    const edge = b('edge', 30, 30, { forced: true, unitSizes: units(2, 80, 30) });
+    const l = layoutPins([edge], { zoom: 16, shrink: true, view: { w: 800, h: 600 } });
+    for (const r of drawn([edge], l)) {
+      expect(r.left).toBeGreaterThanOrEqual(0);
+      expect(r.top).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('never lets drawn plates overlap, whatever the buildings', () => {
     const arb = fc.array(
-      fc.record({ x: fc.integer({ min: 0, max: 400 }), y: fc.integer({ min: 0, max: 400 }) }),
-      { maxLength: 30 },
+      fc.record({
+        x: fc.integer({ min: 0, max: 600 }),
+        y: fc.integer({ min: 0, max: 600 }),
+        n: fc.integer({ min: 1, max: 6 }),
+        open: fc.boolean(),
+      }),
+      { maxLength: 12 },
     );
     fc.assert(
-      fc.property(arb, (pts) => {
-        const boxes = pts.map((p, i) => box(String(i), p.x, p.y, i));
-        const full = boxes.filter((b) => fullPins(boxes, 16, true).has(b.id));
-        for (let i = 0; i < full.length; i++)
-          for (let j = i + 1; j < full.length; j++)
-            expect(overlaps((full[i] as PinBox).rect, (full[j] as PinBox).rect)).toBe(false);
+      fc.property(arb, (spec) => {
+        const bs = spec.map((s, i) =>
+          b(String(i), s.x, s.y, {
+            auto: s.n > 1 && !s.open,
+            forced: s.n > 1 && s.open,
+            unitSizes: s.n > 1 ? units(s.n, 90, 28) : undefined,
+          }),
+        );
+        // Forced fans may have to overlap when there's truly no room; check the others.
+        const l = layoutPins(bs, { zoom: 16, shrink: true });
+        const rects = drawn(
+          bs.filter((x) => !x.forced),
+          l,
+        );
+        for (let i = 0; i < rects.length; i++)
+          for (let j = i + 1; j < rects.length; j++)
+            expect(overlaps(rects[i]!, rects[j]!, 0)).toBe(false);
       }),
+      { numRuns: 60 },
     );
   });
-});
 
-describe('autoFans (fan out when zoomed in, where there is room)', () => {
-  const r = (left: number): Rect => ({ left, right: left + 200, top: 0, bottom: 150 });
+  it('places plates one at a time and reports when strict placement fails', () => {
+    const placed: Rect[] = [{ left: -1000, right: 1000, top: -1000, bottom: 1000 }];
+    expect(placeFan([0, 0], units(1), placed, { reach: 100, strict: true })).toBeNull();
+    expect(placed).toHaveLength(1);
+  });
 
-  it('opens fans in priority order, skipping ones that would overlap', () => {
-    const cands = [
-      { id: 'b', rect: r(150), priority: 2 },
-      { id: 'a', rect: r(0), priority: 1 },
-      { id: 'c', rect: r(400), priority: 3 },
+  it('grows fans away from each other, still leaning up', () => {
+    expect(preferredAngle([100, 100], [])).toBeCloseTo(-Math.PI / 2);
+    // A fan to the right pushes this one left (and a little up)
+    const a = preferredAngle([100, 100], [[200, 100]]);
+    expect(Math.cos(a)).toBeLessThan(-0.8);
+    expect(Math.sin(a)).toBeLessThan(0);
+    // Two neighboring fans' plates end up on opposite sides of each other
+    const bs = [
+      b('left', 300, 300, { forced: true, unitSizes: units(3, 100, 30) }),
+      b('right', 420, 300, { forced: true, unitSizes: units(3, 100, 30) }),
     ];
-    expect(autoFans(cands, [])).toEqual(new Set(['a', 'c']));
+    const l = layoutPins(bs, { zoom: 16, shrink: true });
+    const meanX = (id: string) => {
+      const c = l.fans.get(id)!;
+      return c.reduce((n, [x]) => n + x, 0) / c.length;
+    };
+    expect(meanX('left')).toBeLessThan(0);
+    expect(meanX('right')).toBeGreaterThan(0);
   });
 
-  it('leaves room for fans you opened yourself', () => {
-    expect(autoFans([{ id: 'a', rect: r(0), priority: 1 }], [r(100)])).toEqual(new Set());
-  });
-
-  it('measures a fan around all of its plates and the hub', () => {
-    const rect = fanRect(
-      100,
-      100,
-      [
-        [-80, -40],
-        [80, -40],
-      ],
-      60,
-      33,
-    );
-    expect(rect).toEqual({ left: -10, right: 210, top: 27, bottom: 108 });
+  it('joins a plate to its hub at the plate’s nearest edge', () => {
+    expect(lineEnd([0, 0], [0, -60], { w: 80, h: 30 })).toEqual([0, -45]);
+    expect(lineEnd([0, 0], [100, 0], { w: 80, h: 30 })).toEqual([60, 0]);
   });
 });
 
 describe('estimatePinSize', () => {
   it('grows with text and extras, and is small for dots', () => {
-    const plain = estimatePinSize('plate', ['$1,650'], { icon: false, count: false, tag: false });
+    const one = estimatePinSize('plate', ['$1,650'], { icon: false, count: false, tag: false });
     const more = estimatePinSize('plate', ['$1,650', '1 bd · 720 ft²'], {
       icon: true,
       count: true,
       tag: true,
     });
-    expect(more.w).toBeGreaterThan(plain.w);
+    expect(more.w).toBeGreaterThan(one.w);
     expect(estimatePinSize('dot', ['x'], { icon: true, count: true, tag: true }).w).toBe(24);
-    expect(estimatePinSize('photo', [], { icon: false, count: false, tag: false }).h).toBe(62);
     expect(estimatePinSize('photo', ['$1,650'], { icon: false, count: false, tag: false }).h).toBe(
-      80,
+      82,
     );
-  });
-});
-
-describe('fanOffsets', () => {
-  it('places units above the hub without overlapping plates', () => {
-    for (const n of [2, 3, 5, 8]) {
-      const offs = fanOffsets(n, 90);
-      expect(offs).toHaveLength(n);
-      for (let i = 0; i < n; i++)
-        for (let j = i + 1; j < n; j++) {
-          const [ax, ay] = offs[i] as [number, number];
-          const [bx, by] = offs[j] as [number, number];
-          const apart = Math.abs(ax - bx) >= 88 || Math.abs(ay - by) >= 34;
-          expect(apart).toBe(true);
-        }
-    }
-    expect(fanOffsets(1)).toEqual([[0, -56]]);
-    expect(fanOffsets(0)).toEqual([]);
   });
 });
 

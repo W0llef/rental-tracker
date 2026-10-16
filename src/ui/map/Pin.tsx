@@ -23,7 +23,8 @@ export function TypeGlyph({ type }: { type: UnitType | null }) {
 }
 
 export interface PinProps {
-  pinKey: string;
+  /** `unit:<id>` or `building:<id>`; left out for previews and measuring copies. */
+  pinKey?: string;
   style: PinStyle;
   content: PinContent;
   /** Placeholder for the photo until photos arrive (M11), and the icon of an empty plate. */
@@ -37,6 +38,10 @@ export interface PinProps {
   faded: boolean;
   /** Shrunk to a dot because the map is zoomed out or crowded. */
   dot: boolean;
+  /** In a fan: centered on its spot, no tail (a leader line joins it to the hub). */
+  inFan?: boolean;
+  /** Its card is under the pointer: outlined. */
+  hot?: boolean;
   newMark: 'dot' | 'tag' | null;
   /** Spoken description after the visible text. */
   label: string;
@@ -94,6 +99,8 @@ export function Pin(p: PinProps) {
   if (p.selected) cls.push(styles.sel);
   if (p.rejected) cls.push(styles.rej);
   if (p.faded) cls.push(styles.faded);
+  if (p.inFan) cls.push(styles.inFan);
+  if (p.hot) cls.push(styles.hot);
   const empty = !p.content.typeIcon && !p.content.segments.length;
 
   let inner;

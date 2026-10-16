@@ -81,6 +81,8 @@ export type BaseLayer = (typeof BASE_LAYERS)[number];
 
 export interface MapMemory {
   baseLayer: BaseLayer;
+  /** OpenStreetMap and Cycle map: fetch the next zoom's tiles (4× the downloads). Off. */
+  sharperRaster: boolean;
   pins: Record<PinView, PinPrefs>;
 }
 
@@ -98,6 +100,7 @@ const base: Omit<PinPrefs, 'fields'> = {
 export function defaultMapMemory(): MapMemory {
   return {
     baseLayer: 'wayfinding',
+    sharperRaster: false,
     pins: {
       units: { ...base, fields: ['rent'] },
       buildings: { ...base, fields: ['rent'], autoFan: false },
@@ -109,7 +112,11 @@ export function defaultMapMemory(): MapMemory {
 export function parseMapMemory(raw: unknown): MapMemory {
   const d = defaultMapMemory();
   if (!raw || typeof raw !== 'object') return d;
-  const r = raw as { baseLayer?: unknown; pins?: { units?: unknown; buildings?: unknown } };
+  const r = raw as {
+    baseLayer?: unknown;
+    sharperRaster?: unknown;
+    pins?: { units?: unknown; buildings?: unknown };
+  };
   const view = (v: PinView): PinPrefs => {
     const parsed = pinPrefsSchema(d.pins[v]).safeParse(r.pins?.[v] ?? {});
     return parsed.success ? parsed.data : d.pins[v];
@@ -117,6 +124,7 @@ export function parseMapMemory(raw: unknown): MapMemory {
   const baseLayer = z.enum(BASE_LAYERS).safeParse(r.baseLayer);
   return {
     baseLayer: baseLayer.success ? baseLayer.data : d.baseLayer,
+    sharperRaster: r.sharperRaster === true,
     pins: { units: view('units'), buildings: view('buildings') },
   };
 }

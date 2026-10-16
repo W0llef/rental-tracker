@@ -60,6 +60,7 @@ export interface UiState extends Remembered, MapUi {
   /** Zoomed out to bubble level: clicked fans fold; below street zoom the folded list resets. */
   forgetFans: (opts: { clicked: boolean; folded: boolean }) => void;
   setBaseLayer: (base: BaseLayer) => void;
+  setSharperRaster: (on: boolean) => void;
   setPinPrefs: (view: PinView, prefs: PinPrefs) => void;
 }
 
@@ -172,6 +173,11 @@ export const useUi = create<UiState>()((set, get) => {
     },
     setBaseLayer: (baseLayer) => {
       const map = { ...get().map, baseLayer };
+      set({ map });
+      rememberMap(map);
+    },
+    setSharperRaster: (sharperRaster) => {
+      const map = { ...get().map, sharperRaster };
       set({ map });
       rememberMap(map);
     },

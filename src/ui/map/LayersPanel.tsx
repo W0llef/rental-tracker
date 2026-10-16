@@ -94,12 +94,17 @@ function BaseKey({ base }: { base: BaseLayer }) {
 export function LayersPanel({
   base,
   onBase,
+  sharper,
+  onSharper,
   onClose,
 }: {
   base: BaseLayer;
   onBase: (base: BaseLayer) => void;
+  sharper: boolean;
+  onSharper: (on: boolean) => void;
   onClose: () => void;
 }) {
+  const raster = base === 'osm' || base === 'cycle';
   const ref = useRef<HTMLElement>(null);
   useEffect(() => {
     ref.current?.focus();
@@ -141,6 +146,24 @@ export function LayersPanel({
           ))}
         </div>
       </fieldset>
+
+      {raster && (
+        <div className={styles.lsec}>
+          <label className={styles.chk}>
+            <input
+              type="checkbox"
+              checked={sharper}
+              onChange={(e) => onSharper(e.target.checked)}
+              aria-describedby="sharper-note"
+            />
+            Sharper OpenStreetMap and Cycle maps
+          </label>
+          <p id="sharper-note" className={styles.lnote}>
+            Uses the next zoom level’s tiles: crisper, but about 4× the downloads from volunteer-run
+            servers. Wayfinding and Detailed streets are always sharp.
+          </p>
+        </div>
+      )}
 
       <section className={styles.lsec} aria-labelledby="base-key-title">
         <h4 id="base-key-title" className={styles.lt}>

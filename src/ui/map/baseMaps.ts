@@ -66,21 +66,27 @@ export const CYCLOSM_TILES = ['a', 'b', 'c'].map(
 export const MNGEO_WMS =
   'https://imageserver.gisdata.mn.gov/cgi-bin/wmsll?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap' +
   '&LAYERS=fsa2025,met25&STYLES=,&SRS=EPSG:3857&BBOX={bbox-epsg-3857}' +
-  '&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg';
+  // Twice the tile's size, so the photos stay sharp on high-density screens
+  '&WIDTH=512&HEIGHT=512&FORMAT=image/jpeg';
 
 /** Source id of the raster tiles in the raster styles (used to spot tile errors). */
 export const RASTER_SOURCE = 'base';
 
+/**
+ * A raster base map. `tileSize` 128 makes MapLibre fetch the next zoom level's tiles and
+ * draw them at half size: sharper, at four times the downloads ("Sharper raster maps").
+ */
 function rasterStyle(
   tiles: string[],
   attribution: string,
   maxzoom: number,
   background: string,
+  tileSize = 256,
 ): StyleSpecification {
   return {
     version: 8,
     sources: {
-      [RASTER_SOURCE]: { type: 'raster', tiles, tileSize: 256, maxzoom, attribution },
+      [RASTER_SOURCE]: { type: 'raster', tiles, tileSize, maxzoom, attribution },
     },
     layers: [
       { id: 'background', type: 'background', paint: { 'background-color': background } },
@@ -89,15 +95,16 @@ function rasterStyle(
   };
 }
 
-export const osmStyle = (): StyleSpecification =>
-  rasterStyle([OSM_TILES], OSM_ATTRIBUTION, 19, '#f2efe9');
+export const osmStyle = (sharper = false): StyleSpecification =>
+  rasterStyle([OSM_TILES], OSM_ATTRIBUTION, 19, '#f2efe9', sharper ? 128 : 256);
 
-export const cycleStyle = (): StyleSpecification =>
+export const cycleStyle = (sharper = false): StyleSpecification =>
   rasterStyle(
     CYCLOSM_TILES,
     `${OSM_ATTRIBUTION} · <a href="https://www.cyclosm.org" target="_blank" rel="noopener">CyclOSM</a>`,
     20,
     '#f4f4f0',
+    sharper ? 128 : 256,
   );
 
 export const aerialStyle = (): StyleSpecification =>
@@ -229,6 +236,7 @@ export async function styleFor(
   base: BaseLayer,
   wayfindingUrl: string,
   palette: WayfindingPalette,
+  opts: { sharper?: boolean } = {},
 ): Promise<StyleSpecification | string> {
   switch (base) {
     case 'wayfinding':
@@ -236,9 +244,9 @@ export async function styleFor(
     case 'streets':
       return LIBERTY_STYLE_URL;
     case 'osm':
-      return osmStyle();
+      return osmStyle(opts.sharper);
     case 'cycle':
-      return cycleStyle();
+      return cycleStyle(opts.sharper);
     case 'aerial':
       return aerialStyle();
   }

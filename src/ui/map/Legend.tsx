@@ -40,7 +40,7 @@ export function LegendBody({ legend }: { legend: LegendData }) {
 /** The legend in the map corner (laptop); phones see it in the Pins panel. */
 export function Legend({ legend }: { legend: LegendData }) {
   return (
-    <section className={styles.legend} aria-labelledby="map-legend-title">
+    <section className={styles.legend} aria-labelledby="map-legend-title" data-reserve>
       <h3 id="map-legend-title" className={styles.legendTitle}>
         {legend.title}
       </h3>

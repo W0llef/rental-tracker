@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { Legend as LegendData } from '../../domain/pins';
 import { PRICE_COLOR_LABEL } from '../../domain/pins';
@@ -102,7 +102,8 @@ export function PinsPanel({
   legend: LegendData | null;
 }) {
   const ref = useRef<HTMLElement>(null);
-  const [editing, setEditing] = useState<PinView>(view);
+  // Edits whichever view the list shows; the other view keeps its own settings.
+  const editing = view;
   const prefs = prefsFor[editing];
   const set = (patch: Partial<PinPrefs>) => onChange(editing, { ...prefs, ...patch });
 
@@ -130,22 +131,10 @@ export function PinsPanel({
         </button>
       </div>
 
-      <Section title="Settings for">
-        <Seg
-          label="Settings for"
-          value={editing}
-          options={[
-            { id: 'units', label: 'Units view' },
-            { id: 'buildings', label: 'Buildings view' },
-          ]}
-          onChange={setEditing}
-        />
-        <p className={styles.lnote}>
-          {editing === view
-            ? 'The view the list shows now.'
-            : 'Used when the list shows this view.'}
-        </p>
-      </Section>
+      <p className={styles.lfor}>
+        For the {view === 'units' ? 'Units' : 'Buildings'} view. The{' '}
+        {view === 'units' ? 'Buildings' : 'Units'} view keeps its own settings.
+      </p>
 
       <Section title="Pin style">
         <Seg<PinStyle>

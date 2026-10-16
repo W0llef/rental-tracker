@@ -1,5 +1,13 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import type { ReactNode } from 'react';
 import MapGL, { AttributionControl, Marker } from 'react-map-gl/maplibre';
 import type { MapRef } from 'react-map-gl/maplibre';
@@ -15,14 +23,11 @@ import {
   AUTO_FAN_ZOOM,
   CLUSTER_MAX_ZOOM,
   STREET_ZOOM,
-  autoFans,
   estimatePinSize,
-  fanOffsets,
-  fanRect,
-  fullPins,
-  pinRect,
+  layoutPins,
+  lineEnd,
 } from '../../domain/pinLayout';
-import type { PinBox, Rect } from '../../domain/pinLayout';
+import type { LayoutBuilding, Point, Size } from '../../domain/pinLayout';
 import {
   allRejected,
   buildingPinLabel,
@@ -40,7 +45,7 @@ import {
   unitPinLabel,
 } from '../../domain/pins';
 import type { PinContent, PriceScale } from '../../domain/pins';
-import type { PinPrefs } from '../../domain/pinPrefs';
+import type { PinPrefs, PinStyle } from '../../domain/pinPrefs';
 import { buildingName } from '../../domain/format';
 import { deriveMapItems } from '../../state/derive';
 import type { Dataset, ListView, MapBuilding, UnitRow } from '../../state/derive';
@@ -117,8 +122,8 @@ interface Layout {
   shown: string[];
   /** Of those, the ones drawn in full (the rest are dots). */
   full: Set<string>;
-  /** Buildings fanned out, with each unit's offset from the hub. */
-  fans: Map<string, [number, number][]>;
+  /** Buildings fanned out: each unit's plate center, relative to the building's point. */
+  fans: Map<string, Point[]>;
   /** Fans that opened by themselves (street zoom). */
   autoOpen: string[];
 }
@@ -135,6 +140,28 @@ const emptyLayout: Layout = {
 type PointProps = { id: string; units: number };
 
 const unitKey = (r: UnitRow) => `unit:${r.unit.id}`;
+
+/** Everything that decides a pin's size, so measured sizes can be reused. */
+interface PinSpec {
+  style: PinStyle;
+  content: PinContent;
+  count: number;
+  newMark: 'dot' | 'tag' | null;
+  selected: boolean;
+  /** Drawn in a fan: centered, no tail. */
+  fan: boolean;
+}
+
+const specKey = (s: PinSpec) =>
+  [
+    s.style,
+    s.content.typeIcon ?? '',
+    s.content.segments.map((x) => `${x.field}:${x.text}`).join('¦'),
+    s.count,
+    s.newMark ?? '',
+    s.selected ? 'sel' : '',
+    s.fan ? 'fan' : '',
+  ].join('|');
 
 /** One building as the map draws it: the units it pins and the ones its summary covers. */
 interface Placed extends MapBuilding {
@@ -154,10 +181,12 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
   const ui = useUi();
   const { hoverKey, setHover, panel, setPanel, togglePanel, openFans, foldedFans } = ui;
   const layersBtn = useRef<HTMLButtonElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const pinsBtn = useRef<HTMLButtonElement>(null);
 
   const prefs: PinPrefs = ui.map.pins[view];
   const baseLayer = ui.map.baseLayer;
+  const sharper = ui.map.sharperRaster;
 
   // ── Selection ──
   const [selKind, selId] = selectedKey
@@ -219,7 +248,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
   const failed = failedBase === baseLayer;
   useEffect(() => {
     let live = true;
-    styleFor(baseLayer, data.settings.mapStyleUrl, paletteFromTokens())
+    styleFor(baseLayer, data.settings.mapStyleUrl, paletteFromTokens(), { sharper })
       .then((s) => {
         if (live) setStyle(s);
       })
@@ -230,7 +259,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
       live = false;
     };
     // `dark` re-reads the palette when the theme flips
-  }, [baseLayer, data.settings.mapStyleUrl, dark]);
+  }, [baseLayer, data.settings.mapStyleUrl, dark, sharper]);
 
   // ── Bubbles (low zoom): the selected building and open fans never hide in one ──
   const index = useMemo(() => {
@@ -254,30 +283,58 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     return sc;
   }, [placed, selectedBuildingId]);
 
-  // ── Sizes ──
-  const unitPinSize = useCallback(
-    (r: UnitRow) => {
-      const c = pinContent([r], prefs, false);
-      return estimatePinSize(
-        prefs.style,
-        c.segments.map((s) => s.text),
+  // ── Sizes: measured from real pins (a hidden copy), estimated until then ──
+  const [sizes, setSizes] = useState<ReadonlyMap<string, Size>>(() => new Map());
+  const newMark = useCallback(
+    (on: boolean) => (on && prefs.newBadge !== 'off' ? prefs.newBadge : null),
+    [prefs.newBadge],
+  );
+  const sizeOf = useCallback(
+    (spec: PinSpec): Size => {
+      const known = sizes.get(specKey(spec));
+      if (known) return known;
+      const est = estimatePinSize(
+        spec.style,
+        spec.content.segments.map((x) => x.text),
         {
-          icon: !!c.typeIcon,
-          count: false,
-          tag: prefs.newBadge === 'tag' && isNew(r.unit),
+          icon: !!spec.content.typeIcon,
+          count: spec.count > 1,
+          tag: spec.newMark === 'tag',
         },
       );
+      return spec.selected ? { w: est.w + 20, h: est.h + 8 } : est;
     },
-    [prefs],
+    [sizes],
   );
-  const fanGeometry = useCallback(
-    (b: Placed) => {
-      const sizes = b.pinned.map(unitPinSize);
-      const w = Math.max(...sizes.map((s) => s.w)) + 8;
-      const h = Math.max(...sizes.map((s) => s.h)) + 4;
-      return { offsets: fanOffsets(b.pinned.length, w, h), w, h };
+  /** The pin a building shows when collapsed (or its only unit's pin). */
+  const collapsedSpec = useCallback(
+    (b: Placed): PinSpec => {
+      const single = !b.group && view === 'units' ? b.pinned[0] : undefined;
+      return {
+        style: prefs.style,
+        content: b.content,
+        count: single ? 1 : b.pinned.length,
+        newMark: newMark(b.pinned.some((u) => isNew(u.unit))),
+        selected: single
+          ? selectedKey === unitKey(single)
+          : view === 'buildings'
+            ? selectedKey === `building:${b.id}`
+            : b.pinned.some((u) => unitKey(u) === selectedKey),
+        fan: false,
+      };
     },
-    [unitPinSize],
+    [prefs.style, view, newMark, selectedKey],
+  );
+  const unitSpec = useCallback(
+    (r: UnitRow): PinSpec => ({
+      style: prefs.style,
+      content: pinContent([r], prefs, false),
+      count: 1,
+      newMark: newMark(isNew(r.unit)),
+      selected: selectedKey === unitKey(r),
+      fan: true,
+    }),
+    [prefs, newMark, selectedKey],
   );
 
   // ── Relayout: which pins are in view, bubbled, fanned, full or dots ──
@@ -320,78 +377,62 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
       .map((id) => byId.get(id))
       .filter((b): b is Placed => !!b)
       .sort((x, y) => lowestRent(x.summary) - lowestRent(y.summary));
-    const pt = new Map(ranked.map((b) => [b.id, map.project([b.lng, b.lat])]));
-
-    // Fans: clicked and selected ones, then automatic ones where there's room
-    const fans = new Map<string, [number, number][]>();
-    const fanRects: Rect[] = [];
     const openNow = new Set([...clickedFans, ...(forcedFan ? [forcedFan] : [])]);
-    const geom = new Map<string, ReturnType<typeof fanGeometry>>();
-    for (const b of ranked) {
-      if (!b.group || !openNow.has(b.id)) continue;
-      const g = fanGeometry(b);
-      const p = pt.get(b.id)!;
-      geom.set(b.id, g);
-      fans.set(b.id, g.offsets);
-      fanRects.push(fanRect(p.x, p.y, g.offsets, g.w, g.h));
-    }
-    let autoOpen: string[] = [];
-    if (view === 'units' && prefs.autoFan && zoom >= AUTO_FAN_ZOOM) {
-      const cands = ranked
-        .map((b, i) => ({ b, i }))
-        .filter(({ b }) => b.group && !openNow.has(b.id) && !foldedFans.includes(b.id))
-        .map(({ b, i }) => {
-          const g = fanGeometry(b);
-          geom.set(b.id, g);
-          const p = pt.get(b.id)!;
-          return { id: b.id, rect: fanRect(p.x, p.y, g.offsets, g.w, g.h), priority: i };
-        });
-      const chosen = autoFans(cands, fanRects);
-      autoOpen = [...chosen];
-      for (const c of cands)
-        if (chosen.has(c.id)) {
-          fans.set(c.id, geom.get(c.id)!.offsets);
-          fanRects.push(c.rect);
-        }
-    }
-
-    // Everything else: full plates where they fit, dots where crowded
-    const boxes: PinBox[] = ranked
-      .filter((b) => !fans.has(b.id))
-      .map((b, i) => {
-        const p = pt.get(b.id)!;
-        const size = estimatePinSize(
-          prefs.style,
-          b.content.segments.map((x) => x.text),
-          {
-            icon: !!b.content.typeIcon,
-            count: b.pinned.length > 1,
-            tag: prefs.newBadge === 'tag' && b.pinned.some((u) => isNew(u.unit)),
-          },
-        );
-        const keep = b.id === selectedBuildingId || b.id === hoverBuildingId;
-        return { id: b.id, rect: pinRect(p.x, p.y, size.w, size.h), priority: i, keepFull: keep };
-      });
+    const autoOk = view === 'units' && prefs.autoFan && zoom >= AUTO_FAN_ZOOM;
+    const input: LayoutBuilding[] = ranked.map((b) => {
+      const pt = map.project([b.lng, b.lat]);
+      const spec = collapsedSpec(b);
+      return {
+        id: b.id,
+        x: pt.x,
+        y: pt.y,
+        size: sizeOf(spec),
+        unitSizes: b.group ? fanOrder(b.pinned).map((r) => sizeOf(unitSpec(r))) : undefined,
+        forced: b.group && openNow.has(b.id),
+        auto: b.group && autoOk && !foldedFans.includes(b.id),
+        keepFull: b.id === selectedBuildingId,
+      };
+    });
+    const container = map.getContainer();
+    const { clientWidth, clientHeight } = container;
+    // Plates stay clear of the map's own buttons, legend and notes
+    const origin = container.getBoundingClientRect();
+    const reserved = [...(rootRef.current?.querySelectorAll('[data-reserve]') ?? [])]
+      .map((el) => el.getBoundingClientRect())
+      .filter((r) => r.width && r.height)
+      .map((r) => ({
+        left: r.left - origin.left,
+        right: r.right - origin.left,
+        top: r.top - origin.top,
+        bottom: r.bottom - origin.top,
+      }));
+    const out = layoutPins(input, {
+      zoom,
+      shrink: prefs.shrink,
+      view: clientWidth ? { w: clientWidth, h: clientHeight } : undefined,
+      reserved,
+    });
     setLayout({
       zoom,
       bubbles,
       shown: ranked.map((b) => b.id),
-      full: fullPins(boxes, zoom, prefs.shrink, fanRects),
-      fans,
-      autoOpen,
+      full: out.full,
+      fans: out.fans,
+      autoOpen: out.autoOpen,
     });
   }, [
     index,
     placed,
     byId,
     selectedBuildingId,
-    hoverBuildingId,
     clickedFans,
     forcedFan,
     foldedFans,
-    fanGeometry,
     prefs,
     view,
+    sizeOf,
+    collapsedSpec,
+    unitSpec,
   ]);
 
   useEffect(() => {
@@ -488,28 +529,68 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     navigate(`/${key.replace(':', '/')}`, { replace: selectedKey !== null });
 
   // ── Rendering helpers ──
-  const newMark = (on: boolean) => (on && prefs.newBadge !== 'off' ? prefs.newBadge : null);
+  // Pointing at a fan (a plate, its hub or a line) dims the other open fans
+  const [hoverFan, setHoverFan] = useState<string | null>(null);
+  const hot = (key: string) => hoverKey === key;
 
-  const unitPin = (r: UnitRow) => {
+  const unitPin = (r: UnitRow, inFan: boolean) => {
     const u = r.unit;
     const rejected = isRejected(u);
-    const selected = selectedKey === unitKey(r);
+    const spec = inFan ? unitSpec(r) : collapsedSpec(byId.get(u.buildingId)!);
     return (
       <Pin
         pinKey={unitKey(r)}
         style={prefs.style}
-        content={pinContent([r], prefs, false)}
+        content={spec.content}
         type={u.type}
         count={1}
         stripes={[edgeColor(u, prefs.colorBy, scale)]}
-        selected={selected}
+        selected={spec.selected}
         rejected={rejected}
         faded={rejected && prefs.rejected === 'fade'}
         dot={false}
-        newMark={newMark(isNew(u))}
+        inFan={inFan}
+        hot={hot(unitKey(r))}
+        newMark={spec.newMark}
         label={unitPinLabel(r)}
         onClick={() => select(unitKey(r))}
         onHover={(on) => setHover(on ? unitKey(r) : null)}
+      />
+    );
+  };
+
+  /** A building's collapsed pin (or a single unit's pin), as a plate or a dot. */
+  const collapsedPin = (b: Placed, dot: boolean, opts: { peek?: boolean } = {}) => {
+    const spec = collapsedSpec(b);
+    const single = !b.group && view === 'units' ? (b.pinned[0] as UnitRow) : undefined;
+    const key = single ? unitKey(single) : `building:${b.id}`;
+    const rejected = single ? isRejected(single.unit) : allRejected(b.pinned);
+    return (
+      <Pin
+        pinKey={opts.peek ? undefined : key}
+        style={prefs.style}
+        content={spec.content}
+        type={single?.unit.type ?? b.summary[0]?.unit.type ?? null}
+        count={spec.count}
+        stripes={
+          single
+            ? [edgeColor(single.unit, prefs.colorBy, scale)]
+            : edgeStripes(b.summary, prefs.colorBy, scale)
+        }
+        selected={spec.selected}
+        rejected={rejected}
+        faded={rejected && prefs.rejected === 'fade'}
+        dot={dot && !spec.selected}
+        hot={!opts.peek && !dot && hoverBuildingId === b.id}
+        newMark={spec.newMark}
+        label={
+          single
+            ? unitPinLabel(single)
+            : buildingPinLabel(b.building, b.summary, view, b.pinned.length)
+        }
+        expanded={b.group ? false : undefined}
+        onClick={() => (single ? select(key) : view === 'units' ? ui.openFan(b.id) : select(key))}
+        onHover={(on) => setHover(on ? key : null)}
       />
     );
   };
@@ -519,21 +600,36 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     const b = byId.get(id);
     if (!b) continue;
     const isSel = id === selectedBuildingId;
-    const offsets = layout.fans.get(id);
+    const isHover = id === hoverBuildingId;
+    const centers = layout.fans.get(id);
 
-    if (offsets && b.group) {
+    if (centers && b.group) {
       const ordered = fanOrder(b.pinned);
-      const reach = Math.max(...offsets.map(([x, y]) => Math.max(Math.abs(x), Math.abs(y)))) + 8;
+      const sizes = ordered.map((r) => sizeOf(unitSpec(r)));
+      const ends = centers.map((c, i) => lineEnd([0, 0], c, sizes[i] as Size));
+      const reach =
+        Math.max(
+          ...centers.map(([x, y], i) =>
+            Math.max(Math.abs(x) + (sizes[i]?.w ?? 0) / 2, Math.abs(y) + (sizes[i]?.h ?? 0) / 2),
+          ),
+        ) + 8;
       const name = buildingName(b.building);
       markers.push(
         <Marker
           key={id}
           longitude={b.lng}
           latitude={b.lat}
-          style={{ zIndex: isSel ? 5 : 3 }}
+          style={{ zIndex: isHover ? 6 : isSel ? 5 : 3 }}
           className={styles.anchor}
         >
-          <div role="group" aria-label={`Units at ${name}`} data-fan={b.id}>
+          <div
+            role="group"
+            aria-label={`Units at ${name}`}
+            data-fan={b.id}
+            className={hoverFan && hoverFan !== b.id ? styles.dimFan : undefined}
+            onMouseEnter={() => setHoverFan(b.id)}
+            onMouseLeave={() => setHoverFan(null)}
+          >
             <svg
               className={styles.fan}
               width={reach * 2}
@@ -542,7 +638,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
               style={{ left: -reach, top: -reach }}
               aria-hidden="true"
             >
-              {offsets.map(([x, y], i) => (
+              {ends.map(([x, y], i) => (
                 <line key={i} className={styles.fanLine} x1={0} y1={0} x2={x} y2={y} />
               ))}
             </svg>
@@ -562,10 +658,10 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
               </svg>
             </button>
             {ordered.map((r, i) => {
-              const [x, y] = offsets[i] as [number, number];
+              const [x, y] = centers[i] as Point;
               return (
                 <div key={r.unit.id} className={styles.fanned} style={{ left: x, top: y }}>
-                  {unitPin(r)}
+                  {unitPin(r, true)}
                 </div>
               );
             })}
@@ -576,47 +672,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     }
 
     const dot = !layout.full.has(id);
-    const isHover = id === hoverBuildingId;
-    const z = isSel ? 4 : isHover ? 2 : dot ? 0 : 1;
-
-    if (!b.group && view === 'units') {
-      const r = b.pinned[0] as UnitRow;
-      const rejected = isRejected(r.unit);
-      const selected = selectedKey === unitKey(r);
-      markers.push(
-        <Marker
-          key={id}
-          longitude={b.lng}
-          latitude={b.lat}
-          style={{ zIndex: z }}
-          className={styles.anchor}
-        >
-          <Pin
-            pinKey={unitKey(r)}
-            style={prefs.style}
-            content={b.content}
-            type={r.unit.type}
-            count={1}
-            stripes={[edgeColor(r.unit, prefs.colorBy, scale)]}
-            selected={selected}
-            rejected={rejected}
-            faded={rejected && prefs.rejected === 'fade'}
-            dot={dot && !selected}
-            newMark={newMark(isNew(r.unit))}
-            label={unitPinLabel(r)}
-            onClick={() => select(unitKey(r))}
-            onHover={(on) => setHover(on ? unitKey(r) : null)}
-          />
-        </Marker>,
-      );
-      continue;
-    }
-
-    // A building summary: a folded group (Units view) or any Buildings-view pin
-    const key = `building:${b.id}`;
-    const rejected = allRejected(b.pinned);
-    const selected =
-      view === 'buildings' ? selectedKey === key : b.pinned.some((u) => unitKey(u) === selectedKey);
+    const z = isHover ? 6 : isSel ? 4 : dot ? 0 : 1;
     markers.push(
       <Marker
         key={id}
@@ -625,26 +681,47 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
         style={{ zIndex: z }}
         className={styles.anchor}
       >
-        <Pin
-          pinKey={key}
-          style={prefs.style}
-          content={b.content}
-          type={b.summary[0]?.unit.type ?? null}
-          count={b.pinned.length}
-          stripes={edgeStripes(b.summary, prefs.colorBy, scale)}
-          selected={selected}
-          rejected={rejected}
-          faded={rejected && prefs.rejected === 'fade'}
-          dot={dot && !selected}
-          newMark={newMark(b.pinned.some((u) => isNew(u.unit)))}
-          label={buildingPinLabel(b.building, b.summary, view, b.pinned.length)}
-          expanded={view === 'units' ? false : undefined}
-          onClick={() => (view === 'units' ? ui.openFan(b.id) : select(key))}
-          onHover={(on) => setHover(on ? key : null)}
-        />
+        {collapsedPin(b, dot)}
+        {/* Pointing at a dot (or its card) previews the full pin above it, without moving
+            anything, so the pin under the pointer can't flicker. */}
+        {dot && isHover && (
+          <div className={styles.peek} aria-hidden="true">
+            {collapsedPin(b, false, { peek: true })}
+          </div>
+        )}
       </Marker>,
     );
   }
+
+  // ── Measuring: pins near the view whose size isn't known yet, drawn invisibly ──
+  const toMeasure = new Map<string, PinSpec>();
+  for (const id of layout.shown) {
+    const b = byId.get(id);
+    if (!b) continue;
+    const specs = [collapsedSpec(b), ...(b.group ? b.pinned.map(unitSpec) : [])];
+    for (const spec of specs) {
+      const k = specKey(spec);
+      if (!sizes.has(k)) toMeasure.set(k, spec);
+    }
+  }
+  const measureKeys = [...toMeasure.keys()].join('\n');
+  const measurer = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const root = measurer.current;
+    if (!root || !measureKeys) return;
+    const found: [string, Size][] = [];
+    for (const el of root.querySelectorAll<HTMLElement>('[data-spec]')) {
+      const pin = el.firstElementChild as HTMLElement | null;
+      if (!pin) continue;
+      const k = el.dataset.spec as string;
+      const tag = k.includes('|tag|');
+      // The New tag sticks out past the corner; leave room for it
+      found.push([k, { w: pin.offsetWidth + (tag ? 12 : 0), h: pin.offsetHeight + (tag ? 8 : 0) }]);
+    }
+    // Measuring has to happen after the copies are drawn; this is the one place it can.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (found.length) setSizes((old) => new Map([...old, ...found]));
+  }, [measureKeys]);
 
   for (const c of layout.bubbles) {
     markers.push(
@@ -684,7 +761,12 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
   };
 
   return (
-    <div className={styles.root} data-base={baseLayer} data-zoom={layout.zoom.toFixed(1)}>
+    <div
+      ref={rootRef}
+      className={styles.root}
+      data-base={baseLayer}
+      data-zoom={layout.zoom.toFixed(1)}
+    >
       {style && (
         <MapGL
           ref={mapRef}
@@ -728,14 +810,14 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
 
       <div className={styles.notes}>
         {items.needLocation > 0 && (
-          <p className={styles.note}>
+          <p className={styles.note} data-reserve>
             {items.needLocation === 1
               ? '1 unit needs a location'
               : `${items.needLocation} units need a location`}
           </p>
         )}
         {failed && (
-          <p className={`${styles.note} ${styles.warn}`} role="status">
+          <p className={`${styles.note} ${styles.warn}`} role="status" data-reserve>
             {baseLayer === 'aerial'
               ? 'Aerial photos couldn’t load. Try another base map in Layers.'
               : `Couldn’t load the ${baseName} map. Check your connection, or pick another base map in Layers.`}
@@ -743,7 +825,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
         )}
       </div>
 
-      <div className={styles.controls}>
+      <div className={styles.controls} data-reserve>
         <div className={styles.btnRow}>
           <button
             ref={pinsBtn}
@@ -814,20 +896,28 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
             Fit
           </button>
         </div>
-        {anyFanOpen && (
-          <button
-            type="button"
-            className={styles.collapseBtn}
-            title="Collapse all (Esc)"
-            onClick={() => ui.collapseFans([...layout.fans.keys()])}
-          >
-            Collapse all
-          </button>
-        )}
+        {/* Always takes its space, so fans laid out around it don't shift when it appears */}
+        <button
+          type="button"
+          className={styles.collapseBtn}
+          title="Collapse all (Esc)"
+          style={anyFanOpen ? undefined : { visibility: 'hidden' }}
+          aria-hidden={!anyFanOpen || undefined}
+          tabIndex={anyFanOpen ? undefined : -1}
+          onClick={() => ui.collapseFans([...layout.fans.keys()])}
+        >
+          Collapse all
+        </button>
       </div>
 
       {panel === 'layers' && (
-        <LayersPanel base={baseLayer} onBase={ui.setBaseLayer} onClose={() => setPanel(null)} />
+        <LayersPanel
+          base={baseLayer}
+          onBase={ui.setBaseLayer}
+          sharper={sharper}
+          onSharper={ui.setSharperRaster}
+          onClose={() => setPanel(null)}
+        />
       )}
       {panel === 'pins' && (
         <PinsPanel
@@ -840,6 +930,29 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
       )}
 
       {legend && <Legend legend={legend} />}
+
+      <div ref={measurer} className={styles.measurer} aria-hidden="true" inert>
+        {[...toMeasure].map(([k, spec]) => (
+          <div key={k} data-spec={k}>
+            <Pin
+              style={spec.style}
+              content={spec.content}
+              type="apartment"
+              count={spec.count}
+              stripes={['transparent']}
+              selected={spec.selected}
+              rejected={false}
+              faded={false}
+              dot={false}
+              inFan={spec.fan}
+              newMark={spec.newMark}
+              label=""
+              onClick={() => {}}
+              onHover={() => {}}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -405,7 +405,7 @@
 
 @keyframes fan-in {
   from {
-    transform: translate(0, 0) scale(0.6);
+    transform: scale(0.6);
     opacity: 0;
   }
 }
@@ -1052,5 +1052,72 @@
 @media (max-width: 759px) {
   .collapseBtn {
     height: 44px;
+  }
+}
+
+/* ── Fans, hover, measuring (M3 review 2) ── */
+
+/* A plate in a fan sits centered on its spot; the leader line replaces the tail */
+.inFan {
+  transform: translate(-50%, -50%);
+}
+
+.inFan::after {
+  display: none;
+}
+
+/* Its card is under the pointer */
+.hot {
+  outline: 2px solid var(--lake);
+  outline-offset: 2px;
+}
+
+/* Preview over a dot: drawn on top, never catches the pointer, so it can't flicker */
+.peek {
+  position: absolute;
+  left: 0;
+  top: -6px;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.peek .pin {
+  box-shadow: var(--shadow-float);
+}
+
+/* Invisible copies of pins, measured to lay out the real ones */
+.measurer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+  contain: layout;
+}
+
+.measurer > div {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.lfor {
+  margin: 0;
+  padding: var(--s2) var(--s4);
+  border-bottom: 1px solid var(--ice);
+  background: var(--frost);
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+/* Another fan is under the pointer: this one steps back */
+.dimFan {
+  opacity: 0.35;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-fan] {
+    transition: opacity 120ms;
   }
 }

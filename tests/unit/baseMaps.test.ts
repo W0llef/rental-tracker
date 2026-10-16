@@ -118,6 +118,15 @@ describe('raster base maps', () => {
     expect(BASE_MAPS.map((b) => b.id)).toEqual([...BASE_LAYERS]);
   });
 
+  it('fetches finer tiles for OpenStreetMap and Cycle map only when asked', () => {
+    const size = (st: ReturnType<typeof osmStyle>) =>
+      (st.sources.base as { tileSize: number }).tileSize;
+    expect(size(osmStyle())).toBe(256);
+    expect(size(osmStyle(true))).toBe(128);
+    expect(size(cycleStyle(true))).toBe(128);
+    expect(size(aerialStyle())).toBe(256);
+  });
+
   it('carries attribution on every raster source', () => {
     for (const style of [osmStyle(), cycleStyle(), aerialStyle()]) {
       const src = style.sources.base as { attribution?: string; tiles?: string[] };
@@ -134,5 +143,7 @@ describe('raster base maps', () => {
     expect(MNGEO_WMS).toContain('SRS=EPSG:3857');
     expect(MNGEO_WMS).toContain('BBOX={bbox-epsg-3857}');
     expect(MNGEO_WMS).toContain('LAYERS=fsa2025,met25');
+    // Twice the tile size, for sharp photos on high-density screens
+    expect(MNGEO_WMS).toContain('WIDTH=512&HEIGHT=512');
   });
 });

@@ -17,7 +17,7 @@ async function loadSample(page: Page) {
   await expect(page.getByTestId('list-count')).toContainText('34 units in 10 buildings');
 }
 
-const map = (page: Page) => page.getByRole('region', { name: 'Map' });
+const map = (page: Page) => page.getByRole('region', { name: 'Map', exact: true });
 const pins = (page: Page) => map(page).locator('[data-pin]');
 
 async function showMap(page: Page, phone: boolean) {
@@ -38,12 +38,26 @@ async function zoomIn(page: Page, steps = 2) {
   }
 }
 
+/** Waits until the map stops moving (Fit and zoom buttons animate). */
+async function settle(page: Page) {
+  const zoom = () => map(page).locator('[data-zoom]').getAttribute('data-zoom');
+  let last = await zoom();
+  for (let i = 0; i < 20; i++) {
+    await page.waitForTimeout(150);
+    const now = await zoom();
+    if (now === last) return;
+    last = now;
+  }
+}
+
 /** Zoom in until the map is at or past `level`. */
 async function zoomTo(page: Page, level: number) {
+  await settle(page);
   for (let i = 0; i < 8; i++) {
     const z = Number(await map(page).locator('[data-zoom]').getAttribute('data-zoom'));
     if (z >= level) return;
     await zoomIn(page, 1);
+    await settle(page);
   }
 }
 
@@ -86,26 +100,57 @@ test.describe('map (preview/dev build)', () => {
     ).toHaveCount(4);
   });
 
-  test('pointing at a card shows its pin in full', async ({ page }, info) => {
-    test.skip(isPhone(info.project.name), 'hover needs the list and map side by side');
+  test('pointing at a dot previews its pin without moving anything', async ({ page }, info) => {
+    test.skip(isPhone(info.project.name), 'hover needs a pointer');
     await showMap(page, false);
-    // At the fitted view one crowded building is drawn as a dot
+    // At the fitted view some crowded buildings are drawn as dots
     const dot = pins(page).locator('xpath=self::*[@data-shape="dot"]').first();
     await expect(dot).toBeAttached();
+    const key = (await dot.getAttribute('data-pin')) as string;
+    const shapes = async () =>
+      pins(page).evaluateAll((els) =>
+        els.map((e) => `${e.getAttribute('data-pin')}=${e.getAttribute('data-shape')}`).join(';'),
+      );
+    const before = await shapes();
+
+    // Wiggle the pointer over the dot: it stays a dot, a preview shows, nothing re-lays out
+    const box = (await dot.boundingBox())!;
+    for (const [dx, dy] of [
+      [0, 0],
+      [3, -3],
+      [-3, 4],
+      [2, 6],
+      [0, -6],
+    ] as const) {
+      await page.mouse.move(box.x + box.width / 2 + dx, box.y + box.height / 2 + dy);
+      await page.waitForTimeout(80);
+      await expect(map(page).locator(`[data-pin="${key}"]`)).toHaveAttribute('data-shape', 'dot');
+    }
+    await expect(map(page).locator('[class*="peek"]')).toHaveCount(1);
+    expect(await shapes()).toBe(before);
+
+    // Its card gets highlighted too; moving away clears both
+    await expect(
+      page.getByRole('list', { name: 'Units' }).locator('[data-hover]').first(),
+    ).toBeAttached();
+    await page.mouse.move(5, 5);
+    await expect(map(page).locator('[class*="peek"]')).toHaveCount(0);
+  });
+
+  test('pointing at a card previews its pin on the map', async ({ page }, info) => {
+    test.skip(isPhone(info.project.name), 'hover needs the list and map side by side');
+    await showMap(page, false);
+    const dot = pins(page).locator('xpath=self::*[@data-shape="dot"]').first();
     const name = (await dot.getAttribute('aria-label'))?.match(/units at ([^,]+)/)?.[1];
     expect(name).toBeTruthy();
-    const pinKey = await dot.getAttribute('data-pin');
     await page
       .getByRole('list', { name: 'Units' })
       .getByRole('link', { name: new RegExp(name as string) })
       .first()
       .hover();
-    await expect(map(page).locator(`[data-pin="${pinKey}"]`)).toHaveAttribute(
-      'data-shape',
-      'plate',
-    );
+    await expect(map(page).locator('[class*="peek"]')).toHaveCount(1);
     await page.mouse.move(5, 5);
-    await expect(map(page).locator(`[data-pin="${pinKey}"]`)).toHaveAttribute('data-shape', 'dot');
+    await expect(map(page).locator('[class*="peek"]')).toHaveCount(0);
   });
 
   test('a grouped pin fans out; a unit in the fan opens its details', async ({ page }, info) => {
@@ -178,6 +223,60 @@ test.describe('map (preview/dev build)', () => {
     await expect(page).not.toHaveURL(/#\/unit\//);
   });
 
+  test('plates never cover each other, even large photo pins in several fans', async ({
+    page,
+  }, info) => {
+    test.skip(isPhone(info.project.name), 'laptop: room for several fans');
+    await showMap(page, false);
+    await map(page).getByRole('button', { name: 'Pins', exact: true }).click();
+    const panel = map(page).getByRole('region', { name: 'Pins' });
+    await panel
+      .getByRole('group', { name: 'Pin style' })
+      .getByRole('button', { name: 'Photo' })
+      .click();
+    for (const n of ['Unit type icon', 'Beds and size', 'Unit number', 'Rating'])
+      await panel.getByRole('checkbox', { name: n }).check();
+    await panel.getByRole('button', { name: 'Close pins' }).click();
+    await map(page).getByRole('button', { name: 'Fit all units' }).click();
+    await page.waitForTimeout(400);
+    const area = (await map(page).boundingBox())!;
+    await page.mouse.move(area.x + area.width * 0.4, area.y + area.height * 0.45);
+    await page.mouse.wheel(0, -250);
+    await page.waitForTimeout(700);
+    for (const name of [/units at Northloop Yards/, /units at The Larkin/]) {
+      const pin = map(page).getByRole('button', { name });
+      if (await pin.count()) await pin.first().click();
+    }
+    await expect(map(page).locator('[data-fan]')).toHaveCount(2);
+    await page.waitForTimeout(600);
+    const boxes = await map(page)
+      .locator('[data-pin]:not([data-shape="dot"])')
+      .evaluateAll((els) =>
+        els.map((e) => {
+          const r = e.getBoundingClientRect();
+          return { k: e.getAttribute('data-pin'), l: r.left, r: r.right, t: r.top, b: r.bottom };
+        }),
+      );
+    expect(boxes.length).toBeGreaterThan(5);
+    const clash: string[] = [];
+    for (let i = 0; i < boxes.length; i++)
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i]!;
+        const c = boxes[j]!;
+        if (a.l < c.r - 1 && c.l < a.r - 1 && a.t < c.b - 1 && c.t < a.b - 1)
+          clash.push(`${a.k} × ${c.k}`);
+      }
+    expect(clash).toEqual([]);
+
+    // Pointing at one fan dims the other
+    await map(page)
+      .getByRole('group', { name: 'Units at The Larkin' })
+      .locator('[data-pin]')
+      .first()
+      .hover();
+    await expect(map(page).locator('[data-fan][class*="dimFan"]')).toHaveCount(1);
+  });
+
   test('buildings fan out by themselves at street zoom, where there is room', async ({
     page,
   }, info) => {
@@ -233,7 +332,7 @@ test.describe('map (preview/dev build)', () => {
       map(page).getByRole('button', { name: /4 units at Lowertown Flats/ }),
     ).toHaveAccessibleName(/Lowertown Flats 4 New/);
 
-    // The Buildings view keeps its own settings
+    // The Buildings view keeps its own settings (the panel edits the view the list shows)
     if (phone)
       await page
         .getByRole('navigation', { name: 'Views' })
