@@ -32,10 +32,10 @@ A personal, map-first web app for tracking rental units in Minneapolis–St. Pau
 
 ## Running a milestone
 
-1. Branch from `main`: `m<N>-<short-name>` (e.g. `m3-map`).
+1. Branch from `main`: `m<N>-<short-name>` (e.g. `m3-map`). Set the `package.json` version to `0.<N>.0` on the branch (fixes after release: `0.<N>.1`, …), so the footer shows the right version.
 2. Build in small commits. Every data write goes through `commands/`; every data-format change gets a new Dexie version, a migration in `db/migrations/`, a fixture and a test (`PLAN.md` §3.7). Never edit a released migration.
-3. Run `npm run lint`, `npm test` and `npm run e2e`; all must pass.
-4. Push the branch; the workflow deploys it to `…/rental-tracker/preview/` (separate database, "Preview" banner). Check the preview yourself (screenshots at laptop and phone width).
+3. Run `npm run lint`, `npm test` and `npm run e2e`; all must pass. In the cloud workspace: `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium npm run e2e`.
+4. Push the branch; the workflow deploys it to `…/rental-tracker/preview/` (separate database, "Preview" banner). Check the preview yourself (screenshots at laptop and phone width). **Check the live build too**: the live variant in the e2e tests (port 4174, no banner) and that the live site still works.
 5. Report to the owner, briefly:
    - what works, and how to try it (preview link and steps);
    - what isn't included yet, and known issues;
@@ -45,9 +45,9 @@ A personal, map-first web app for tracking rental units in Minneapolis–St. Pau
 
 ## When the owner approves
 
-1. Merge the branch into `main` (merge commit, not squash) and delete the branch.
-2. Tag `v0.<N>.0` (fixes after release: `v0.<N>.1`, …) and push the tag.
-3. Confirm the live site deployed.
+1. Merge the branch into `main` (merge commit, not squash) and push `main`.
+2. The GitHub access here refuses tag pushes and branch deletes (HTTP 403), so **ask the owner** to create the tag `v0.<N>.0` on `main` on GitHub (Releases → Draft a new release → new tag; fixes after release: `v0.<N>.1`, …) and to delete the merged branch.
+3. Confirm the live site deployed and shows the new version in the footer.
 4. Update `PLAN.md` §14: set the milestone's status, version and date, and add a session-log entry (newest first) with: what was built, known issues, data format changed yes/no, and notes for the next milestone. Commit to `main`.
 5. Tell the owner the milestone is live and give them the prompt for the next chat (below), filled in.
 
