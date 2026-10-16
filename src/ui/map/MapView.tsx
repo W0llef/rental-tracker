@@ -61,6 +61,10 @@ export interface MapViewProps {
 
 setWorkerUrl(workerUrl);
 
+const MAP_LOCALE = {
+  'Map.Title': 'Map view. Use the arrow keys to pan, plus and minus to zoom.',
+};
+
 // ── Theme ──────────────────────────────────────────────────────────────────
 
 const darkQuery = '(prefers-color-scheme: dark)';
@@ -563,6 +567,8 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
           mapStyle={style}
           style={{ position: 'absolute', inset: 0 }}
           attributionControl={false}
+          // The canvas is its own landmark; name it apart from our "Map" region
+          locale={MAP_LOCALE}
           maxZoom={20}
           minZoom={3}
           dragRotate={false}

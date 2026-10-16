@@ -853,10 +853,19 @@
     border-bottom: 0;
   }
 
-  .layersLabel,
   .kbd,
   .legend {
     display: none;
+  }
+
+  /* Icon-only on phones; the word stays for screen readers and voice control */
+  .layersLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
   }
 
   .grp button,

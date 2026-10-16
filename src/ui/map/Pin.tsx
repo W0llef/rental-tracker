@@ -56,11 +56,15 @@ export function Pin(p: PinProps) {
   if (p.rejected) cls.push(styles.rej);
   if (p.faded) cls.push(styles.faded);
 
+  // The accessible name starts with what the pin visibly says (WCAG 2.5.3, label in name),
+  // so "click $1,650" works with voice control; the description follows.
+  const visible: (string | number | null)[] = [];
   let inner;
   if (asDot) {
     cls.push(styles.dot);
     if (multi) cls.push(styles.multi);
     inner = multi ? <span className={styles.txt}>{p.count}</span> : null;
+    if (multi) visible.push(p.count);
   } else if (p.show === 'photo') {
     // Photos arrive in M11; until then the frame holds the unit-type icon.
     cls.push(styles.photo);
@@ -72,6 +76,7 @@ export function Pin(p: PinProps) {
         {multi && <span className={styles.cnt}>{p.count}</span>}
       </>
     );
+    if (multi) visible.push(p.count);
   } else if (p.show === 'type') {
     cls.push(styles.iconOnly);
     inner = (
@@ -79,10 +84,11 @@ export function Pin(p: PinProps) {
         <span className={styles.ico}>
           <TypeGlyph type={p.type} />
         </span>
-        {p.stars && <span className={styles.sx}>{p.stars}</span>}
+        {p.stars && <span className={styles.sx}>{p.stars}</span>}{' '}
         {multi && <span className={styles.cnt}>{p.count}</span>}
       </>
     );
+    visible.push(p.stars, multi ? p.count : null);
   } else {
     inner = (
       <>
@@ -91,19 +97,21 @@ export function Pin(p: PinProps) {
             <TypeGlyph type={p.type} />
           </span>
         )}
-        <span className={styles.txt}>{p.text}</span>
-        {p.stars && p.show !== 'rating' && <span className={styles.sx}>{p.stars}</span>}
+        <span className={styles.txt}>{p.text}</span>{' '}
+        {p.stars && p.show !== 'rating' && <span className={styles.sx}>{p.stars}</span>}{' '}
         {multi && <span className={styles.cnt}>{p.count}</span>}
       </>
     );
+    visible.push(p.text, p.stars && p.show !== 'rating' ? p.stars : null, multi ? p.count : null);
   }
+  const shown = visible.filter((v) => v !== null && v !== '').join(' ');
 
   return (
     <button
       type="button"
       className={cls.join(' ')}
       style={{ '--edge': p.edge } as CSSProperties}
-      aria-label={p.label}
+      aria-label={shown ? `${shown}, ${p.label}` : p.label}
       aria-pressed={p.expanded === undefined ? p.selected : undefined}
       aria-expanded={p.expanded}
       data-pin={p.pinKey}
