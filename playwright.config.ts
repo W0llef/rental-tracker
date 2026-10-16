@@ -32,10 +32,21 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: 'npm run build && npm run preview -- --port 4173 --strictPort',
-    url: 'http://localhost:4173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      // Default build: a development build with the amber banner
+      command: 'npm run build && npm run preview -- --port 4173 --strictPort',
+      url: 'http://localhost:4173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    {
+      // Live build: no banner. It must look right too (tests/e2e/shell-live.spec.ts)
+      command:
+        'APP_CHANNEL=live APP_BASE=/ npx vite build --outDir dist-live && npx vite preview --outDir dist-live --port 4174 --strictPort',
+      url: 'http://localhost:4174',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+  ],
 });
