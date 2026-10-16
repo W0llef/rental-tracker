@@ -1,6 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { AppShell } from '../../src/ui/shell/AppShell';
+import { MemoryRouter } from 'react-router-dom';
+import { AppShell as Shell } from '../../src/ui/shell/AppShell';
+
+const AppShell = () => (
+  <MemoryRouter>
+    <Shell />
+  </MemoryRouter>
+);
 
 describe('AppShell', () => {
   it('shows the title, the three regions and the build info', () => {
@@ -30,5 +37,10 @@ describe('AppShell', () => {
     expect(map).toHaveAttribute('aria-current', 'page');
     expect(list).not.toHaveAttribute('aria-current');
     expect(container.firstElementChild).toHaveAttribute('data-tab', 'map');
+  });
+
+  it('links to the data check page', () => {
+    render(<AppShell />);
+    expect(screen.getByRole('link', { name: 'Data check' })).toHaveAttribute('href', '/debug');
   });
 });

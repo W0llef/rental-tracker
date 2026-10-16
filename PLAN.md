@@ -4,7 +4,7 @@ Status: **Draft 3** · Oct 15, 2026 · covers spec Draft v1 (`SPEC.md`)
 
 This plan covers Phase 1 only (spec §12: "track and compare"). The data model, however, contains every field from spec §3 now, plus the few supporting fields later phases need, so Phases 2–4 add screens and services without reshaping stored data.
 
-**Status:** approved in principle; Q11 answered (fast data entry is in Phase 1). M0 done. Next: M1. Workflow, versions and progress: §13–§14 and `CLAUDE.md`.
+**Status:** approved in principle; Q11 answered (fast data entry is in Phase 1). M0 done. M1 in review. Workflow, versions and progress: §13–§14 and `CLAUDE.md`.
 
 **Draft 2 changes:** design direction C (Wayfinding) chosen; your answers to Q1–Q10 applied (§11); lease length for spreading one-time costs (§5.3); switchable base maps and customizable pins (§4.3); a fast data-entry and AI-import section (§5.7) with revised milestones (§9). One new scope question, Q11, is in §11.
 
@@ -23,7 +23,7 @@ The spec §11 stack is confirmed with four changes and a few additions. Everythi
 | UI-only state | Zustand | Addition | Small store for selection, filters, mode, viewport. Data itself lives in IndexedDB. |
 | Accessible primitives | Radix UI (dialog, popover, menu, tabs, tooltip) | Addition | Keyboard and screen-reader behavior for free; styled by us. |
 | Long lists | TanStack Virtual | Addition | Keeps 500 cards smooth. |
-| Validation + types | **zod** — every record type is a zod schema; TS types are inferred | Addition | One source of truth for: backup import validation, the AI research prompt and import format (zod exports JSON Schema), and migrations. |
+| Validation + types | **zod** (4.x) — every record type is a zod schema; TS types are inferred | Addition | One source of truth for: backup import validation, the AI research prompt and import format (zod exports JSON Schema), and migrations. Commands validate every record before writing it. |
 | Storage | IndexedDB via Dexie 4 + `dexie-react-hooks` (`useLiveQuery`) | Same | |
 | Photo originals | File System Access API folder; fallback **Origin Private File System (OPFS)**, then IndexedDB blobs | Refines spec §7 | OPFS is still "browser storage" (spec's fallback) but handles multi-GB files far better than IndexedDB blobs. |
 | Map | MapLibre GL JS via `react-map-gl/maplibre` | Same | |
@@ -54,26 +54,31 @@ rental-tracker/
 ├─ .github/workflows/        build, test, deploy main → /, milestone branch → /preview/
 ├─ index.html
 ├─ package.json  tsconfig.json  vite.config.ts  playwright.config.ts
-├─ public/                   icons, PWA manifest, sample-data.json (demo only)
+├─ public/                   icons, PWA manifest
 ├─ mockups/                  static design mockups (this step)
 ├─ src/
 │  ├─ main.tsx  App.tsx  routes.tsx
 │  ├─ model/                 zod schemas = the data model
 │  │  ├─ common.ts           Maybe, Tri, IDs, dates, money, Direction, Address, Link
-│  │  ├─ building.ts  unit.ts  listing.ts  destination.ts  collection.ts
-│  │  ├─ note.ts  photo.ts  settings.ts  filters.ts  backup.ts
+│  │  ├─ building.ts  unit.ts  settings.ts  filters.ts  backup.ts
+│  │  ├─ records.ts          listing, destination, collection, note, photo, import batch
+│  │  ├─ factories.ts        new records with every researched field unknown
 │  │  └─ index.ts            SCHEMA_VERSION, re-exports, inferred TS types
 │  ├─ db/
 │  │  ├─ db.ts               Dexie instance + table declarations
 │  │  ├─ versions.ts         every Dexie version() and its upgrade()
 │  │  ├─ migrations/         pure per-version transforms (shared with backup import)
 │  │  ├─ changeLog.ts        DBCore middleware that records before/after of every write
-│  │  └─ undo.ts             undo/redo stacks over change-log actions
+│  │  └─ undo.ts             undo/redo stacks derived from the change log; retention
 │  ├─ commands/              the ONLY way the UI writes data (each = one undoable action)
-│  │  ├─ action.ts           action(label, fn): transaction + change log + toast
+│  │  ├─ action.ts           action(label, fn): transaction + change log (+ toast in M6); systemWrite
+│  │  ├─ undo.ts             undo() and redo() commands
+│  │  ├─ records.ts          M1's basic create/update/delete for buildings, units, listings,
+│  │  │                      notes, settings; later milestones split commands by area:
 │  │  ├─ units.ts  buildings.ts  listings.ts  markers.ts  collections.ts
 │  │  ├─ notes.ts  photos.ts  merge.ts  settings.ts
 │  ├─ domain/                pure functions, no I/O, heavily unit-tested
+│  │  ├─ unitKey.ts          normalized unit number ("Apt 1504" → "1504")
 │  │  ├─ cost.ts             total monthly cost, move-in cost, $/sq ft, breakdown
 │  │  ├─ address.ts          normalization (USPS abbreviations, unit designators)
 │  │  ├─ dedupe.ts           building/unit/listing duplicate matching
@@ -88,6 +93,7 @@ rental-tracker/
 │  │  │                      idbStore.ts, thumbnails.ts, sidecar.ts, paths.ts
 │  │  ├─ backup/             exportJson.ts, exportZip.ts, restore.ts, reminders.ts
 │  │  └─ storage.ts          persist() request, usage estimate
+│  ├─ dev/                   sampleData.ts: made-up sample data (preview/dev builds only)
 │  ├─ state/                 ui.ts (Zustand), useDataset.ts (live queries + derive)
 │  ├─ hooks/                 useKeyboardShortcuts.ts, useSelectionUrlSync.ts
 │  ├─ ui/
@@ -103,6 +109,7 @@ rental-tracker/
 │  │  ├─ photos/             PhotoStrip, Lightbox, DropZone
 │  │  ├─ duplicates/         DuplicatesPage, MergeDialog
 │  │  ├─ history/            HistoryPanel
+│  │  ├─ debug/              DebugPage: data check (#/debug), M1
 │  │  ├─ settings/           SettingsPage + one component per section
 │  │  └─ common/             UnknownInput, MoneyInput, DirectionPicker, TriToggle, …
 │  └─ styles/                tokens.css, base.css, map-style.json overrides
@@ -512,9 +519,9 @@ There are two places old data can come from — the browser's own database and o
 2. Each version bump adds `db/migrations/vN.ts` exporting pure functions, e.g. `upgradeUnit(v1Unit) → v2Unit`. They take plain objects, so they're trivial to test.
 3. `db/versions.ts` declares `db.version(N).stores(...).upgrade(tx => …)`; the upgrade first copies the whole dataset into `snapshots`, then applies `migrations/vN` to each table.
 4. Backup import runs the same chain: `v1 → v2 → … → current`, then validates against the current zod schemas. A backup from a *newer* app version is refused with a clear message instead of being half-imported.
-5. Old migrations are never edited. Each one ships with a fixture backup (`tests/fixtures/backup-vN.json`) and a test that it migrates to the current version and passes validation.
+5. Old migrations are never edited. Each one ships with a fixture backup (`tests/fixtures/backup-vN.json`) and a test that it migrates to the current version and passes validation. Fixtures are frozen: never regenerate an old one. The framework itself is tested with throwaway v2–v6 versions (`tests/db/versions.test.ts`).
 6. Rule for the build: from Milestone 1 on, data is never wiped to change its shape. You can start entering real units at Milestone 4 and keep them through Phase 4.
-7. **Before any migration runs on real data**, the app asks you to download a backup file first ("This update changes how your data is stored. Download a backup before continuing."). That file is what makes rolling back to an older version possible, because an older version can't open a database a newer one has upgraded (§13).
+7. **Before any migration runs on real data**, the app asks you to download a backup file first (built in M5 with backup export; no migration ships before then) ("This update changes how your data is stored. Download a backup before continuing."). That file is what makes rolling back to an older version possible, because an older version can't open a database a newer one has upgraded (§13).
 8. **Preview builds use a separate database** (`rental-tracker-preview`) and show a "Preview" banner, so testing a milestone never touches your real data even though both live at the same web address.
 
 ---
@@ -695,10 +702,12 @@ interface OriginalStore {
 ### 5.6 Undo and change history
 
 - Every write goes through `action(label, fn)`. A **Dexie DBCore middleware** records `{actionId, table, key, before, after}` for every put/delete inside it, so nothing can be written without being undoable.
+- Writes to data tables outside an action are refused (an error, not a silent unlogged write). Two exceptions: Dexie upgrade transactions (migrations) and `systemWrite(reason, fn)` for restore (M5) and test setup. Caches, thumbnails, the change log and `meta` aren't logged.
 - **Undo** (⌘/Ctrl+Z) writes the `before` values of the last action in reverse order; **Redo** (⇧⌘/Ctrl+Shift+Z) re-applies `after`. Both are themselves recorded, so history stays linear and honest.
+- The undo and redo stacks aren't stored separately: they're derived from the change log (do pushes, undo moves to redo, redo moves back; a new action clears redo). So they survive reloads and can't drift from the history.
 - Toasts after every action carry an Undo button ("Flagged as reject · Undo"). Bulk actions (multi-select, merge, restore) are single actions.
 - The **History panel** shows a unit's changes with time and field, and "Restore this version" for one record.
-- The change log keeps 90 days or 10,000 entries (whichever is smaller); restores clear it after the snapshot.
+- The change log keeps 90 days or 10,000 entries (whichever is smaller), pruned after each action and only in whole actions; restores clear it after the snapshot.
 - Photo files aren't in the change log; soft delete covers them.
 
 ### 5.7 Fast data entry and AI import
@@ -878,6 +887,7 @@ None. New questions will be added here as they come up.
 | 2026-10-15 | Draft 2: direction C chosen; Q1–Q10 decided; lease length; base maps and pin options; fast data entry and AI import (§5.7); milestones revised to M0–M13; GitHub repo from M0; Q11 opened |
 | 2026-10-15 | M0: deploys use the `gh-pages` branch (live at the root, preview in `preview/`) instead of the GitHub Actions Pages artifact, because the Actions method can only serve one build at a time; Pages source must be set once to "Deploy from a branch" (README). TypeScript pinned to 6.0 (see §1). Only dependencies needed for the empty shell are installed; Zustand, Radix, Dexie and the rest arrive with the milestone that first uses them |
 | 2026-10-15 | Draft 3: Q11 decided (fast entry in Phase 1); workflow, versions and backups (§13) and progress tracking (§14) added; `CLAUDE.md` added; preview builds isolated from real data; backup download before migrations |
+| 2026-10-15 | M1: undo/redo stacks derived from the change log instead of stored (§5.6); writes outside a command are refused, with `systemWrite` for restore and tests; sample data is generated by `src/dev/sampleData.ts` (deterministic, always valid against the model) instead of `public/sample-data.json`; the data check page (`#/debug`) exists on every build but sample data and test changes only on preview/dev; the debug page loads on demand so the first download stays small; the pre-migration backup prompt is built in M5, before any v2; listing/destination/collection/note/photo/import schemas share `model/records.ts`. Workflow: `package.json` version is set per milestone (`0.N.0` on the branch); the owner creates tags and deletes merged branches on GitHub (this setup's GitHub access gets HTTP 403 for those) |
 
 ---
 
@@ -914,7 +924,7 @@ The full working agreement for every session is in `CLAUDE.md`; this is the summ
 | --- | --- | --- | --- |
 | Planning (PLAN, DESIGN, mockups) | Approved | — | 2026-10-15 |
 | M0 Scaffold and deploys | Approved (fix v0.0.1) | v0.0.1 | 2026-10-15 |
-| M1 Data model, database, undo | Not started | — | — |
+| M1 Data model, database, undo | In review (preview) | v0.1.0 | — |
 | M2 List and detail | Not started | — | — |
 | M3 Map, pins, layers | Not started | — | — |
 | M4 Quick-add and paste text | Not started | — | — |

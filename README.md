@@ -43,6 +43,12 @@ Other commands:
 
 `localhost` uses a separate database from the live app, so development never touches real data.
 
+### Checking the data
+
+**Data check** (link at the bottom of the list, or `#/debug`) shows what the build has stored, the
+undo history, and Undo/Redo buttons. On preview and development builds it can also load made-up
+sample data and make test changes; the live app never offers that.
+
 ## How it gets published
 
 Two GitHub Actions workflows in `.github/workflows/` do everything automatically:
