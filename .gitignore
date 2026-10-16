@@ -22,3 +22,4 @@ blob-report/
 backups/
 *.backup.json
 dist-live/
+*.tsbuildinfo
