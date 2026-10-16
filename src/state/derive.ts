@@ -147,3 +147,54 @@ export function deriveListView(
     buildings: sortBuildings(buildings, buildingSort),
   };
 }
+
+// ── Map (M3) ───────────────────────────────────────────────────────────────
+
+export interface MapBuilding {
+  id: ID;
+  building: Building;
+  lng: number;
+  lat: number;
+  /** The building's units the map shows (the list's units, under the current search). */
+  units: UnitRow[];
+}
+
+export interface MapItems {
+  buildings: MapBuilding[];
+  /** Units shown in the list that can't be mapped yet ("Needs location"). */
+  needLocation: number;
+}
+
+/**
+ * What the map shows: one entry per building that has visible units and a location
+ * (PLAN.md §4.3). Uses the list's own rows, so search and the Units/Buildings switch drive
+ * the map and the list together.
+ */
+export function deriveMapItems(view: ListView, mode: 'units' | 'buildings'): MapItems {
+  const groups =
+    mode === 'buildings'
+      ? view.buildings.map((b) => ({ building: b.building, units: b.matching }))
+      : [...groupBy(view.units, (u) => u.unit.buildingId)].flatMap(([, units]) => {
+          const building = units[0]?.building;
+          return building ? [{ building, units }] : [];
+        });
+
+  let needLocation = 0;
+  const buildings: MapBuilding[] = [];
+  for (const g of groups) {
+    const loc = g.building.location;
+    if (!loc) {
+      needLocation += g.units.length;
+      continue;
+    }
+    buildings.push({
+      id: g.building.id,
+      building: g.building,
+      lng: loc.lng,
+      lat: loc.lat,
+      units: g.units,
+    });
+  }
+  if (mode === 'units') needLocation += view.units.filter((u) => !u.building).length;
+  return { buildings, needLocation };
+}

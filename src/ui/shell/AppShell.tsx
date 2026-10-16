@@ -6,6 +6,7 @@ import { deriveListView } from '../../state/derive';
 import { useDataset } from '../../state/useDataset';
 import { useUi } from '../../state/ui';
 import { BuildingPanel } from '../detail/BuildingPanel';
+import { MapPanel } from '../map/MapPanel';
 import { UnitPanel } from '../detail/UnitPanel';
 import { ListPanel } from '../list/ListPanel';
 import { PreviewBanner } from './PreviewBanner';
@@ -33,7 +34,7 @@ export function AppShell() {
   const navigate = useNavigate();
 
   const data = useDataset();
-  const { query, unitSort, buildingSort, view, toggleView } = useUi();
+  const { query, unitSort, buildingSort, view, toggleView, toggleLayers } = useUi();
   const listView = useMemo(
     () => (data ? deriveListView(data, query, unitSort, buildingSort) : undefined),
     [data, query, unitSort, buildingSort],
@@ -52,10 +53,15 @@ export function AppShell() {
   const search = useRef<HTMLInputElement>(null);
   useListKeys({
     focusSearch: () => search.current?.focus(),
+    // Esc: close the layers panel, then a fan-out opened by clicking, then the details
     close: () => {
-      if (selectedKey) navigate('/');
+      const ui = useUi.getState();
+      if (ui.layersOpen) ui.setLayersOpen(false);
+      else if (ui.fannedId) ui.setFanned(null);
+      else if (selectedKey) navigate('/');
     },
     toggleView,
+    toggleLayers,
     move: (delta) => {
       if (!listView) return;
       const keys =
@@ -157,9 +163,11 @@ export function AppShell() {
           <h2 id="map-heading" className={styles.visuallyHidden}>
             Map
           </h2>
-          <div className={styles.mapPlaceholder}>
-            <p className={styles.mapNote}>The map arrives in the next step.</p>
-          </div>
+          {data && listView ? (
+            <MapPanel data={data} listView={listView} view={view} selectedKey={selectedKey} />
+          ) : (
+            <div className={styles.mapPlaceholder} aria-busy="true" />
+          )}
         </section>
       </main>
 

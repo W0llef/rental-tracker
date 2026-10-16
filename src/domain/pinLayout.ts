@@ -7,10 +7,14 @@ import { effectivePinShow } from './pins';
  * show in full. Pure: positions are screen pixels supplied by the map.
  */
 
-/** Below this zoom every pin is a dot (when shrinking is on). */
-export const STREET_ZOOM = 14;
-/** At or below this zoom nearby buildings merge into neighborhood bubbles. */
-export const CLUSTER_MAX_ZOOM = 12;
+/**
+ * Below this zoom every pin is a dot (when shrinking is on); from here up, pins shrink only
+ * where they would overlap. 11 shows Minneapolis–St. Paul on a laptop screen: tuned so "Fit all
+ * units" over Minneapolis–St. Paul shows price plates, not a field of dots.
+ */
+export const STREET_ZOOM = 11;
+/** At or below this (whole) zoom nearby buildings merge into neighborhood bubbles. */
+export const CLUSTER_MAX_ZOOM = 10;
 
 export interface PinBox {
   id: string;
@@ -83,18 +87,25 @@ export function fullPins(boxes: readonly PinBox[], zoom: number, simplify: boole
  * Pixel offsets for fanned-out units around their building: a ring above the point, wide
  * enough that plates don't overlap, opening upward so the tails point back at the hub.
  */
-export function fanOffsets(count: number, pinWidth = 90): [number, number][] {
+export function fanOffsets(count: number, pinWidth = 90, pinHeight = 34): [number, number][] {
   if (count <= 0) return [];
   if (count === 1) return [[0, -56]];
-  // Spread over an arc from upper left to upper right; widen the radius as units are added.
-  const arc = Math.min(300, 60 * (count - 1)); // degrees
+  // Spread over an arc above the hub; widen the radius until no two plates overlap.
+  const arc = Math.min(160, 55 * (count - 1)); // degrees, kept above the hub
   const start = -90 - arc / 2;
   const step = arc / (count - 1);
-  const chord = (step * Math.PI) / 180;
-  // Radius so neighbouring plates (≈ pinWidth apart) don't touch: 2r·sin(step/2) ≥ width.
-  const radius = Math.max(64, Math.ceil(pinWidth / 2 / Math.max(Math.sin(chord / 2), 0.2)));
-  return Array.from({ length: count }, (_, i) => {
-    const a = ((start + step * i) * Math.PI) / 180;
-    return [Math.round(radius * Math.cos(a)), Math.round(radius * Math.sin(a))];
-  });
+  const ring = (radius: number): [number, number][] =>
+    Array.from({ length: count }, (_, i) => {
+      const a = ((start + step * i) * Math.PI) / 180;
+      return [Math.round(radius * Math.cos(a)), Math.round(radius * Math.sin(a))];
+    });
+  const clear = (pts: [number, number][]) =>
+    pts.every(([ax, ay], i) =>
+      pts
+        .slice(i + 1)
+        .every(([bx, by]) => Math.abs(ax - bx) >= pinWidth || Math.abs(ay - by) >= pinHeight),
+    );
+  let radius = 64;
+  while (!clear(ring(radius)) && radius < 600) radius += 4;
+  return ring(radius);
 }

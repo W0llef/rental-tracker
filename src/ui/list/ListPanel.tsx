@@ -111,8 +111,22 @@ export function ListPanel({
   view: ListView | undefined;
   selectedKey: string | null;
 }) {
-  const { view, setView, query, setQuery, unitSort, setUnitSort, buildingSort, setBuildingSort } =
-    useUi();
+  const {
+    view,
+    setView,
+    query,
+    setQuery,
+    unitSort,
+    setUnitSort,
+    buildingSort,
+    setBuildingSort,
+    setHover,
+  } = useUi();
+  // Pointing at a card (or focusing it) shows its pin in full on the map (M3).
+  const hoverFrom = (e: { target: EventTarget }) => {
+    const card = e.target instanceof Element ? e.target.closest('[data-key]') : null;
+    setHover(card?.getAttribute('data-key') ?? null);
+  };
   const scroller = useRef<HTMLDivElement>(null);
 
   // Keep the selected card in view (keyboard moves, or opening a link to a unit).
@@ -184,7 +198,14 @@ export function ListPanel({
           </div>
         )}
         {data && listView && (shown ?? 0) > 0 && (
-          <ul className={styles.cards} aria-label={view === 'units' ? 'Units' : 'Buildings'}>
+          <ul
+            className={styles.cards}
+            aria-label={view === 'units' ? 'Units' : 'Buildings'}
+            onMouseOver={hoverFrom}
+            onFocus={hoverFrom}
+            onMouseLeave={() => setHover(null)}
+            onBlur={() => setHover(null)}
+          >
             {view === 'units'
               ? listView.units.map((row) => (
                   <li key={row.unit.id}>

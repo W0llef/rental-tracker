@@ -227,7 +227,7 @@
   font-size: 11.5px;
 }
 
-/* Placeholder map: block grid in the Wayfinding colors until MapLibre arrives */
+/* Shown while the data is read, before the map loads */
 .mapPlaceholder {
   position: absolute;
   inset: 0;
@@ -238,17 +238,6 @@
     linear-gradient(var(--map-road) 2px, transparent 2px),
     linear-gradient(90deg, var(--map-road) 2px, transparent 2px);
   background-size: 64px 64px;
-}
-
-.mapNote {
-  margin: 0;
-  padding: var(--s2) var(--s3);
-  background: var(--surface);
-  border: 1px solid var(--ice);
-  border-radius: var(--r-md);
-  color: var(--slate);
-  font-size: 13px;
-  font-weight: 600;
 }
 
 .visuallyHidden {

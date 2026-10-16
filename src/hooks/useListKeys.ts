@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react';
  *   ↓ / J      next item       ↑ / K   previous item
  *   Esc        leave search, or close the panel
  *   B          switch Units / Buildings
+ *   L          open or close the Map layers panel (M3)
  * Ignored while typing in a field (except Esc) and when a modifier key is held.
  */
 export interface ListKeyHandlers {
@@ -13,7 +14,12 @@ export interface ListKeyHandlers {
   move: (delta: 1 | -1) => void;
   close: () => void;
   toggleView: () => void;
+  toggleLayers?: () => void;
 }
+
+/** The map canvas pans with the arrow keys; let it, rather than moving the list. */
+const onMapCanvas = (target: EventTarget | null) =>
+  target instanceof HTMLElement && target.classList.contains('maplibregl-canvas');
 
 export function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -42,12 +48,20 @@ export function useListKeys(handlers: ListKeyHandlers) {
           h.focusSearch();
           break;
         case 'ArrowDown':
+          if (onMapCanvas(e.target)) return;
+          e.preventDefault();
+          h.move(1);
+          break;
         case 'j':
         case 'J':
           e.preventDefault();
           h.move(1);
           break;
         case 'ArrowUp':
+          if (onMapCanvas(e.target)) return;
+          e.preventDefault();
+          h.move(-1);
+          break;
         case 'k':
         case 'K':
           e.preventDefault();
@@ -59,6 +73,10 @@ export function useListKeys(handlers: ListKeyHandlers) {
         case 'b':
         case 'B':
           h.toggleView();
+          break;
+        case 'l':
+        case 'L':
+          h.toggleLayers?.();
           break;
       }
     };
