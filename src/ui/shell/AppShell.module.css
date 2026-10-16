@@ -56,12 +56,74 @@
   line-height: 1.2;
 }
 
-/* Columns (≥ 760 px: list + map; the detail column opens when a unit is selected) */
+/* Search (top bar) */
+.search {
+  flex: 0 1 320px;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  height: 34px;
+  padding: 0 var(--s2) 0 var(--s3);
+  background: var(--frost);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  color: var(--slate);
+  min-width: 0;
+}
+
+.search:focus-within {
+  border-color: var(--lake);
+  background: var(--surface);
+}
+
+.searchIcon {
+  flex: none;
+  width: 15px;
+  height: 15px;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  padding: 2px 0 0;
+}
+
+.searchInput:focus-visible {
+  outline: none; /* the field's border shows focus */
+}
+
+.searchInput::placeholder {
+  color: var(--slate);
+  opacity: 1;
+}
+
+.kbd {
+  flex: none;
+  font: 600 11px/1 var(--font);
+  padding: 4px 5px 2px;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-sm);
+  color: var(--slate);
+  background: var(--surface);
+}
+
+/* Columns (DESIGN.md §3). ≥ 1280 px: list 360 · map, plus detail 420 when something is open */
 .main {
   flex: 1 1 0;
   display: grid;
   grid-template-columns: 360px minmax(0, 1fr);
   min-height: 0;
+  position: relative;
+}
+
+.app[data-open] .main {
+  grid-template-columns: 360px 420px minmax(0, 1fr);
 }
 
 .list,
@@ -73,9 +135,45 @@
   border-right: 1px solid var(--ice);
 }
 
-/* Nothing can be selected yet, so the detail column stays closed on wide screens */
+/* The detail column is closed until a unit or building is selected */
 .detail {
   display: none;
+}
+
+.app[data-open] .detail {
+  display: flex;
+}
+
+.detailScroll {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.close {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  margin-top: -6px;
+  margin-bottom: -6px;
+  margin-right: -6px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--slate);
+}
+
+.close:hover {
+  background: var(--frost);
+  color: var(--ink);
+}
+
+.close svg {
+  width: 16px;
+  height: 16px;
 }
 
 .map {
@@ -170,10 +268,36 @@
   display: none;
 }
 
-/* 760–959 px: narrower list */
+/* 760–1279 px: list · map; the detail panel opens over the left edge of the map */
+@media (max-width: 1279px) {
+  .main,
+  .app[data-open] .main {
+    grid-template-columns: 340px minmax(0, 1fr);
+  }
+
+  .app[data-open] .detail {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 340px;
+    width: 400px;
+    z-index: 5;
+    box-shadow: var(--shadow-float);
+  }
+}
+
+/* 760–959 px: narrower list; the detail panel covers the map */
 @media (max-width: 959px) {
-  .main {
+  .main,
+  .app[data-open] .main {
     grid-template-columns: 320px minmax(0, 1fr);
+  }
+
+  .app[data-open] .detail {
+    left: 320px;
+    right: 0;
+    width: auto;
+    box-shadow: none;
   }
 }
 
@@ -184,13 +308,42 @@
     position: relative;
   }
 
+  .top {
+    padding: 0 var(--s3);
+  }
+
+  /* The brand mark stays; the name is kept for screen readers (room for search) */
+  .title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .search {
+    flex: 1 1 auto;
+  }
+
+  .kbd {
+    display: none;
+  }
+
+  .search {
+    height: 40px;
+  }
+
   .list,
   .detail,
+  .app[data-open] .detail,
   .map {
     position: absolute;
     inset: 0;
+    width: auto;
     display: none;
     border-right: 0;
+    box-shadow: none;
   }
 
   .app[data-tab='list'] .list,

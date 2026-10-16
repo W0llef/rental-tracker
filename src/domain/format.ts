@@ -3,6 +3,7 @@ import type {
   BuildingType,
   Direction,
   ISODate,
+  Settings,
   SiteKey,
   Unit,
   UnitStatus,
@@ -29,10 +30,6 @@ export const num = (n: number): string => numberFormat.format(n);
 export const bedsLabel = (n: number): string => (n === 0 ? 'Studio' : `${num(n)} bd`);
 export const bathsLabel = (n: number): string => `${num(n)} ba`;
 export const sqftLabel = (n: number): string => `${num(n)} ft²`;
-
-/** "Studio", "1 bedroom", "2 bedrooms" for facts. */
-export const bedroomsLong = (n: number): string =>
-  n === 0 ? 'Studio' : `${num(n)} bedroom${n === 1 ? '' : 's'}`;
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -199,4 +196,22 @@ export function leaseTermsLabel(months: number[] | null): string | null {
 export function rangeLabel(min: number | null, max: number | null): string | null {
   if (min === null || max === null) return null;
   return min === max ? money(min) : `${money(min)}–${money(max)}`;
+}
+
+/** Names of a unit's reject reasons, joined: "Too far, No laundry". */
+export function rejectReasonText(
+  ids: readonly string[],
+  settings: Pick<Settings, 'rejectReasons'>,
+): string {
+  return ids
+    .map((id) => settings.rejectReasons.find((r) => r.id === id)?.label)
+    .filter(Boolean)
+    .join(', ');
+}
+
+/** "Faces south and west" for the compass's accessible name. */
+export function facingText(dirs: readonly Direction[]): string {
+  const names = dirs.map((d) => DIRECTION_NAMES[d]);
+  if (names.length <= 1) return `Faces ${names[0] ?? 'an unknown direction'}`;
+  return `Faces ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }

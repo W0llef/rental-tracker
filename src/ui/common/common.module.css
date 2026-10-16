@@ -1,0 +1,113 @@
+/* Shared marker styles (DESIGN.md §4.1 and §4.2) */
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 1px 8px 0 6px;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--frost);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.status::before {
+  content: '';
+  width: 4px;
+  height: 12px;
+  margin-top: -1px;
+  border-radius: 2px;
+  background: var(--c);
+}
+
+.stars,
+.starsLarge {
+  color: var(--ink);
+  font-size: 12px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.starsLarge {
+  font-size: 18px;
+  letter-spacing: 1px;
+}
+
+.starsOff {
+  color: var(--ice);
+}
+
+.flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.flagIcon {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -2px;
+}
+
+.pick {
+  color: var(--pick-ink);
+}
+
+.reject {
+  color: var(--reject-ink);
+}
+
+.swatch {
+  flex: none;
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.newTag {
+  flex: none;
+  font-size: 11px;
+  font-weight: 800;
+  color: #3a2a00;
+  background: var(--plow);
+  padding: 2px 6px 0;
+  border-radius: 3px;
+}
+
+.tag {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--slate);
+  border: 1px solid var(--ice);
+  border-radius: 3px;
+  padding: 1px 5px 0;
+  white-space: nowrap;
+}
+
+.unknown {
+  color: var(--slate);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.typeIcon {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: var(--slate);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

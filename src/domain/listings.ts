@@ -1,5 +1,5 @@
 import type { ISODate, Listing, USD } from '../model';
-import { daysBetween } from './format';
+import { daysBetween, money, shortDate } from './format';
 
 /** Listing age and price history, derived from a unit's listings (never stored). */
 
@@ -46,4 +46,14 @@ export function listingPrices(l: Listing): { current: USD | null; previous: USD 
     }
   }
   return { current, previous };
+}
+
+/** Describes the history in words, for the chart's accessible name. */
+export function priceHistoryText(points: readonly PricePoint[], today: ISODate): string {
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (!first || !last) return 'No prices seen yet';
+  if (points.length === 1) return `${money(first.rent)} since ${shortDate(first.date, today)}`;
+  const verb = last.rent < first.rent ? 'dropped' : last.rent > first.rent ? 'rose' : 'changed';
+  return `Rent ${verb} from ${money(first.rent)} on ${shortDate(first.date, today)} to ${money(last.rent)} on ${shortDate(last.date, today)}`;
 }

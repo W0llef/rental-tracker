@@ -13,6 +13,9 @@
   --lake: #2462c6;
   --plow: #e5a11a;
   --assumed-ink: #6a4a00;
+  /* Flag text: darker than the status colors so it stays AA on --frost (hover, selected) */
+  --pick-ink: #237032;
+  --reject-ink: #a8341f;
 
   /* Status colors (§2.2) */
   --st-new: #e5a11a;
@@ -74,6 +77,8 @@
     --lake: #6fa2f2;
     --plow: #f0b43a;
     --assumed-ink: #f0b43a;
+    --pick-ink: #4fb063;
+    --reject-ink: #e8826f;
 
     --st-new: #f0b43a;
     --st-reviewing: #8a9ba5;
@@ -119,6 +124,8 @@
   --lake: #6fa2f2;
   --plow: #f0b43a;
   --assumed-ink: #f0b43a;
+  --pick-ink: #4fb063;
+  --reject-ink: #e8826f;
 
   --st-new: #f0b43a;
   --st-reviewing: #8a9ba5;

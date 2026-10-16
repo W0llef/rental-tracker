@@ -3,13 +3,18 @@ import { AppShell } from './ui/shell/AppShell';
 
 /**
  * Hash URLs (#/unit/…) work on GitHub Pages without any server rewrite rules.
- * M1 adds the data check page (#/debug); later milestones add unit, building, compare, settings.
+ * The main screen is one route; selecting a unit or building only adds a child path, so
+ * the list keeps its scroll position and state while the detail panel changes (M2).
  */
 export const router = createHashRouter([
-  { path: '/', element: <AppShell /> },
+  {
+    path: '/',
+    element: <AppShell />,
+    children: [{ path: 'unit/:unitId' }, { path: 'building/:buildingId' }],
+  },
   {
     path: '/debug',
-    // Loaded on demand, so the database code isn't in the first download until M2 needs it.
+    // Loaded on demand: the Data check page isn't part of everyday use.
     lazy: () => import('./ui/debug/DebugPage').then((m) => ({ Component: m.DebugPage })),
   },
   { path: '*', element: <Navigate to="/" replace /> },
