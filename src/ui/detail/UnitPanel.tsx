@@ -23,6 +23,7 @@ import type { ISODate, Settings, Unit } from '../../model';
 import type { UnitRow } from '../../state/derive';
 import { PasteIntoUnit } from '../add/PasteIntoUnit';
 import { PlaceOnMapButton } from '../add/PlaceOnMap';
+import { DeleteSection } from '../edit/DeleteSection';
 import { FlagMark, LabelSwatch, Stars, StatusPill, Tag, Value } from '../common/Markers';
 import { Compass } from './Compass';
 import { mapLinks } from '../../domain/links';
@@ -368,6 +369,11 @@ export function UnitPanel({
       <Section title="Links">
         <Links links={links} />
       </Section>
+      <DeleteSection
+        kind="unit"
+        id={u.id}
+        name={b && buildingName(b) !== title ? `${title} at ${buildingName(b)}` : title}
+      />
     </article>
   );
 }

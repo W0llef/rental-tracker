@@ -52,6 +52,8 @@ export interface Notice {
   id: number;
   text: string;
   to: string | null;
+  /** Undoes the action the notice is about (e.g. a delete). */
+  undo: (() => void) | null;
 }
 
 export interface UiState extends Remembered, MapUi {
@@ -59,7 +61,7 @@ export interface UiState extends Remembered, MapUi {
   placing: Placing | null;
   notice: Notice | null;
   setPlacing: (placing: Placing | null) => void;
-  showNotice: (text: string, to?: string | null) => void;
+  showNotice: (text: string, to?: string | null, undo?: (() => void) | null) => void;
   clearNotice: () => void;
   setView: (view: ListMode) => void;
   toggleView: () => void;
@@ -157,7 +159,8 @@ export const useUi = create<UiState>()((set, get) => {
     placing: null,
     notice: null,
     setPlacing: (placing) => set({ placing }),
-    showNotice: (text, to = null) => set({ notice: { id: Date.now(), text, to } }),
+    showNotice: (text, to = null, undo = null) =>
+      set({ notice: { id: Date.now(), text, to, undo } }),
     clearNotice: () => set({ notice: null }),
     setView: (view) => update({ view }),
     toggleView: () => update({ view: get().view === 'units' ? 'buildings' : 'units' }),

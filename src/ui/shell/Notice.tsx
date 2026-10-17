@@ -5,7 +5,8 @@ import styles from './AppShell.module.css';
 
 /**
  * A short confirmation after an action ("Unit 1504 at Riverlight added."), with a link to
- * what it's about. It goes away by itself after a while. Toasts with Undo arrive in M6.
+ * what it's about, or an Undo button for a delete. It goes away by itself after a while (a
+ * notice with Undo stays longer). Toasts with Undo after every action arrive in M6.
  */
 export function Notice() {
   const notice = useUi((s) => s.notice);
@@ -13,7 +14,7 @@ export function Notice() {
 
   useEffect(() => {
     if (!notice) return;
-    const t = setTimeout(clear, 9000);
+    const t = setTimeout(clear, notice.undo ? 20000 : 9000);
     return () => clearTimeout(t);
   }, [notice, clear]);
 
@@ -22,6 +23,18 @@ export function Notice() {
       {notice && (
         <p className={styles.noticeBody} key={notice.id}>
           <span>{notice.text}</span>
+          {notice.undo && (
+            <button
+              type="button"
+              className={styles.noticeAction}
+              onClick={() => {
+                notice.undo?.();
+                clear();
+              }}
+            >
+              Undo
+            </button>
+          )}
           {notice.to && (
             <Link to={notice.to} onClick={clear} className={styles.noticeLink}>
               Open

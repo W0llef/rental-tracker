@@ -56,7 +56,12 @@ unticked and show your value.
 note offers it too). Click the spot on the map, or pan the map's center onto it and choose
 **Place at the center**. `Esc` cancels.
 
-Each add, paste or placement is one step in the undo history (Undo is on the Data check page
+**Deleting.** At the end of a unit's or building's panel, **Delete unit…** or **Delete
+building…** asks once, then deletes (a building takes its units with it). The confirmation that
+follows has **Undo**. Editing details by hand (a building's name, amenities and so on) arrives
+with the full forms in M7.
+
+Each add, paste, placement or delete is one step in the undo history (Undo is on the Data check page
 until the keyboard shortcuts arrive in M6).
 
 ### Browsing your units

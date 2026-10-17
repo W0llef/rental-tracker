@@ -1,7 +1,7 @@
 import { addToUnit, placeBuilding, quickAdd } from '../../src/commands/quickAdd';
 import type { QuickAddInput, UnitDraft } from '../../src/commands/quickAdd';
-import { createBuilding } from '../../src/commands/records';
-import { undo } from '../../src/commands/undo';
+import { createBuilding, deleteUnit } from '../../src/commands/records';
+import { undo, undoAction } from '../../src/commands/undo';
 import { parseListingText } from '../../src/domain/listingText';
 import { makeAddress } from '../../src/model/factories';
 import { dumpData, makeDb } from './helpers';
@@ -246,5 +246,21 @@ describe('place on map', () => {
     });
     expect((await undo(db))?.label).toBe('Place on map');
     expect((await db.buildings.get(b.id))?.location).toBeNull();
+  });
+});
+
+describe('undoing one particular action', () => {
+  it('undoes a delete only while it is still the latest action', async () => {
+    const db = makeDb();
+    const r = await quickAdd(db, newBuildingInput());
+    const id = await deleteUnit(db, r.unit.id);
+    expect((await db.units.get(r.unit.id))?.deletedAt).not.toBeNull();
+    expect(await undoAction(db, id)).toBe(true);
+    expect((await db.units.get(r.unit.id))?.deletedAt).toBeNull();
+
+    const again = await deleteUnit(db, r.unit.id);
+    await placeBuilding(db, r.building.id, { lat: 45, lng: -93 });
+    expect(await undoAction(db, again)).toBe(false); // something else happened since
+    expect((await db.units.get(r.unit.id))?.deletedAt).not.toBeNull();
   });
 });

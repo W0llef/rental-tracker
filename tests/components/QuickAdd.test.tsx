@@ -256,6 +256,38 @@ describe('a unit you already have', () => {
     expect((await db.buildings.get(ids.cedar))?.pets.dogs).toBe(false);
   });
 
+  it('deletes a unit after asking, and Undo brings it back', async () => {
+    const user = userEvent.setup();
+    renderAt(`/unit/${ids.u702}`);
+    await user.click(await screen.findByRole('button', { name: 'Delete unit…' }));
+    expect(
+      screen.getByText(/Delete Unit 702 at Cedar Mill\? Its listings, prices and notes go with it/),
+    ).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('button', { name: 'Delete unit' })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Delete unit…' }));
+    await user.click(screen.getByRole('button', { name: 'Delete unit' }));
+    await waitFor(() => expect(path()).toBe('/'));
+    expect(await screen.findByText('No units yet')).toBeVisible();
+    expect(useUi.getState().notice?.text).toBe('Unit 702 at Cedar Mill deleted.');
+
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(await screen.findByText('1 unit in 1 building')).toBeVisible();
+    expect((await db.units.get(ids.u702))?.deletedAt).toBeNull();
+  });
+
+  it('deletes a building with its units', async () => {
+    const user = userEvent.setup();
+    renderAt(`/building/${ids.cedar}`);
+    await user.click(await screen.findByRole('button', { name: 'Delete building…' }));
+    expect(screen.getByText(/Delete Cedar Mill and its unit\?/)).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Delete building' }));
+    await waitFor(() => expect(path()).toBe('/'));
+    expect((await db.buildings.get(ids.cedar))?.deletedAt).not.toBeNull();
+    expect((await db.units.get(ids.u702))?.deletedAt).not.toBeNull();
+  });
+
   it('places a building without a location on the map', async () => {
     const user = userEvent.setup();
     const b = await createBuilding(db, { address: makeAddress('5 Elm St', 'Minneapolis') });

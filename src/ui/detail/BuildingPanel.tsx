@@ -12,6 +12,7 @@ import { sortUnits } from '../../domain/sort';
 import type { ISODate } from '../../model';
 import type { BuildingRow } from '../../state/derive';
 import { PlaceOnMapButton } from '../add/PlaceOnMap';
+import { DeleteSection } from '../edit/DeleteSection';
 import { StatusPill, Value } from '../common/Markers';
 import { mapLinks } from '../../domain/links';
 import { Amenities, Facts, Links, Notes, Section } from './parts';
@@ -146,6 +147,7 @@ export function BuildingPanel({ row, today }: { row: BuildingRow; today: ISODate
       <Section title="Links">
         <Links links={links} />
       </Section>
+      <DeleteSection kind="building" id={b.id} name={name} unitCount={row.unitCount} />
     </article>
   );
 }

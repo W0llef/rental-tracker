@@ -361,6 +361,7 @@ The paste box is collapsed to one line until you paste; anything it recognizes a
 - The duplicate banner uses the same light amber with the plow border.
 - After adding, a navy confirmation shows at the bottom left for a few seconds ("Unit 1504 at Riverlight added. Open"). With ⇧⏎ the confirmation shows at the top of the dialog instead and the cursor goes back to Unit.
 - A unit's **Listings and price** section has **Paste text** at the right of its heading; it opens the same chips inline with **Apply N** and **Cancel**.
+- **Delete** (owner review, Q13): the last section of the unit and building panels holds an outlined **Delete unit…** / **Delete building…** button in `--reject-ink`. It opens an inline box with a `--reject-ink` border: "Delete Unit 1504 at Riverlight? Its listings, prices and notes go with it. You can undo this." with a solid **Delete unit** and **Cancel** (focused). After deleting, the panel closes and the confirmation reads "Unit 1504 at Riverlight deleted. [Undo]" (shown 20 s).
 - **Place on map**: an outlined button on the navy plate ("Needs location: not on the map yet. [Place on map]"); while placing, the map shows a crosshair at its center and a bar under the Pins and Layers buttons: "Click the map where Riverlight is. [Place at the center] [Cancel]".
 
 ### 4.7 Map layers (L) and Pins panels

@@ -441,3 +441,57 @@
   font: inherit;
   color: inherit;
 }
+
+/* Delete (end of the unit and building panels) */
+.dangerButton,
+.dangerSolid,
+.plainButton {
+  min-height: 34px;
+  padding: 2px 14px 0;
+  border-radius: var(--r-md);
+  font-weight: 700;
+}
+
+.dangerButton {
+  border: 1px solid var(--ice);
+  background: var(--surface);
+  color: var(--reject-ink);
+}
+
+.dangerButton:hover {
+  background: var(--frost);
+}
+
+.dangerSolid {
+  border: 1px solid var(--reject-ink);
+  background: var(--reject-ink);
+  color: var(--surface);
+}
+
+.plainButton {
+  border: 1px solid var(--ice);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.dangerSolid:disabled,
+.plainButton:disabled {
+  opacity: 0.6;
+}
+
+.confirm {
+  padding: var(--s3);
+  border: 1px solid var(--reject-ink);
+  border-radius: var(--r-md);
+}
+
+.confirmText {
+  margin: 0 0 var(--s2);
+  font-weight: 600;
+}
+
+.confirmActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}

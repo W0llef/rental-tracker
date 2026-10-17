@@ -182,3 +182,16 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(results.violations).toEqual([]);
   });
 }
+
+test('deletes a unit and undoes the delete', async ({ page }) => {
+  await openAdd(page);
+  await pickRiverlight(page);
+  await field(page, 'Unit').fill('1504');
+  await dialog(page).getByRole('button', { name: 'Add and open' }).click();
+  await page.getByRole('button', { name: 'Delete unit…' }).click();
+  await page.getByRole('button', { name: 'Delete unit', exact: true }).click();
+  await expect(page.getByText('No units yet')).toBeVisible();
+  const notice = page.getByRole('status').filter({ hasText: 'Unit 1504 at Riverlight deleted.' });
+  await notice.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByTestId('list-count')).toHaveText('1 unit in 1 building');
+});
