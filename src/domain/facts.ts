@@ -19,7 +19,8 @@ interface Target {
 function read(t: Target, path: string): unknown {
   const [root, ...rest] = path.split('.');
   let v: unknown = root === 'unit' ? t.unit : root === 'building' ? t.building : undefined;
-  for (const k of rest) v = v && typeof v === 'object' ? (v as Record<string, unknown>)[k] : undefined;
+  for (const k of rest)
+    v = v && typeof v === 'object' ? (v as Record<string, unknown>)[k] : undefined;
   return v === undefined ? null : v;
 }
 
@@ -84,7 +85,10 @@ export function applyFacts(
       fact.field === 'unit.recurringFees' && Array.isArray(fact.value)
         ? (fact.value as { label: string; amount: number }[]).map((f) => ({ id: makeId(), ...f }))
         : fact.value;
-    const sets = [{ path, value }, ...(fact.also ?? []).map((a) => ({ path: a.field.split('.').slice(1), value: a.value }))];
+    const sets = [
+      { path, value },
+      ...(fact.also ?? []).map((a) => ({ path: a.field.split('.').slice(1), value: a.value })),
+    ];
     for (const s of sets) {
       if (root === 'unit') unit = write(unit, s.path, s.value);
       else building = write(building, s.path, s.value);
