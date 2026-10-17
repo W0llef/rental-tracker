@@ -304,13 +304,22 @@ export function QuickAddDialog({
           typed.push({ field: 'unit.bedrooms', value: beds, label: '' });
         if (baths !== null && target.bathrooms === null)
           typed.push({ field: 'unit.bathrooms', value: baths, label: '' });
+        const facts = [...chosen.filter((f) => f.field !== 'unit.rent'), ...typed];
+        if (!listing?.url && rent === null && !facts.length && !chosen.length) {
+          const row = data.unitById.get(target.id);
+          setError({
+            text: `Nothing new to add to ${unitTitle(target, row?.building)}. Add a link, a price or pasted text, or add it as a separate unit.`,
+            field: null,
+          });
+          return;
+        }
         const r = await addToUnit(db, {
           unitId: target.id,
           today,
           listing,
           rent,
           rentIsFrom: form.rentFrom,
-          facts: [...chosen.filter((f) => f.field !== 'unit.rent'), ...typed],
+          facts,
           pasted,
           skipped: chips.length - chosen.length,
         });

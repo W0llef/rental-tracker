@@ -4,7 +4,7 @@ Status: **Draft 3** · Oct 15, 2026 · covers spec Draft v1 (`SPEC.md`)
 
 This plan covers Phase 1 only (spec §12: "track and compare"). The data model, however, contains every field from spec §3 now, plus the few supporting fields later phases need, so Phases 2–4 add screens and services without reshaping stored data.
 
-**Status:** approved in principle; Q11 answered (fast data entry is in Phase 1). M0–M2 done. M3 in review. Workflow, versions and progress: §13–§14 and `CLAUDE.md`.
+**Status:** approved in principle; Q11 answered (fast data entry is in Phase 1). M0–M3 done. M4 in review. Workflow, versions and progress: §13–§14 and `CLAUDE.md`.
 
 **Draft 2 changes:** design direction C (Wayfinding) chosen; your answers to Q1–Q10 applied (§11); lease length for spreading one-time costs (§5.3); switchable base maps and customizable pins (§4.3); a fast data-entry and AI-import section (§5.7) with revised milestones (§9). One new scope question, Q11, is in §11.
 
@@ -103,7 +103,8 @@ rental-tracker/
 │  │  ├─ list/               ListPanel (toolbar, sort, empty states), UnitCard, BuildingCard
 │  │  ├─ map/                MapView, Pin, MapCard, PinsPanel, LayersPanel, Legend
 │  │  ├─ detail/             UnitPanel, BuildingPanel, parts (sections), Compass, PriceChart
-│  │  ├─ add/                QuickAddDialog, AddressField, PlaceOnMap
+│  │  ├─ add/                QuickAddDialog, AddressField, FactChips, PasteIntoUnit, PlaceOnMap,
+│  │  │                      plan.ts (helpers), useSuggestions.ts (M4)
 │  │  ├─ edit/               UnitEditPage, BuildingEditPage, field components
 │  │  ├─ triage/             FlagControl, Stars, ColorLabel, StatusSelect, RejectDialog
 │  │  ├─ compare/            ComparePage, CompareTray
@@ -537,7 +538,7 @@ There are two places old data can come from — the browser's own database and o
 | `#/` | **Main**: list + map (+ detail when selected) | TopBar (search, filters, mode switch Explore/Shortlist, Units/Buildings view, Add, Undo), UnitList / BuildingList, MapView, DetailPanel, CompareTray, banners (backup due, reconnect photo folder) |
 | `#/unit/:id` | Main with detail panel open | DetailPanel: header + markers, photos, cost + breakdown, specs, lease, utilities, building + amenities, listings + price history, notes log, links, history |
 | `#/building/:id` | Main with building panel | BuildingPanel: building info, its units, "Add unit here" |
-| dialog | **Quick-add** | AddressField (suggestions), ListingUrlField, "Paste listing text" box, unit #/plan, rent, beds, baths; duplicate match banner; "Place on map" fallback |
+| `#/add` (dialog) | **Quick-add** | AddressField (suggestions), ListingUrlField, "Paste listing text" box, unit #/plan, rent, beds, baths; duplicate match banner; "Place on map" fallback. A route so Back closes it; `#/add?building=<id>` starts in that building ("Add unit here") |
 | map panel | **Map layers** | Base map picker (5), "Pins show" (9 options), extras, pin color, simplify, overlays section (Phase 2) |
 | `#/building/:id/add` | **Batch add units** | Spreadsheet-style grid for many units in one building; accepts a pasted table |
 | dialog | **AI research prompt** | Scope (unit, building, selection), which fields, copy button, tips |
@@ -662,11 +663,21 @@ Raster base maps have no dark version; in dark mode they show as-is with dark pa
 
 **Listing URL field.** No page is ever fetched (spec §2). The app recognizes the site from the domain and, where the URL itself contains an address or name (Zillow `homedetails/…`, Apartments.com slugs), pre-fills the address search. It also catches exact URL duplicates.
 
+*As built in M4:*
+
+- `services/geocode/`: `photon.ts` and `nominatim.ts` read the answers into one `Place` shape (address, location with `source` and `precision`, building name, neighborhood); `cache.ts` keeps answers 30 days in `geocodeCache` (not your data: not undoable, not in backups); `rateLimit.ts` spaces Nominatim calls 1.1 s apart; `index.ts` makes one geocoder per app. Offline (`navigator.onLine === false`) both fail at once with a `GeocodeError`.
+- Suggestions show your own buildings first ("In your list", by name or address words, offline), then Photon's. Picking one of yours adds to it; picking a Photon place checks it against your buildings (same address, or within 25 m with a similar name).
+- On submit without a pick: a Photon suggestion already on screen for the same street address is used; otherwise one Nominatim lookup. **A lookup that answers with a different street address than the one typed is ignored** (Nominatim falls back to nearby or partial matches, which would put the unit at the wrong building); the unit is then saved without a location. Typed text that isn't an address (a building name) is kept as the new building's name.
+- Photon attribution: the address field's note says "Suggestions come from OpenStreetMap (Photon)"; the map corner keeps its OpenStreetMap attribution.
+- Listing links (`domain/listingUrl.ts`): Zillow, Apartments.com, HotPads, Trulia, Craigslist, Facebook, Rent.com and PadMapper get their own site key; other known listing sites (Zumper, Apartment List, RentCafe…) are "Other site"; any other domain is "Building website". Duplicate checks compare a canonical link (lowercase host without `www.`, no trailing slash, tracking parameters like `utm_*` removed).
+- **Place on map**: a button on the plate of a unit or building without a location, and in the map's "N units need a location" note. The next click on the map sets the location (`source: 'map-click'`); pins let clicks through meanwhile. For the keyboard: pan the map (arrow keys) and choose **Place at the center** (a crosshair marks it). `Esc` cancels. On a phone it switches to the Map tab.
+
 ### 5.2 Duplicate detection (MVP)
 
 - **Address normalization**: lowercase, strip punctuation, USPS street-suffix and directional abbreviations, move `Apt/Unit/#/Ste` into the unit part.
 - **Same unit** = same building + same normalized unit number, or same listing URL. **Possible same building** = same normalized address, or within 25 m with a similar name. Floor-plan-only units are only suggested (same building + same plan name), never matched automatically.
 - **On add**: a match shows a banner — "This looks like Unit 1504 at Riverlight, added Oct 2. Add this listing to it instead?" — default action adds a new Listing (and price observation) to the existing unit.
+  *As built in M4* (`domain/address.ts`, `domain/dedupe.ts`, `commands/quickAdd.ts`): a link you already saved for that unit gets today's price on its existing listing (same day replaces, a new day adds a point) instead of a second listing; without a link, a typed or pasted price goes on the unit's most recent listing. The unit's rent follows the latest price. A floor-plan match shows the banner too, but ⏎ still adds a new unit. When the building only becomes known on submit (after the lookup), the banner shows first and nothing is added until you choose. Addresses typed without a city still match (cities are compared only when both are known).
 - **Duplicate review** (`#/duplicates`) lists all candidate pairs. Merge keeps one unit, lets you pick the value for each conflicting field, moves listings, notes, photos, collections and keeps the higher rating; the other is soft-deleted. One undoable action.
 
 ### 5.3 Total monthly cost
@@ -750,7 +761,7 @@ Goal: nothing is typed twice, and each field can be filled from wherever you're 
 | Path | How it works |
 | --- | --- |
 | Quick-add | As §5.1. ⇧⏎ adds the unit and starts another in the same building, with address and listing site kept. |
-| Paste listing text | On a listing page, select all, copy, and paste into Quick-add or a unit's "Paste text" box. A local parser recognizes about 30 patterns (rent, beds/baths, sq ft, available date, deposit and fees, lease terms, laundry, dishwasher, AC, parking price, pet policy and pet rent, which utilities are included, common amenities like fitness, rooftop, package lockers, skyway). Recognized values appear as chips you confirm (⏎ accepts all); the raw text is kept with the import. |
+| Paste listing text | On a listing page, select all, copy, and paste into Quick-add or a unit's "Paste text" box. A local parser recognizes about 30 patterns (rent, beds/baths, sq ft, available date, deposit and fees, lease terms, laundry, dishwasher, AC, parking price, pet policy and pet rent, which utilities are included, common amenities like fitness, rooftop, package lockers, skyway). Recognized values appear as chips you confirm (⏎ accepts all); the raw text is kept with the import. *As built (M4, `domain/listingText.ts`):* the first mention wins (the top of a page is the listing; "similar homes" come later); when the first mention of beds, baths or size is a range, the page lists several units, so rent becomes "from" the lowest and unit-specific values (beds, baths, size, unit, floor, plan, date) are left out with a note; "No …" makes a feature a no; values outside sane limits are dropped. In Quick-add, rent, beds, baths, unit, plan and address fill their boxes (highlighted until changed) and everything else is a chip, on by default; ⏎ adds the unit with the chips that are on. On an existing unit (its **Paste text**), details it lacks start on, ones that would change a value you have start off and show yours, and ones that match are hidden; ⌘/Ctrl+⏎ applies. Building facts (amenities, pets, year built, floors, smoking, elevator) go on the building; their sources are recorded on the unit (`fieldSources`, `building.*` paths) because buildings have no source list. |
 | Batch add (grid) | From a building: "Add several units" opens a spreadsheet-style grid (unit #, floor plan, beds, baths, sq ft, floor, rent, available). Paste a table copied from the building's availability page; columns are matched by their headers. Each row becomes a unit; the whole batch is one undo step. |
 | Copy from | "New unit from Plan C" or "Copy details from Unit 908" copies specs, features, fees and utilities, never the unit number, floor, rent, windows, ratings or notes. |
 | Bulk edit | Select several units, then "Edit together" to set any field for all of them (e.g. heat included for every Riverlight unit). Fields that differ show "Mixed". |
@@ -806,7 +817,7 @@ Not built: search-area drawing, travel times, overlays, buildings layer, keyed b
 | Database + commands | Vitest + fake-indexeddb | every command; undo/redo (property test with fast-check: random command sequences, then undo all → original state); merge; soft delete |
 | Backup | Vitest + fast-check | random datasets: export → wipe → restore → deep-equal |
 | Photo stores | Vitest (in-memory fake of FSA handles) + Playwright (real OPFS) | write/read/move/remove, path sanitizing, sidecar contents. The real folder picker gets a short manual checklist (browsers can't automate it). |
-| Import parsing | Vitest | a fixture library of real-world shapes: AI replies with prose around the JSON, broken JSON, every value format; listing text copied from Zillow, Apartments.com, RentCafe and Entrata pages (saved as text fixtures); pasted availability tables. Each fixture has an expected change set. |
+| Import parsing | Vitest | a fixture library of real-world shapes: AI replies with prose around the JSON, broken JSON, every value format; listing text in the shape of Zillow, Apartments.com, RentCafe, Entrata and Craigslist pages (M4: made-up text in `tests/fixtures/listing-text/`, since the build workspace can't reach those sites; add a fixture whenever a real page is misread); pasted availability tables. Each fixture has an expected change set. |
 | Import review | Vitest + Testing Library | your values never change unless accepted; one undo step per import; floor-plan upgrade; sources recorded |
 | Pins and base maps | Playwright | every "Pins show" option renders; base map switch keeps selection and attribution; no tile requests to raster servers when offline |
 | Components | Testing Library | UnknownInput states, forms commit once, shortcuts ignored while typing |
@@ -913,6 +924,7 @@ None. New questions will be added here as they come up.
 | 2026-10-15 | Draft 3: Q11 decided (fast entry in Phase 1); workflow, versions and backups (§13) and progress tracking (§14) added; `CLAUDE.md` added; preview builds isolated from real data; backup download before migrations |
 | 2026-10-15 | M1: undo/redo stacks derived from the change log instead of stored (§5.6); writes outside a command are refused, with `systemWrite` for restore and tests; sample data is generated by `src/dev/sampleData.ts` (deterministic, always valid against the model) instead of `public/sample-data.json`; the data check page (`#/debug`) exists on every build but sample data and test changes only on preview/dev; the debug page loads on demand so the first download stays small; the pre-migration backup prompt is built in M5, before any v2; listing/destination/collection/note/photo/import schemas share `model/records.ts`. Workflow: `package.json` version is set per milestone (`0.N.0` on the branch); the owner creates tags and deletes merged branches on GitHub (this setup's GitHub access gets HTTP 403 for those) |
 | 2026-10-15 | Workflow: the next-chat prompt carries a `Model:` line (default Claude Opus 5.5); each chat checks it against its own model and, on approval, checks the owner's tag and branch cleanup (`CLAUDE.md`) |
+| 2026-10-16 | M4: Quick-add (`#/add`, `N`, top-bar Add), listing links, pasted listing text, building and unit matching with the duplicate banner, Place on map, "Add unit here", and **Paste text** on a unit. Geocoder lookups that answer with a different street address are ignored (§5.1 "As built"). Quick-add's text box and chips: rent, beds, baths, unit, plan and address go in their boxes; other details are chips (§5.7). A price without a link is kept on a listing with no link (shown as "No link") so price history starts at the first price. Section actions in the detail panels sit beside their heading instead of inside it (a heading's name is just its title). Confirmations after an action ("Unit 1504 at Riverlight added.") show briefly at the bottom left; toasts with Undo replace them in M6. No data-format change: everything fits model v1 (`imports`, `fieldSources`, `geocodeCache`). |
 | 2026-10-16 | M3, owner review 4 follow-up: the larger photo is the map's top layer (no pin or marker over it), shows only the photo and the unit's name (280 × 200 px), and single units' photo pins show it too. |
 | 2026-10-16 | M3, owner review 4: one card per open building instead of fanned plates and trays (rows per unit, header with marker, name, count and close; a visible line to the marker; larger photo preview on hover); cards never cover cards, pins, markers or dots and lines never cross, going off screen if need be; cards keep their spot while free; plates that would cover a dot shrink to dots; a Pin size slider (70–130%). §4.3 "As built", DESIGN §2.4, §4.7. |
 | 2026-10-16 | M3, owner review 3: trays around each open building (frosted fill, outline, solid leader lines in a band) with colors per base map; layout keeps trays apart, reserves open centers, keeps lines off other trays, lines and centers when there's any room, and scores spots by distance plus turning; opening a fan pans just enough to show its tray |
@@ -960,7 +972,7 @@ The full working agreement for every session is in `CLAUDE.md`; this is the summ
 | M1 Data model, database, undo | Approved | v0.1.0 | 2026-10-15 |
 | M2 List and detail | Approved | v0.2.0 | 2026-10-15 |
 | M3 Map, pins, layers | Approved | v0.3.0 | 2026-10-16 |
-| M4 Quick-add and paste text | Not started | — | — |
+| M4 Quick-add and paste text | In review (preview) | 0.4.0 | — |
 | M5 Backup and restore | Not started | — | — |
 | M6 Triage and bulk edit | Not started | — | — |
 | M7 Forms and research mode | Not started | — | — |

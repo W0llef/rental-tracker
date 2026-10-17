@@ -351,6 +351,18 @@ Sections:
 
 The paste box is collapsed to one line until you paste; anything it recognizes also fills the fields above it (highlighted until you move on). "Add another here" keeps the building, address and listing site.
 
+*As built in M4:*
+
+- Top bar: a navy **Add unit** button with its key (`N`); on phones an icon-only `+` button. The empty list offers **Add a unit** too.
+- The dialog is a modal `<dialog>` 600 px wide, full screen on phones; `Esc` closes it (after first closing the address list).
+- Order: Listing link (the site it recognized underneath), Address (combobox, with a line underneath saying what will happen: "✓ Riverlight is in your list; adding it there." with **Add as a new building**, or "New building in Downtown East."), Unit · Floor plan · _Floor plan only_, Rent · Beds · Baths · _Price is "from"_, the paste box, the duplicate banner, then the footer **Add and open** · **Add another here ⇧⏎** · **Add unit ⏎** (navy). When a duplicate is shown, the main button reads "Add to Unit 1504".
+- Filled-in boxes have a light amber (`--plow` 16%) background until you change them.
+- Chips: pill buttons with ✓ when on and + when off (`aria-pressed`); a chip that would change your value is dashed and ends "(yours: $1,500)".
+- The duplicate banner uses the same light amber with the plow border.
+- After adding, a navy confirmation shows at the bottom left for a few seconds ("Unit 1504 at Riverlight added. Open"). With ⇧⏎ the confirmation shows at the top of the dialog instead and the cursor goes back to Unit.
+- A unit's **Listings and price** section has **Paste text** at the right of its heading; it opens the same chips inline with **Apply N** and **Cancel**.
+- **Place on map**: an outlined button on the navy plate ("Needs location: not on the map yet. [Place on map]"); while placing, the map shows a crosshair at its center and a bar under the Pins and Layers buttons: "Click the map where Riverlight is. [Place at the center] [Cancel]".
+
 ### 4.7 Map layers (L) and Pins panels
 
 *Split in the M3 review.* Two buttons sit above the zoom controls: **Pins** and **Layers** (`L`). Laptop: a 316 px panel anchored under the buttons. Phone: a bottom sheet over the map; the buttons are icon-only.
