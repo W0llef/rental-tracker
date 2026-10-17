@@ -48,8 +48,9 @@ export interface UnitDraft {
   bathrooms: number | null;
 }
 
+/** Where the unit was seen. With no link, the site is still kept for its price. */
 export interface ListingDraft {
-  url: string;
+  url: string | null;
   site: SiteKey;
 }
 
@@ -161,7 +162,7 @@ export async function quickAdd(db: RentalDB, input: QuickAddInput): Promise<Quic
 
     await db.units.add(u);
 
-    if (input.listing || u.rent !== null) {
+    if (input.listing?.url || u.rent !== null) {
       const l = newListing({
         unitId: u.id,
         url: input.listing?.url ?? null,
@@ -208,7 +209,11 @@ export async function addToUnit(
   db: RentalDB,
   input: AddToUnitInput,
 ): Promise<{ unit: Unit; actionId: string }> {
-  const label = input.listing ? 'Add listing' : 'Paste listing text';
+  const label = input.listing?.url
+    ? 'Add listing'
+    : input.pasted
+      ? 'Paste listing text'
+      : 'Add price';
   const { value, actionId } = await action(db, label, async () => {
     const current = await db.units.get(input.unitId);
     if (!current || current.deletedAt) throw new NotFoundError('Unit', input.unitId);
@@ -241,7 +246,7 @@ export async function addToUnit(
     const listings = (await db.listings.where('unitId').equals(u.id).toArray()).filter(
       (l) => !l.deletedAt,
     );
-    if (input.listing) {
+    if (input.listing?.url) {
       const key = canonicalUrl(input.listing.url);
       const same = listings.find((l) => canonicalUrl(l.url) === key);
       const l =
@@ -255,7 +260,9 @@ export async function addToUnit(
       await db.listings.put(listing.parse(observe(l, input.today, rent, rentIsFrom)));
     } else if (rent !== null) {
       const latest = [...listings].sort((a, z) => (a.lastSeen < z.lastSeen ? 1 : -1))[0];
-      const l = latest ?? newListing({ unitId: u.id, site: 'other', firstSeen: input.today });
+      const l =
+        latest ??
+        newListing({ unitId: u.id, site: input.listing?.site ?? 'other', firstSeen: input.today });
       await db.listings.put(listing.parse(observe(l, input.today, rent, rentIsFrom)));
     }
 

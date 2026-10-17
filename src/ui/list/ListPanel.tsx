@@ -87,11 +87,13 @@ function EmptyNoData() {
   return (
     <div className={styles.empty}>
       <p className={styles.emptyTitle}>No units yet</p>
-      {appInfo.channel === 'live' ? (
-        <p className={styles.emptyText}>Adding units arrives in a later update.</p>
-      ) : (
+      <p className={styles.emptyText}>Paste a listing link or an address to add your first one.</p>
+      <Link to="/add" state={{ inApp: true }} className={styles.addLink}>
+        Add a unit
+      </Link>
+      {appInfo.channel !== 'live' && (
         <p className={styles.emptyText}>
-          To try the list, <Link to="/debug">load sample data</Link> on the Data check page.
+          Or, to try things out, <Link to="/debug">load sample data</Link> on the Data check page.
         </p>
       )}
     </div>

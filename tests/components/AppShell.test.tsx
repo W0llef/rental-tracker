@@ -23,7 +23,10 @@ describe('AppShell', () => {
   it('is marked as a non-live build outside production', () => {
     render(<AppShell />);
     // Tests run as the "dev" channel, which must warn that it is not the live app.
-    expect(screen.getByRole('status')).toHaveTextContent('never your real data');
+    const banner = screen
+      .getAllByRole('status')
+      .find((el) => el.textContent?.includes('real data'));
+    expect(banner).toHaveTextContent('never your real data');
   });
 
   it('switches the phone tabs and marks the current one', async () => {

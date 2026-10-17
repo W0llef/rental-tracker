@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BUILDING_TYPE_LABELS,
@@ -20,6 +21,8 @@ import { listingPrices, priceHistory } from '../../domain/listings';
 import { UTILITY_KEYS } from '../../model';
 import type { ISODate, Settings, Unit } from '../../model';
 import type { UnitRow } from '../../state/derive';
+import { PasteIntoUnit } from '../add/PasteIntoUnit';
+import { PlaceOnMapButton } from '../add/PlaceOnMap';
 import { FlagMark, LabelSwatch, Stars, StatusPill, Tag, Value } from '../common/Markers';
 import { Compass } from './Compass';
 import { mapLinks } from '../../domain/links';
@@ -221,8 +224,19 @@ function BuildingSection({ row }: { row: UnitRow }) {
 function ListingsSection({ row, today }: { row: UnitRow; today: ISODate }) {
   const listings = [...row.listings].sort((a, b) => (a.lastSeen < b.lastSeen ? 1 : -1));
   const history = priceHistory(listings);
+  const [pasting, setPasting] = useState(false);
   return (
-    <Section title="Listings and price">
+    <Section
+      title="Listings and price"
+      action={
+        !pasting && (
+          <button type="button" className={styles.linkButton} onClick={() => setPasting(true)}>
+            Paste text
+          </button>
+        )
+      }
+    >
+      {pasting && <PasteIntoUnit row={row} today={today} onDone={() => setPasting(false)} />}
       {listings.length === 0 ? (
         <p className={styles.muted}>No listings yet.</p>
       ) : (
@@ -238,6 +252,8 @@ function ListingsSection({ row, today }: { row: UnitRow; today: ISODate }) {
                       {site}
                       <span className={styles.visuallyHidden}> listing (opens in a new tab)</span>
                     </a>
+                  ) : l.url === null && l.site === 'other' ? (
+                    'No link'
                   ) : (
                     site
                   )}
@@ -299,7 +315,9 @@ export function UnitPanel({
             {title}
           </h2>
           <p className={styles.where}>
-            {b && buildingName(b) !== title && <b>{buildingName(b)}, </b>}
+            {b && buildingName(b) !== title && buildingName(b) !== b.address.line1 && (
+              <b>{buildingName(b)}, </b>
+            )}
             {b ? b.address.line1 : 'Building missing'}
             {b?.neighborhood && (
               <>
@@ -324,7 +342,9 @@ export function UnitPanel({
         </div>
         {u.isFloorPlanOnly && <p className={styles.plateNote}>Floor plan: no specific unit yet.</p>}
         {b && b.location === null && (
-          <p className={styles.plateNote}>Needs location: not on the map yet.</p>
+          <p className={styles.plateNote}>
+            Needs location: not on the map yet. <PlaceOnMapButton building={b} />
+          </p>
         )}
       </header>
 

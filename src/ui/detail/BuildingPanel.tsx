@@ -11,6 +11,7 @@ import {
 import { sortUnits } from '../../domain/sort';
 import type { ISODate } from '../../model';
 import type { BuildingRow } from '../../state/derive';
+import { PlaceOnMapButton } from '../add/PlaceOnMap';
 import { StatusPill, Value } from '../common/Markers';
 import { mapLinks } from '../../domain/links';
 import { Amenities, Facts, Links, Notes, Section } from './parts';
@@ -19,7 +20,7 @@ import styles from './detail.module.css';
 
 /**
  * The read-only building panel (#/building/:id, PLAN.md §4.1): building facts, amenities,
- * policies and your units in it. "Add unit here" arrives with quick-add (M4).
+ * policies and your units in it, with "Add unit here" and "Place on map" (M4).
  */
 export function BuildingPanel({ row, today }: { row: BuildingRow; today: ISODate }) {
   const b = row.building;
@@ -64,11 +65,20 @@ export function BuildingPanel({ row, today }: { row: BuildingRow; today: ISODate
           </div>
         </div>
         {b.location === null && (
-          <p className={styles.plateNote}>Needs location: not on the map yet.</p>
+          <p className={styles.plateNote}>
+            Needs location: not on the map yet. <PlaceOnMapButton building={b} />
+          </p>
         )}
       </header>
 
-      <Section title="Your units here">
+      <Section
+        title="Your units here"
+        action={
+          <Link to={`/add?building=${b.id}`} state={{ inApp: true }}>
+            Add unit here
+          </Link>
+        }
+      >
         {units.length === 0 ? (
           <p className={styles.muted}>None of your units are in this building.</p>
         ) : (

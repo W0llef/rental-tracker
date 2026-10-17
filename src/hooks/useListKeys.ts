@@ -7,7 +7,9 @@ import { useEffect, useRef } from 'react';
  *   Esc        leave search, or close the panel
  *   B          switch Units / Buildings
  *   L          open or close the Map layers panel (M3)
- * Ignored while typing in a field (except Esc) and when a modifier key is held.
+ *   N          add a unit (Quick-add, M4)
+ * Ignored while typing in a field (except Esc), when a modifier key is held, and inside a
+ * dialog (it handles its own keys, Esc included).
  */
 export interface ListKeyHandlers {
   focusSearch: () => void;
@@ -15,6 +17,8 @@ export interface ListKeyHandlers {
   close: () => void;
   toggleView: () => void;
   toggleLayers?: () => void;
+  /** N: open Quick-add (M4). */
+  add?: () => void;
 }
 
 /** The map canvas pans with the arrow keys; let it, rather than moving the list. */
@@ -42,6 +46,7 @@ export function useListKeys(handlers: ListKeyHandlers) {
       if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
       const h = ref.current;
       if (isTypingTarget(e.target)) return; // the search field handles its own Esc
+      if (e.target instanceof Element && e.target.closest('dialog')) return;
       switch (e.key) {
         case '/':
           e.preventDefault();
@@ -77,6 +82,12 @@ export function useListKeys(handlers: ListKeyHandlers) {
         case 'l':
         case 'L':
           h.toggleLayers?.();
+          break;
+        case 'n':
+        case 'N':
+          if (!h.add) return;
+          e.preventDefault();
+          h.add();
           break;
       }
     };

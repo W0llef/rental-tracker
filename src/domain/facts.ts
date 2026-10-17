@@ -54,9 +54,11 @@ export function factStatus(fact: Fact, t: Partial<Target>): FactStatus {
   return comparable(current) === comparable(fact.value) ? 'same' : 'changes';
 }
 
-/** The value a field has now, for showing "was …" next to a change. */
-export function currentValue(fact: Fact, t: Target): unknown {
-  return read(t, fact.field);
+/** The value a field has now ("unit.rent"), for showing "yours: …" next to a change. */
+export function valueAt(field: string, t: Partial<Target>): unknown {
+  const root = field.split('.')[0];
+  if ((root === 'unit' && !t.unit) || (root === 'building' && !t.building)) return null;
+  return read(t as Target, field);
 }
 
 export interface FactSource {

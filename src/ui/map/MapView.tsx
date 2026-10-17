@@ -18,6 +18,8 @@ import type { StyleSpecification } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { useNavigate } from 'react-router-dom';
 import Supercluster from 'supercluster';
+import { placeBuilding } from '../../commands/quickAdd';
+import { db } from '../../db/db';
 import { DEFAULT_CENTER, DEFAULT_ZOOM, boundsOf } from '../../domain/geo';
 import {
   AUTO_FAN_ZOOM,
@@ -841,6 +843,19 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
   }
 
   const anyFanOpen = view === 'units' && layout.cards.size > 0;
+
+  // "Place on map" (M4): the next click sets the building's location; the keyboard way is
+  // to pan the map's center onto the spot and use "Place at the center".
+  const placing = ui.placing;
+  const needing = data.buildings.filter((r) => r.unitCount > 0 && r.building.location === null);
+  const place = (lat: number, lng: number) => {
+    if (!placing) return;
+    const p = placing;
+    ui.setPlacing(null);
+    placeBuilding(db, p.buildingId, { lat, lng })
+      .then(() => ui.showNotice(`${p.name} is on the map.`))
+      .catch(() => ui.showNotice(`Couldn’t place ${p.name}. Try again.`));
+  };
   const baseName = BASE_MAPS.find((b) => b.id === baseLayer)?.name ?? 'base';
   const zoomBy = (d: number) => {
     const map = mapRef.current;
@@ -853,6 +868,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
       className={styles.root}
       data-base={baseLayer}
       data-zoom={layout.zoom.toFixed(1)}
+      data-placing={placing ? true : undefined}
     >
       {style && (
         <MapGL
@@ -868,6 +884,8 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
           dragRotate={false}
           pitchWithRotate={false}
           touchPitch={false}
+          cursor={placing ? 'crosshair' : undefined}
+          onClick={(e) => place(e.lngLat.lat, e.lngLat.lng)}
           onLoad={() => setLoaded(true)}
           onResize={() => {
             fitFirstTime();
@@ -896,11 +914,27 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
       )}
 
       <div className={styles.notes}>
-        {items.needLocation > 0 && (
+        {!placing && items.needLocation > 0 && (
           <p className={styles.note} data-reserve>
-            {items.needLocation === 1
-              ? '1 unit needs a location'
-              : `${items.needLocation} units need a location`}
+            <span>
+              {items.needLocation === 1
+                ? '1 unit needs a location'
+                : `${items.needLocation} units need a location`}
+            </span>
+            {needing[0] && (
+              <button
+                type="button"
+                className={styles.noteButton}
+                onClick={() =>
+                  ui.setPlacing({
+                    buildingId: needing[0]!.building.id,
+                    name: buildingName(needing[0]!.building),
+                  })
+                }
+              >
+                Place {buildingName(needing[0].building)}
+              </button>
+            )}
           </p>
         )}
         {failed && (
@@ -1017,6 +1051,29 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
       )}
 
       {legend && <Legend legend={legend} />}
+      {placing && (
+        <>
+          <div className={styles.crosshair} aria-hidden="true" />
+          <div className={styles.placingBar} role="status">
+            <span>
+              Click the map where <b>{placing.name}</b> is.
+            </span>
+            <button
+              type="button"
+              className={styles.noteButton}
+              onClick={() => {
+                const c = mapRef.current?.getCenter();
+                if (c) place(c.lat, c.lng);
+              }}
+            >
+              Place at the center
+            </button>
+            <button type="button" className={styles.noteButton} onClick={() => ui.setPlacing(null)}>
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
 
       {preview && previewRow && (
         <PhotoPreview
