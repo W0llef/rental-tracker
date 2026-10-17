@@ -899,7 +899,9 @@ Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 14
 
 ### 11.2 Open
 
-None. New questions will be added here as they come up.
+| # | Question | Options |
+| --- | --- | --- |
+| Q13 | Deleting a unit or building (M4 review, Oct 17): no milestone has a Delete button; today the only way is Undo on the Data check page, and only for the latest changes | (a) add **Delete unit** and **Delete building** to M4 now (soft delete, one undo step; the commands already exist); (b) add them with the full forms in M7; (c) another milestone |
 
 **Assumptions I'll proceed with unless you object**
 
