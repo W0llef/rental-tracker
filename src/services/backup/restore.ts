@@ -9,7 +9,7 @@ import { DATA_TABLES, SCHEMA_VERSION } from '../../model';
 import type { Settings } from '../../model';
 import { backupEnvelope, currentBackup } from '../../model/backup';
 import type { BackupEnvelope, CurrentBackup } from '../../model/backup';
-import { backupJson, makeEnvelope } from './exportJson';
+import { backupJson, makeEnvelope, withoutSecrets } from './exportJson';
 import type { BackupData } from './exportJson';
 
 /**
@@ -51,6 +51,22 @@ export function summarize(data: BackupData): DataSummary {
     photos: active('photos'),
     deleted,
   };
+}
+
+const plural = (n: number, one: string, many = `${one}s`) =>
+  `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`;
+
+/** "2 units, 1 building, 3 listings and 1 note". */
+export function summaryText(s: DataSummary): string {
+  const parts = [
+    plural(s.units, 'unit'),
+    plural(s.buildings, 'building'),
+    plural(s.listings, 'listing'),
+    plural(s.notes, 'note'),
+  ];
+  if (s.collections) parts.push(plural(s.collections, 'collection'));
+  if (s.photos) parts.push(plural(s.photos, 'photo'));
+  return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0]!;
 }
 
 export function isEmpty(summary: DataSummary): boolean {
@@ -236,17 +252,7 @@ export async function listSnapshots(db: RentalDB): Promise<SnapshotInfo[]> {
 
 /** A snapshot as a backup file (in the data format it was taken in), without API keys. */
 export function snapshotEnvelope(snapshot: Snapshot): BackupEnvelope {
-  const data: BackupData = {};
-  for (const [table, rows] of Object.entries(snapshot.data)) {
-    data[table] =
-      table === 'settings'
-        ? (rows as Settings[]).map((s) => ({
-            ...s,
-            apiKeys: { openRouteService: null, google: null },
-          }))
-        : rows;
-  }
-  return makeEnvelope(data, snapshot.fromVersion, snapshot.at);
+  return makeEnvelope(withoutSecrets(snapshot.data), snapshot.fromVersion, snapshot.at);
 }
 
 export async function snapshotFile(db: RentalDB, seq: number) {

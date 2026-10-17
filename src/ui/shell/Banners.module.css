@@ -1,0 +1,105 @@
+/* Banners under the top bar (DESIGN.md §4; PLAN.md §4.1): backup due, later photo folder.
+   Light amber with the plow edge, like the duplicate banner in Quick-add. */
+
+.backup {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+  padding: var(--s2) var(--s4);
+  background: color-mix(in srgb, var(--plow) 14%, var(--surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--plow) 55%, var(--ice));
+}
+
+.icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--ink);
+}
+
+.text {
+  flex: 1 1 320px;
+  margin: 0;
+  min-width: 0;
+  font-size: 13.5px;
+  line-height: 20px;
+  padding-top: 2px;
+}
+
+.more {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.error {
+  flex: 1 1 100%;
+  order: 3;
+  margin: 0;
+  color: var(--reject-ink);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.actions {
+  flex: none;
+  display: flex;
+  gap: var(--s2);
+}
+
+.button,
+.primary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 2px 12px 0;
+  border-radius: var(--r-md);
+  border: 1px solid var(--ice);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.button:hover {
+  background: var(--frost);
+}
+
+.primary {
+  background: var(--river);
+  border-color: var(--river);
+  color: var(--on-river);
+}
+
+.primary:hover {
+  filter: brightness(1.15);
+}
+
+.button:disabled,
+.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+@media (max-width: 759px) {
+  .backup {
+    padding: var(--s2) var(--s3);
+  }
+
+  .icon {
+    display: none;
+  }
+
+  .actions {
+    flex: 1 1 100%;
+  }
+
+  .button,
+  .primary {
+    min-height: 44px;
+    flex: 1;
+    justify-content: center;
+  }
+}

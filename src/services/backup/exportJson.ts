@@ -29,6 +29,11 @@ function clean(table: string, rows: unknown[]): unknown[] {
   }));
 }
 
+/** Every table cleaned of what must never leave the browser (API keys). */
+export function withoutSecrets(data: BackupData): BackupData {
+  return Object.fromEntries(Object.entries(data).map(([t, rows]) => [t, clean(t, rows)]));
+}
+
 /** Reads every data table in one transaction, so the backup is one consistent moment. */
 export async function readBackupData(db: RentalDB): Promise<BackupData> {
   return db.transaction('r', DATA_TABLES, async () => {

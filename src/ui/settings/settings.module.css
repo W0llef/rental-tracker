@@ -1,0 +1,368 @@
+/* Settings (DESIGN.md §4.5): section list on the left, the section on the right. */
+
+.page {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--snow);
+}
+
+.top {
+  flex: none;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--s4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--ice);
+}
+
+.back {
+  font-weight: 700;
+  text-decoration: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.back:hover {
+  text-decoration: underline;
+}
+
+.layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 720px);
+  gap: var(--s5);
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: var(--s5) var(--s4) var(--s6);
+}
+
+.title {
+  margin: 0 0 var(--s3);
+  font-size: 26px;
+  line-height: 29px;
+  font-weight: 800;
+}
+
+.navList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 2px var(--s3) 0;
+  border-radius: var(--r-md);
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.navLink:hover {
+  background: var(--frost);
+}
+
+.navLink[aria-current='page'] {
+  background: var(--frost);
+  box-shadow: inset 4px 0 0 var(--river);
+  font-weight: 800;
+}
+
+.main {
+  min-width: 0;
+}
+
+.heading {
+  margin: 4px 0 var(--s2);
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 800;
+}
+
+.lead,
+.text {
+  margin: 0;
+  color: var(--slate);
+  max-width: 62ch;
+}
+
+.card {
+  margin-top: var(--s4);
+  padding: var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+}
+
+.cardTitle {
+  margin: 0 0 var(--s3);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 700;
+}
+
+.fact {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s1) var(--s4);
+  margin: 0;
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--ice);
+}
+
+.factLabel {
+  color: var(--slate);
+}
+
+.factValue {
+  font-weight: 700;
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.factValue code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  font-weight: 400;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s3);
+}
+
+.button,
+.primary,
+.danger {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 2px 14px 0;
+  border-radius: var(--r-md);
+  border: 1px solid var(--ice);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.button:hover:not(:disabled),
+.danger:hover:not(:disabled) {
+  background: var(--frost);
+}
+
+.primary {
+  background: var(--river);
+  border-color: var(--river);
+  color: var(--on-river);
+}
+
+.primary:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+/* Red edge rather than red text: red text fails contrast on --frost in dark mode */
+.danger {
+  border: 2px solid var(--st-declined);
+  color: var(--reject-ink);
+}
+
+.button:disabled,
+.primary:disabled,
+.danger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.message,
+.error,
+.success {
+  margin: var(--s2) 0 0;
+  font-size: 13.5px;
+  color: var(--slate);
+}
+
+.message:empty {
+  margin: 0;
+}
+
+.error {
+  color: var(--reject-ink);
+  font-weight: 600;
+}
+
+.success {
+  padding: var(--s3);
+  border-radius: var(--r-md);
+  background: var(--frost);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.note {
+  margin: var(--s3) 0 0;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--slate);
+}
+
+.field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2) var(--s4);
+  margin-top: var(--s4);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--ice);
+}
+
+.fieldLabel {
+  font-weight: 600;
+}
+
+.select {
+  min-height: 36px;
+  padding: 2px var(--s2) 0;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.review {
+  margin-top: var(--s3);
+  padding: var(--s3) var(--s4) var(--s4);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--plow) 14%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--plow) 55%, var(--ice));
+}
+
+.reviewTitle {
+  margin: 0 0 var(--s2);
+  font-size: 15px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.reviewFacts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--s1) var(--s3);
+  margin: 0;
+}
+
+.reviewFacts dt {
+  color: var(--slate);
+}
+
+.reviewFacts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.list {
+  list-style: none;
+  margin: var(--s3) 0 0;
+  padding: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2) var(--s3);
+  padding: var(--s2) 0;
+  border-top: 1px solid var(--ice);
+}
+
+.rowText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rowTitle {
+  font-weight: 700;
+}
+
+.rowMeta {
+  font-size: 12.5px;
+  color: var(--slate);
+}
+
+.rowActions {
+  display: flex;
+  gap: var(--s2);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 759px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s3);
+    padding: var(--s4) var(--s3) var(--s6);
+  }
+
+  .navList {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .navLink {
+    min-height: 44px;
+  }
+
+  .navLink[aria-current='page'] {
+    box-shadow: inset 0 -3px 0 var(--river);
+  }
+
+  .button,
+  .primary,
+  .danger,
+  .select {
+    min-height: 44px;
+  }
+
+  .fact {
+    flex-direction: column;
+  }
+
+  .factValue {
+    text-align: left;
+  }
+}
+
+/* The pre-update backup screen (UpgradeGate) */
+.gate {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--s6) var(--s4);
+}
