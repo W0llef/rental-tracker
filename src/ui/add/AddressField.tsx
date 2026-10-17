@@ -145,7 +145,7 @@ export const AddressField = forwardRef<
             }}
             onMouseMove={() => setActive(i)}
           >
-            <span className={styles.optionTitle}>{o.title}</span>
+            <span className={styles.optionTitle}>{o.title}</span>{' '}
             {o.detail && <span className={styles.optionDetail}>{o.detail}</span>}
           </li>
         ))}

@@ -52,8 +52,13 @@ export function FactChips({
               <span aria-hidden="true" className={styles.chipMark}>
                 {on ? '✓' : '+'}
               </span>
-              {fact.label}
-              {was !== null && <span className={styles.chipWas}> (yours: {was})</span>}
+              <span>{fact.label}</span>
+              {was !== null && (
+                <>
+                  {' '}
+                  <span className={styles.chipWas}>(yours: {was})</span>
+                </>
+              )}
             </button>
           </li>
         );

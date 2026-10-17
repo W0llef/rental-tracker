@@ -334,12 +334,15 @@ export function QuickAddDialog({
         located = true;
       } else {
         const place = await lookUp(form.address, suggestions.places);
+        // Typed words that aren't an address are probably the building's name.
+        const typedName = parseAddress(form.address) ? null : form.address.trim();
+        const name = nameHint ?? typedName;
         const m =
           place && !form.newBuilding
             ? matchBuilding(buildings, {
                 address: place.address,
                 location: place.location,
-                name: place.name ?? nameHint,
+                name: place.name ?? name,
               })
             : null;
         if (m) {
@@ -360,7 +363,7 @@ export function QuickAddDialog({
           ref = { id: m.building.id };
           located = m.building.location !== null;
         } else if (place) {
-          ref = { draft: draftFromPlace(place, nameHint) };
+          ref = { draft: draftFromPlace(place, name) };
           located = true;
         } else {
           ref = { draft: draftFromTyped(form.address, nameHint) };
@@ -438,6 +441,14 @@ export function QuickAddDialog({
       onCancel={(e) => {
         e.preventDefault();
         onClose();
+      }}
+      onKeyDown={(e) => {
+        // Esc closes (handled here too, as not every browser sends "cancel"); a field that
+        // used Esc itself (the address list) has already prevented it.
+        if (e.key === 'Escape' && !e.defaultPrevented) {
+          e.preventDefault();
+          onClose();
+        }
       }}
     >
       <form className={styles.form} onSubmit={onSubmit} onKeyDown={onKeyDown} noValidate>
