@@ -307,9 +307,11 @@ export function BackupSection() {
               )}
               <dt>Replaces</dt>
               <dd>
-                {current && !isEmpty(current)
-                  ? `${summaryText(current)} in this browser now`
-                  : 'Nothing: this browser has no data yet'}
+                {!current
+                  ? '…'
+                  : !isEmpty(current)
+                    ? `${summaryText(current)} in this browser now`
+                    : 'Nothing: this browser has no data yet'}
               </dd>
             </dl>
             <div className={styles.buttons}>

@@ -114,8 +114,10 @@ describe('Settings → Backup and restore', () => {
     expect(within(review).getByTestId('restore-contains')).toHaveTextContent(
       '1 unit, 1 building, 1 listing, 1 note, 2 collections and 1 photo',
     );
-    expect(review).toHaveTextContent(
-      '2 units, 1 building, 0 listings and 0 notes in this browser now',
+    await waitFor(() =>
+      expect(review).toHaveTextContent(
+        '2 units, 1 building, 0 listings and 0 notes in this browser now',
+      ),
     );
 
     await userEvent.click(within(review).getByRole('button', { name: 'Replace with this backup' }));
