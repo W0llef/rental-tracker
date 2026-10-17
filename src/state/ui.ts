@@ -41,8 +41,28 @@ interface MapUi {
   map: MapMemory;
 }
 
+/** "Place on map" in progress: the next click on the map sets this building's location. */
+export interface Placing {
+  buildingId: string;
+  name: string;
+}
+
+/** A short confirmation after an action ("Unit 1504 added"), with a link to what it's about. */
+export interface Notice {
+  id: number;
+  text: string;
+  to: string | null;
+  /** Undoes the action the notice is about (e.g. a delete). */
+  undo: (() => void) | null;
+}
+
 export interface UiState extends Remembered, MapUi {
   query: string;
+  placing: Placing | null;
+  notice: Notice | null;
+  setPlacing: (placing: Placing | null) => void;
+  showNotice: (text: string, to?: string | null, undo?: (() => void) | null) => void;
+  clearNotice: () => void;
   setView: (view: ListMode) => void;
   toggleView: () => void;
   setQuery: (query: string) => void;
@@ -136,6 +156,12 @@ export const useUi = create<UiState>()((set, get) => {
   return {
     ...loadRemembered(),
     query: '',
+    placing: null,
+    notice: null,
+    setPlacing: (placing) => set({ placing }),
+    showNotice: (text, to = null, undo = null) =>
+      set({ notice: { id: Date.now(), text, to, undo } }),
+    clearNotice: () => set({ notice: null }),
     setView: (view) => update({ view }),
     toggleView: () => update({ view: get().view === 'units' ? 'buildings' : 'units' }),
     setQuery: (query) => set({ query }),
@@ -191,7 +217,7 @@ export const useUi = create<UiState>()((set, get) => {
 
 /** Back to the starting state (tests). */
 export function resetUi() {
-  useUi.setState({ ...defaults, ...mapUiStart(), query: '' });
+  useUi.setState({ ...defaults, ...mapUiStart(), query: '', placing: null, notice: null });
 }
 
 // ── Map viewport memory (PLAN.md §4.2: "Map viewport … remembered in localStorage") ──

@@ -22,10 +22,13 @@ export function Section({
 }) {
   return (
     <section className={styles.sec} aria-labelledby={id}>
-      <h3 className={styles.secTitle} id={id}>
-        <span>{title}</span>
+      {/* The action sits beside the heading, not in it, so the heading's name is just its title */}
+      <div className={styles.secTitle}>
+        <h3 className={styles.secHeading} id={id}>
+          {title}
+        </h3>
         {action && <span className={styles.secAction}>{action}</span>}
-      </h3>
+      </div>
       {children}
     </section>
   );

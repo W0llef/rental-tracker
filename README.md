@@ -20,6 +20,50 @@ browser for that exact web address. That means:
   **Restore** (arrives in milestone M5).
 - Clearing "site data" for the page erases your units. Keep backups.
 
+### Adding units
+
+Press **Add unit** in the top bar (or `N`). Everything is optional except where the unit is.
+
+- **Listing link**: paste the link from Zillow, Apartments.com, HotPads, a building's own site…
+  The app recognizes the site, and where the link spells out an address or a building's name
+  (Zillow and Apartments.com links usually do) it fills the address in for you. Nothing is
+  downloaded from the site.
+- **Address**: start typing a street address or a building's name. Your own buildings come
+  first ("In your list"), then suggestions from OpenStreetMap (Photon). Pick one with the arrow
+  keys and `⏎`, or the mouse. If you don't pick one, the app looks the address up once when you
+  add the unit (Nominatim). If it can't find it, or you're offline, the unit is still saved and
+  marked **Needs location**.
+- **Unit**, **Floor plan**, **Rent**, **Beds** (0 for a studio), **Baths**. Tick _Floor plan only_
+  for a plan with no unit number yet, and _Price is "from"_ for the low end of a range.
+- **Paste listing text**: on the listing page, select all (`⌘A` / `Ctrl+A`), copy, and paste it
+  in the box. The app recognizes about 30 kinds of detail (rent, beds, baths, size, available
+  date, deposit and fees, lease terms, laundry, A/C and heat, parking, storage, which utilities
+  are included, pet policy, amenities, year built and more). Rent, beds, baths, unit and address
+  go into their boxes (highlighted); the rest show as chips. Click a chip to leave it out. The
+  pasted text is kept with the unit's history.
+- **Same unit twice?** If the link is already saved, or the building already has that unit
+  number, a banner says so: **Add this listing to it** (the default, `⏎`) adds the link and
+  today's price to the unit you have; **Add as a separate unit** adds a new one anyway.
+- **Add unit** (`⏎`) closes the dialog; **Add and open** shows the new unit; **Add another
+  here** (`⇧⏎`) keeps the building and listing site so you can add the next unit straight away.
+- A building's panel has **Add unit here**.
+
+Later, a unit's **Listings and price** section has **Paste text** for more listing text:
+details the unit doesn't have yet start ticked; ones that would change what you have start
+unticked and show your value.
+
+**Place on map.** A unit marked _Needs location_ has **Place on map** in its panel (the map's
+note offers it too). Click the spot on the map, or pan the map's center onto it and choose
+**Place at the center**. `Esc` cancels.
+
+**Deleting.** At the end of a unit's or building's panel, **Delete unit…** or **Delete
+building…** asks once, then deletes (a building takes its units with it). The confirmation that
+follows has **Undo**. Editing details by hand (a building's name, amenities and so on) arrives
+with the full forms in M7.
+
+Each add, paste, placement or delete is one step in the undo history (Undo is on the Data check page
+until the keyboard shortcuts arrive in M6).
+
 ### Browsing your units
 
 - The list shows every unit with its rent, size, status and markers. **Units / Buildings** switches
@@ -63,6 +107,9 @@ browser for that exact web address. That means:
 - Map pictures come from free services (OpenFreeMap, OpenStreetMap, CyclOSM and Minnesota's MnGeo
   aerial photos). They load only while you look at the map and need an internet connection; if
   one is down, the map says so and you can pick another in Layers.
+- Address suggestions come from Photon and Nominatim (both run on OpenStreetMap data, free, no
+  key). Answers are remembered in the browser for 30 days, so adding a second unit at the same
+  address needs no network.
 
 ## Running it on your computer (for development)
 
@@ -86,8 +133,10 @@ Other commands:
 | `npm run format`    | Fixes formatting                                                   |
 
 `localhost` uses a separate database from the live app, so development never touches real data.
-Browser tests answer the map servers' requests themselves (`tests/e2e/fixtures.ts`), so they run
-offline and never load real tiles.
+Browser tests answer the map servers' and geocoders' requests themselves
+(`tests/e2e/fixtures.ts`), so they run offline, never load real tiles and never ask Photon or
+Nominatim anything. Pasted-text examples live in `tests/fixtures/listing-text/` (made-up pages in
+the shape of real sites).
 
 ### Checking the data
 

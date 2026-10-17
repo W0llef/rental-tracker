@@ -1,14 +1,16 @@
 import { useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useMatch, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { localDate } from '../../domain/format';
 import { useListKeys } from '../../hooks/useListKeys';
 import { deriveListView } from '../../state/derive';
 import { useDataset } from '../../state/useDataset';
 import { useUi } from '../../state/ui';
+import { QuickAddDialog } from '../add/QuickAddDialog';
 import { BuildingPanel } from '../detail/BuildingPanel';
 import { MapPanel } from '../map/MapPanel';
 import { UnitPanel } from '../detail/UnitPanel';
 import { ListPanel } from '../list/ListPanel';
+import { Notice } from './Notice';
 import { PreviewBanner } from './PreviewBanner';
 import { SearchField } from './SearchField';
 import styles from './AppShell.module.css';
@@ -32,6 +34,17 @@ export function AppShell() {
   const { unitId, buildingId } = useParams();
   const selectedKey = unitId ? `unit:${unitId}` : buildingId ? `building:${buildingId}` : null;
   const navigate = useNavigate();
+  const location = useLocation();
+  const adding = useMatch('/add') !== null;
+  const [params] = useSearchParams();
+  // Quick-add is a route (#/add), so Back closes it. Opened from the app, closing goes back
+  // to where you were; opened from a link, it goes to the main screen.
+  const openAdd = () => navigate('/add', { state: { inApp: true } });
+  const closeAdd = () => {
+    if ((location.state as { inApp?: boolean } | null)?.inApp) navigate(-1);
+    else navigate('/', { replace: true });
+  };
+  const placing = useUi((s) => s.placing);
 
   const data = useDataset();
   const { query, unitSort, buildingSort, view, toggleView, togglePanel } = useUi();
@@ -49,6 +62,12 @@ export function AppShell() {
     if (selectedKey) setTab('unit');
     else if (tab === 'unit') setTab('list');
   }
+  // "Place on map" shows the map (phones).
+  const [seenPlacing, setSeenPlacing] = useState(placing);
+  if (seenPlacing !== placing) {
+    setSeenPlacing(placing);
+    if (placing) setTab('map');
+  }
 
   const search = useRef<HTMLInputElement>(null);
   const lastMove = useRef<{ from: string | null; to: string } | null>(null);
@@ -57,12 +76,16 @@ export function AppShell() {
     // Esc: close a map panel, then fold the fans you opened, then close the details
     close: () => {
       const ui = useUi.getState();
-      if (ui.panel) ui.setPanel(null);
+      if (ui.placing) ui.setPlacing(null);
+      else if (ui.panel) ui.setPanel(null);
       else if (ui.openFans.length) ui.collapseFans();
       else if (selectedKey) navigate('/');
     },
     toggleView,
     toggleLayers: () => togglePanel('layers'),
+    add: () => {
+      if (!adding) openAdd();
+    },
     move: (delta) => {
       if (!listView) return;
       const keys =
@@ -136,6 +159,21 @@ export function AppShell() {
           <h1 className={styles.title}>Rental Unit Tracker</h1>
         </div>
         <SearchField ref={search} />
+        <button
+          type="button"
+          className={styles.addBtn}
+          onClick={openAdd}
+          title="Add a unit (N)"
+          aria-keyshortcuts="n"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <span className={styles.addLabel}>Add unit</span>
+          <kbd className={styles.kbd} aria-hidden="true">
+            N
+          </kbd>
+        </button>
       </header>
 
       <main className={styles.main}>
@@ -176,6 +214,17 @@ export function AppShell() {
           )}
         </section>
       </main>
+
+      <Notice />
+      {adding && data && (
+        <QuickAddDialog
+          // A new building chosen from its panel starts a fresh dialog.
+          key={params.get('building') ?? 'new'}
+          data={data}
+          presetBuildingId={params.get('building')}
+          onClose={closeAdd}
+        />
+      )}
 
       <nav className={styles.tabs} aria-label="Views">
         {tabs.map((t) => (

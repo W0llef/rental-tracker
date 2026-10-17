@@ -10,7 +10,7 @@ for (const scheme of ['light', 'dark'] as const) {
   test(`live build fills the screen (${scheme})`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });
     await page.goto('/');
-    await expect(page.getByRole('status')).toHaveCount(0); // no preview banner
+    await expect(page.getByText(/It uses its own database/)).toHaveCount(0); // no preview banner
     await expect(page.getByTestId('build-info')).toContainText('Live build');
     await expect(page.getByTestId('build-info')).toContainText('rental-tracker');
 
@@ -38,11 +38,30 @@ for (const scheme of ['light', 'dark'] as const) {
   });
 }
 
-test('live list is empty and does not offer sample data', async ({ page }) => {
+test('live list is empty, offers Quick-add and no sample data', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('No units yet')).toBeVisible();
-  await expect(page.getByText('Adding units arrives in a later update.')).toBeVisible();
+  await expect(
+    page.getByText('Paste a listing link or an address to add your first one.'),
+  ).toBeVisible();
   await expect(page.getByRole('link', { name: 'load sample data' })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Add a unit' }).click();
+  await expect(page.getByRole('dialog', { name: 'Add a unit' })).toBeVisible();
+});
+
+test('live build adds a unit and keeps it after a reload', async ({ page, geoNet }) => {
+  await page.goto('/#/add');
+  const dialog = page.getByRole('dialog', { name: 'Add a unit' });
+  await dialog.getByRole('combobox', { name: 'Address' }).fill('Riverlight');
+  await dialog.getByRole('option', { name: /^Riverlight 201 South Example/ }).click();
+  await dialog.getByLabel('Unit', { exact: true }).fill('1504');
+  await dialog.getByLabel('Rent', { exact: true }).fill('1650');
+  await dialog.getByLabel('Rent', { exact: true }).press('Enter');
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByTestId('list-count')).toHaveText('1 unit in 1 building');
+  await page.reload();
+  await expect(page.getByTestId('list-count')).toHaveText('1 unit in 1 building');
+  expect(geoNet.queries.some((q) => q.startsWith('photon:'))).toBe(true);
 });
 
 test('live data check page uses the real database and offers no sample data', async ({ page }) => {

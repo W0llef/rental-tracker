@@ -1449,3 +1449,71 @@
     height: 36px;
   }
 }
+
+/* ── Place on map (M4) ── */
+.note {
+  max-width: 100%;
+}
+
+.note:has(.noteButton) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--s2);
+}
+
+.noteButton {
+  min-height: 26px;
+  padding: 2px 8px 0;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.noteButton:hover {
+  background: var(--frost);
+}
+
+.placingBar {
+  position: absolute;
+  z-index: 4;
+  left: var(--s4);
+  right: 72px;
+  top: 64px;
+  justify-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px var(--s2);
+  width: fit-content;
+  max-width: calc(100% - var(--s4) - 72px);
+  padding: 8px 10px 7px;
+  background: var(--surface);
+  border: 1px solid var(--river);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-float);
+  font-size: 13px;
+}
+
+/* While placing, pins let clicks through to the map */
+.root[data-placing] :global(.maplibregl-marker) {
+  pointer-events: none;
+}
+
+.crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--river), var(--river)) center / 2px 100% no-repeat,
+    linear-gradient(var(--river), var(--river)) center / 100% 2px no-repeat;
+  filter: drop-shadow(0 0 1px var(--surface)) drop-shadow(0 0 1px var(--surface));
+}

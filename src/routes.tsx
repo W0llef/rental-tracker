@@ -11,7 +11,7 @@ export const routes: RouteObject[] = [
   {
     path: '/',
     element: <AppShell />,
-    children: [{ path: 'unit/:unitId' }, { path: 'building/:buildingId' }],
+    children: [{ path: 'unit/:unitId' }, { path: 'building/:buildingId' }, { path: 'add' }],
   },
   {
     path: '/debug',

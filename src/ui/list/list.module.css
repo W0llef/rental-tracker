@@ -319,3 +319,20 @@
   max-width: 100%;
   flex-shrink: 1;
 }
+
+.addLink {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  margin-bottom: var(--s3);
+  padding: 2px 14px 0;
+  border-radius: var(--r-md);
+  background: var(--river);
+  color: var(--on-river);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.addLink:hover {
+  filter: brightness(1.15);
+}

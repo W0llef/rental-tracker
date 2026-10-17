@@ -41,6 +41,11 @@ function currentContext(): ActionContext | undefined {
   return ctx && 'actionId' in ctx ? ctx : undefined;
 }
 
+/** The id of the action being run, inside an action's function (e.g. for an import record). */
+export function currentActionId(): string | null {
+  return currentContext()?.actionId ?? null;
+}
+
 export async function action<T>(
   db: RentalDB,
   label: string,

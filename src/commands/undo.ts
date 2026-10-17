@@ -43,6 +43,21 @@ export async function undo(db: RentalDB): Promise<ActionSummary | null> {
   return target;
 }
 
+/**
+ * Undoes one particular action, but only while it's still the latest thing done (the Undo
+ * button on a confirmation). Returns false when something else has happened since.
+ */
+export async function undoAction(db: RentalDB, actionId: string): Promise<boolean> {
+  const { undo: stack } = await readStacks(db);
+  if (stack.at(-1)?.actionId !== actionId) return false;
+  try {
+    return (await undo(db))?.actionId === actionId;
+  } catch (e) {
+    if (e instanceof HistoryChangedError) return false;
+    throw e;
+  }
+}
+
 export async function redo(db: RentalDB): Promise<ActionSummary | null> {
   const { redo: stack } = await readStacks(db);
   const target = stack.at(-1);

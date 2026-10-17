@@ -1,0 +1,50 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-93.2601, 44.9801] },
+      "properties": {
+        "osm_id": 1001,
+        "osm_type": "W",
+        "osm_key": "building",
+        "osm_value": "apartments",
+        "type": "house",
+        "name": "Riverlight",
+        "housenumber": "201",
+        "street": "South Example Street",
+        "postcode": "55401",
+        "city": "Minneapolis",
+        "district": "Downtown East",
+        "state": "Minnesota",
+        "countrycode": "US"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-93.2655, 44.9765] },
+      "properties": {
+        "osm_id": 2002,
+        "osm_type": "W",
+        "type": "street",
+        "name": "South Example Street",
+        "postcode": "55401",
+        "city": "Minneapolis",
+        "state": "Minnesota",
+        "countrycode": "US"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-87.6, 41.8] },
+      "properties": {
+        "osm_id": 3,
+        "osm_type": "N",
+        "type": "house",
+        "housenumber": "201",
+        "street": "Example St",
+        "countrycode": "CA"
+      }
+    }
+  ]
+}

@@ -1,9 +1,12 @@
 import { expect, test as base } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 /**
- * Every e2e test uses this `test`: it answers the map's network requests locally, so tests
- * never depend on (or put load on) OpenFreeMap, OpenStreetMap, CyclOSM or MnGeo.
+ * Every e2e test uses this `test`: it answers the map's and the geocoders' network requests
+ * locally, so tests never depend on (or put load on) OpenFreeMap, OpenStreetMap, CyclOSM,
+ * MnGeo, Photon or Nominatim.
  *  - style documents → a small stand-in style (background only, Wayfinding layer id)
  *  - raster tiles    → a plain 1×1 PNG
  * `mapNet.requests` records which hosts the map asked for, so tests can check the base
@@ -37,11 +40,57 @@ export interface MapNetwork {
   failHosts: Set<string>;
 }
 
-export const test = base.extend<{ mapNet: MapNetwork }>({
+/**
+ * The geocoders (M4) answered locally too: Photon with `photon` (GeoJSON), Nominatim with
+ * `nominatim` (a JSON array). Set either to null to make it fail (as when offline).
+ * `queries` records what was asked, as "photon:<q>" or "nominatim:<q>".
+ */
+export interface GeoNetwork {
+  photon: unknown;
+  nominatim: unknown;
+  queries: string[];
+}
+
+const geoFixture = (name: string) =>
+  JSON.parse(
+    readFileSync(fileURLToPath(new URL(`../fixtures/geocode/${name}`, import.meta.url)), 'utf8'),
+  ) as unknown;
+
+export const test = base.extend<{ mapNet: MapNetwork; geoNet: GeoNetwork }>({
   mapNet: [
     async ({ page }, use) => {
       const net: MapNetwork = { requests: [], failHosts: new Set() };
       await stubMapNetwork(page, net);
+      await use(net);
+    },
+    { auto: true },
+  ],
+  geoNet: [
+    // Registered after the map stubs, so it answers first for the geocoder hosts.
+    async ({ page, mapNet }, use) => {
+      void mapNet;
+      const net: GeoNetwork = {
+        photon: geoFixture('photon-riverlight.json'),
+        nominatim: geoFixture('nominatim-1010.json'),
+        queries: [],
+      };
+      await page.route(
+        (url) =>
+          url.hostname === 'photon.komoot.io' || url.hostname === 'nominatim.openstreetmap.org',
+        async (route) => {
+          const url = new URL(route.request().url());
+          const which = url.hostname.startsWith('photon') ? 'photon' : 'nominatim';
+          net.queries.push(`${which}:${url.searchParams.get('q') ?? ''}`);
+          const body = net[which];
+          if (body === null) return route.abort('internetdisconnected');
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            headers: { 'access-control-allow-origin': '*' },
+            body: JSON.stringify(body),
+          });
+        },
+      );
       await use(net);
     },
     { auto: true },

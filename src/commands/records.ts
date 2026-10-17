@@ -45,9 +45,9 @@ export async function updateBuilding(
   return value;
 }
 
-/** Soft-deletes a building and its units (one undo step). */
-export async function deleteBuilding(db: RentalDB, id: ID): Promise<void> {
-  await action(db, 'Delete building', async () => {
+/** Soft-deletes a building and its units (one undo step). Returns the action's id. */
+export async function deleteBuilding(db: RentalDB, id: ID): Promise<string> {
+  const { actionId } = await action(db, 'Delete building', async () => {
     const at = nowIso();
     const current = await db.buildings.get(id);
     if (!current) throw new NotFoundError('Building', id);
@@ -57,6 +57,7 @@ export async function deleteBuilding(db: RentalDB, id: ID): Promise<void> {
       if (!u.deletedAt) await db.units.put({ ...u, deletedAt: at, updatedAt: at });
     }
   });
+  return actionId;
 }
 
 // ── Units ──────────────────────────────────────────────────────────────────
@@ -98,13 +99,15 @@ export async function updateUnit(
   return value;
 }
 
-export async function deleteUnit(db: RentalDB, id: ID): Promise<void> {
-  await action(db, 'Delete unit', async () => {
+/** Soft-deletes a unit (one undo step); its listings and notes stay with it. Returns the action's id. */
+export async function deleteUnit(db: RentalDB, id: ID): Promise<string> {
+  const { actionId } = await action(db, 'Delete unit', async () => {
     const current = await db.units.get(id);
     if (!current) throw new NotFoundError('Unit', id);
     const at = nowIso();
     await db.units.put({ ...current, deletedAt: at, updatedAt: at });
   });
+  return actionId;
 }
 
 // ── Listings and notes ─────────────────────────────────────────────────────

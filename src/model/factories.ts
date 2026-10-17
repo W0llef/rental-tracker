@@ -20,21 +20,8 @@ function baseFields(at: ISODateTime) {
 const allUnknown = <K extends string>(keys: readonly K[]) =>
   Object.fromEntries(keys.map((k) => [k, null])) as Record<K, null>;
 
-/** Display form and dedupe key for a typed address (full normalization arrives in M4). */
-export function makeAddress(
-  line1: string,
-  city: string | null,
-  state = 'MN',
-  zip: string | null = null,
-): Address {
-  const formatted = [line1, city, [state, zip].filter(Boolean).join(' ')]
-    .filter(Boolean)
-    .join(', ');
-  const normalized = [line1, city ?? '']
-    .map((part) => part.toLowerCase().replace(/[.,#]/g, '').replace(/\s+/g, ' ').trim())
-    .join('|');
-  return { line1, city, state, zip, formatted, normalized };
-}
+/** Display form and dedupe key for an address (domain/address.ts). */
+export { makeAddress } from '../domain/address';
 
 export type BuildingInput = Partial<
   Omit<Building, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>
