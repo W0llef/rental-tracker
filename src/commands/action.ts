@@ -84,8 +84,10 @@ export async function systemWrite<T>(
   db: RentalDB,
   reason: string,
   fn: () => Promise<T>,
+  /** Other tables the write needs in the same transaction (e.g. snapshots for a restore). */
+  extraTables: string[] = [],
 ): Promise<T> {
-  return db.transaction('rw', WRITE_TABLES, async (tx) => {
+  return db.transaction('rw', [...WRITE_TABLES, ...extraTables], async (tx) => {
     setWriteContext(tx.idbtrans, { system: reason });
     return fn();
   });
