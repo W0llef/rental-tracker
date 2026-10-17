@@ -1,0 +1,19 @@
+[
+  {
+    "place_id": 4242,
+    "lat": "44.9731",
+    "lon": "-93.2752",
+    "name": "",
+    "addresstype": "building",
+    "address": {
+      "house_number": "1010",
+      "road": "Nicollet Mall",
+      "neighbourhood": "Downtown West",
+      "city": "Minneapolis",
+      "county": "Hennepin County",
+      "state": "Minnesota",
+      "postcode": "55403",
+      "country_code": "us"
+    }
+  }
+]
