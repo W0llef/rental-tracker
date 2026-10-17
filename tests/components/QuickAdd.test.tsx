@@ -9,6 +9,7 @@ import { makeAddress } from '../../src/model/factories';
 import { routes } from '../../src/routes';
 import { readPhoton } from '../../src/services/geocode/photon';
 import type { Place } from '../../src/services/geocode';
+import type * as GeocodeModule from '../../src/services/geocode';
 import { resetUi, useUi } from '../../src/state/ui';
 
 /** M4: Quick-add, paste text, duplicates and Place on map, with the geocoders faked. */
@@ -18,7 +19,7 @@ const geo = vi.hoisted(() => ({
   lookup: vi.fn<(q: string) => Promise<Place | null>>(),
 }));
 vi.mock('../../src/services/geocode', async (importOriginal) => {
-  const real = await importOriginal<typeof import('../../src/services/geocode')>();
+  const real = await importOriginal<typeof GeocodeModule>();
   return { ...real, geocoder: () => geo };
 });
 
