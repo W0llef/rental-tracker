@@ -7,12 +7,14 @@ import './styles/base.css';
 import { dbName } from './config';
 import { checkPendingUpgrade, hasRecords, readStoredData } from './db/upgradeCheck';
 import { router } from './routes';
+import { watchForFirstChange } from './ui/shell/useStorageSafety';
 
 const element = document.getElementById('root');
 if (!element) throw new Error('Missing #root element');
 const root = createRoot(element);
 
 function renderApp() {
+  watchForFirstChange();
   root.render(
     <StrictMode>
       <RouterProvider router={router} />
