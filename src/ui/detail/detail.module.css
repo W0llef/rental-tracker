@@ -435,3 +435,9 @@
   font: inherit;
   text-decoration: underline;
 }
+
+.secHeading {
+  margin: 0;
+  font: inherit;
+  color: inherit;
+}
