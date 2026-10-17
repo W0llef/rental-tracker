@@ -183,7 +183,7 @@ export function BackupSection() {
             {!meta
               ? '…'
               : meta.lastBackupAt
-                ? `${lastBackupText(reminder?.daysSince ?? null)} · ${dateTimeText(meta.lastBackupAt)}`
+                ? `${lastBackupText(reminder?.daysSince ?? null)} (${dateTimeText(meta.lastBackupAt)})`
                 : 'Never'}
           </span>
         </p>
@@ -291,7 +291,8 @@ export function BackupSection() {
               <dt>Made</dt>
               <dd>
                 {dateTimeText(restore.checked.backup.exportedAt)}
-                {restore.source.kind === 'file' && ` · app ${restore.checked.backup.appVersion}`}
+                {restore.source.kind === 'file' &&
+                  ` by app version ${restore.checked.backup.appVersion}`}
               </dd>
               <dt>Contains</dt>
               <dd data-testid="restore-contains">{summaryText(restore.checked.summary)}</dd>
@@ -361,7 +362,7 @@ export function BackupSection() {
                 <div className={styles.rowText}>
                   <span className={styles.rowTitle}>{snapshotTitle(s)}</span>
                   <span className={styles.rowMeta}>
-                    {dateTimeText(s.at)} · {summaryText(s.summary)}
+                    {dateTimeText(s.at)}: {summaryText(s.summary)}
                   </span>
                 </div>
                 <div className={styles.rowActions}>

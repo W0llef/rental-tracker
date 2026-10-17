@@ -524,7 +524,7 @@ There are two places old data can come from — the browser's own database and o
 4. Backup import runs the same chain: `v1 → v2 → … → current`, then validates against the current zod schemas. A backup from a *newer* app version is refused with a clear message instead of being half-imported.
 5. Old migrations are never edited. Each one ships with a fixture backup (`tests/fixtures/backup-vN.json`) and a test that it migrates to the current version and passes validation. Fixtures are frozen: never regenerate an old one. The framework itself is tested with throwaway v2–v6 versions (`tests/db/versions.test.ts`).
 6. Rule for the build: from Milestone 1 on, data is never wiped to change its shape. You can start entering real units at Milestone 4 and keep them through Phase 4.
-7. **Before any migration runs on real data**, the app asks you to download a backup file first (built in M5 with backup export; no migration ships before then) ("This update changes how your data is stored. Download a backup before continuing."). That file is what makes rolling back to an older version possible, because an older version can't open a database a newer one has upgraded (§13).
+7. **Before any migration runs on real data**, the app asks you to download a backup file first (built in M5 with backup export; no migration ships before then) ("This update changes how your data is stored. Download a backup before continuing."). That file is what makes rolling back to an older version possible, because an older version can't open a database a newer one has upgraded (§13). *As built in M5:* before the database is opened, `main.tsx` reads the stored version with plain IndexedDB (`indexedDB.databases()`, or opening without a version and never creating one) and, if it's older than `SCHEMA_VERSION` and holds data, shows that screen instead of the app. *Download backup* reads the stored records as they are, so the file is in the old format and opens in the previous app version too; *Continue* (or *Continue without a backup*) opens the database, which runs the upgrade and its snapshot. Tested with a throwaway v2 (`tests/db/upgradeCheck.test.ts`); no real v2 exists yet.
 8. **Preview builds use a separate database** (`rental-tracker-preview`) and show a "Preview" banner, so testing a milestone never touches your real data even though both live at the same web address.
 
 ---
@@ -733,6 +733,17 @@ interface OriginalStore {
 - **Safety**: `navigator.storage.persist()` is requested on first data entry. A banner appears when the last backup is older than 7 days (configurable) and after any restore or bulk import.
 - **"Nothing lost" check**: an automated round-trip test (export → wipe → restore → deep-equal) runs on random datasets every test run.
 
+*As built in M5* (`services/backup/`, `services/storage.ts`, `db/upgradeCheck.ts`, `ui/settings/`):
+
+- **Settings** (`#/settings/backup`, `#/settings/storage`; the gear in the top bar) has only the two sections M5 needs; the others arrive with their milestones. Loaded on demand like the Data check page.
+- **Backup (data)**: every data table read in one transaction, ordered by id, deleted records included; API keys blanked; indented JSON so it can be read without the app. Preview and development builds name files `rental-tracker-preview-backup-…`. *Back up with photos (.zip)* stays in M11 with the photo archive.
+- **Last backup time is kept per browser** in `meta` (`lastBackupAt`), not in `Settings.backup.lastBackupAt` (left in the model, always null): it isn't data, so it mustn't be undoable or travel in backups. After a restore it's set to the file's `exportedAt` (the data now matches that file), so restoring an old file shows the reminder until you back up again. The reminder interval (`Settings.backup.remindEveryDays`: 1, 3, 7, 14 or 30 days) is a normal undoable setting.
+- **Reminder banner** under the top bar on the main screen when there's a building or unit and no backup from this browser in the interval (or never). *Back up data* downloads at once; *Later* hides it for 24 hours (`meta.backupSnoozedUntil`). "After a bulk import" (M10) is left to that milestone.
+- **Restore**: the file is checked before anything is written: envelope, migration chain, every record against the zod schemas (first three problems named), duplicate ids, one settings record. Unknown tables are ignored, missing ones are empty. The review shows what the file holds next to what's in the browser now, with *Replace with this backup*, *Download what's here first* and *Cancel*. One `systemWrite` transaction then saves a snapshot (skipped when the database is empty), empties and refills the data tables, keeps this browser's API keys, and clears the change log; a failure part-way changes nothing.
+- **Snapshots ("Safety copies")** now carry a `reason` (`migration` or `restore`; older ones read as migration) and the last 3 **of each kind** are kept, so restores never push out the copy from before an update. Each can be downloaded (`…-safety-copy-<date>.json`, in the data format it was taken in) or restored through the same review. `snapshots` isn't a data table, so this isn't a data-format change.
+- **Persistent storage**: `navigator.storage.persist()` is asked once by itself (`meta.persistAskedAt`), after the first change anywhere in the app or on opening the main screen with data. Settings → Storage shows the answer, space used and available, and can ask again.
+- **Nothing lost**: a fast-check property test runs random command sequences (sample data, quick-add with pasted text, edits, deletes, notes, settings, undo), exports to JSON text, restores into a fresh database and over the old one, and deep-compares every table. A browser test does the same through the real UI between two browser profiles.
+
 ### 5.6 Undo and change history
 
 - Every write goes through `action(label, fn)`. A **Dexie DBCore middleware** records `{actionId, table, key, before, after}` for every put/delete inside it, so nothing can be written without being undoable.
@@ -906,7 +917,9 @@ Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 14
 
 ### 11.2 Open
 
-None. New questions will be added here as they come up.
+| # | Question | Proposal |
+| --- | --- | --- |
+| Q14 | DESIGN §4.5 lists **Clear all data** under Settings → Storage (type DELETE, offers a backup first), but no milestone builds it (M5 review, Oct 17) | Not needed to be safe, and the browser's own "clear site data" does it. Proposal: add it in M13 with the other Settings polish, or leave it out. Preview builds already have *Remove all data* on the Data check page. |
 
 **Assumptions I'll proceed with unless you object**
 
@@ -925,6 +938,7 @@ None. New questions will be added here as they come up.
 
 | Date | Change |
 | --- | --- |
+| 2026-10-17 | M5: backup (JSON) and restore in Settings (`#/settings/backup`, `#/settings/storage`, gear in the top bar), backup reminder banner, safety copies (snapshots with a reason, 3 kept per kind, downloadable and restorable), persistent storage request, and the pre-update backup screen (§3.7 step 7). Last backup time and the reminder's "Later" live in `meta` per browser, not in Settings (§5.5 "As built"). Backups with photos stay in M11. No data-format change. Q14 opened (Clear all data). |
 | 2026-10-15 | First draft for approval |
 | 2026-10-15 | Draft 2: direction C chosen; Q1–Q10 decided; lease length; base maps and pin options; fast data entry and AI import (§5.7); milestones revised to M0–M13; GitHub repo from M0; Q11 opened |
 | 2026-10-15 | M0: deploys use the `gh-pages` branch (live at the root, preview in `preview/`) instead of the GitHub Actions Pages artifact, because the Actions method can only serve one build at a time; Pages source must be set once to "Deploy from a branch" (README). TypeScript pinned to 6.0 (see §1). Only dependencies needed for the empty shell are installed; Zustand, Radix, Dexie and the rest arrive with the milestone that first uses them |
@@ -982,7 +996,7 @@ The full working agreement for every session is in `CLAUDE.md`; this is the summ
 | M2 List and detail | Approved | v0.2.0 | 2026-10-15 |
 | M3 Map, pins, layers | Approved | v0.3.0 | 2026-10-16 |
 | M4 Quick-add and paste text | Approved | v0.4.0 | 2026-10-17 |
-| M5 Backup and restore | Not started | — | — |
+| M5 Backup and restore | In review (preview) | 0.5.0 | — |
 | M6 Triage and bulk edit | Not started | — | — |
 | M7 Forms and research mode | Not started | — | — |
 | M8 Cost profile and lease length | Not started | — | — |
