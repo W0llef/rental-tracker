@@ -224,7 +224,7 @@ Phone gestures: swipe the unit's photo strip; tap a star to rate; long-press a c
 - Floor plan only: "Plan C" plus a "floor plan" tag; specs say "units vary"; prices say "from".
 - New: the status pill reads "New" with its amber edge; no separate badge on the card (it repeated the pill). The amber New dot stays an option on map pins (§2.4), which show no status text.
 - Needs location: a "Needs location" chip with "Place on map".
-- Multi-select: ⌘/Ctrl-click or Shift-click; a checkbox appears in the photo corner.
+- Multi-select: ⌘/Ctrl-click or Shift-click; a check appears in the photo corner and the card gets a lake outline. A **selection bar** above the list (M7) shows the count, the markers for all selected units, **Edit together…** and **Clear**.
 - The **Building card** (Buildings view) shows name, neighborhood, building type, "3 of your units", and the range "$1,857–$2,560".
 
 ### 4.2 Detail panel
@@ -264,7 +264,9 @@ Phone gestures: swipe the unit's photo strip; tap a star to rate; long-press a c
 └────────────────────────────────────────────┘
 ```
 
-**Ratings (M6).** One row per person: badge and name, five star buttons (click the current one again to clear) and a flag menu. Until household sharing exists you set other people's ratings for them here; with only you, a line points to Settings → People. Reject reasons and rating/flag notes show under the row; editing them arrives with triage (M7). Notes in the Notes section name their author when it isn't you ("Oct 18, note · Alex").
+**Markers row (M7).** Flag as three buttons (Pick P · Reject… X · No flag U), your stars, then **Your label** and **Shared label** as five swatches each (pressed one ringed; click again to clear) and the status menu. With several units selected the same controls sit in the selection bar and say "Mixed" where the units differ.
+
+**Ratings (M6).** One row per person: badge and name, five star buttons (click the current one again to clear) and a flag menu. Until household sharing exists you set other people's ratings for them here; with only you, a line points to Settings → People. Reject reasons and rating/flag notes show under the row, with **Add/Edit notes** and **Reasons** (M7). Notes in the Notes section name their author when it isn't you ("Oct 18, note · Alex").
 
 Imported values carry a small source link (site name, or "AI" until you confirm them). A "Paste text" action sits next to Edit for pasting more listing text later.
 

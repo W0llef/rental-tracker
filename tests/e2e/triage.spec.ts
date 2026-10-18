@@ -149,7 +149,9 @@ test.describe('triage', () => {
 
     await page.keyboard.press('3');
     for (const i of [1, 2, 3, 4])
-      await expect(cards(page).nth(i).getByRole('img', { name: '3 of 5 stars' })).toBeVisible();
+      await expect(
+        cards(page).nth(i).getByRole('img', { name: '3 of 5 stars', exact: true }),
+      ).toBeVisible();
     await expect(toast(page)).toContainText('Rated 4 units 3 stars');
 
     await bar.getByRole('button', { name: 'Edit together…' }).click();

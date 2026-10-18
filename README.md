@@ -102,8 +102,41 @@ building…** asks once, then deletes (a building takes its units with it). The 
 follows has **Undo**. Editing details by hand (a building's name, amenities and so on) arrives
 with the full forms in M8.
 
-Each add, paste, placement or delete is one step in the undo history (Undo is on the Data check page
-until the keyboard shortcuts arrive in M7).
+Each add, paste, placement or delete is one step in the undo history: see **Undo and History**
+below.
+
+### Triage: flags, stars, labels and status
+
+- Open a unit and use the markers row under its title: **Pick**, **Reject…**, **No flag**, your
+  stars, **your label** (private: only you see it and its names), the **shared label** (the
+  household's) and the **status**.
+- Keys, on the open unit: `P` pick, `X` reject (asks why: tick saved reasons, type a new one,
+  add a note; `⏎` rejects), `U` no flag, `0`–`5` stars, `6`–`9` your red, yellow, green or blue
+  label, `⇧6`–`⇧9` the shared one (press again to take it off). Purple is in the menus. `?`
+  shows every key.
+- **Several units at once:** `⌘`/`Ctrl`-click cards to add or remove them, `Shift`-click to
+  select a range. A bar above the list shows how many and has the same markers; the keys act on
+  all of them. **Edit together…** sets flags, stars, labels, status, utilities, laundry,
+  dishwasher, AC, heating, parking, storage, lease terms and the available date for all of them
+  ("Mixed" where they differ). `Esc` clears the selection.
+- In a unit's **Ratings** section, **Add notes** / **Edit notes** keeps a flag note and a rating
+  note per person; **Reasons** changes reject reasons.
+- **Notes** (units and buildings): add a note, tour note or call note; edit or delete your own.
+- Name your labels and manage reject reasons in **Settings → Labels and reasons**. Cards show the
+  shared label as a square and yours as a ringed dot; the map's **Pins** panel colors pins by
+  **Shared label** or **Your label**.
+
+### Undo and History
+
+- Every change shows a message at the bottom left saying exactly what happened ("Rent $1,650 →
+  $1,600 on Unit 908 at Riverlight") with **Undo**; after an undo it offers **Redo**.
+- `⌘Z` / `Ctrl+Z` undoes, `⇧⌘Z` / `Ctrl+Shift+Z` redoes (not while you're typing in a field).
+- **History** (the clock in the top bar, or **Open history** at the end of a unit's panel) lists
+  every change for 90 days, newest first. **Undo this** reverses one change on its own, even an
+  old one; if something it touched was changed again later, it shows what would be overwritten
+  and lets you undo just the rest. **Restore to here** puts everything back the way it was right
+  after that change. Both are new steps you can undo too.
+- **History → Deleted** lists deleted units and buildings with **Restore**.
 
 ### Browsing your units
 
@@ -115,7 +148,8 @@ until the keyboard shortcuts arrive in M7).
   the direction. Units with an unknown value always sort last. The app remembers your sort.
 - Click a card to open its details; **Back**, `Esc` or the × closes them. On a phone the details
   open in the **Unit** tab.
-- Keys: `↓`/`J` and `↑`/`K` move through the list, `B` switches Units / Buildings.
+- Keys: `↓`/`J` and `↑`/`K` move through the list, `B` switches Units / Buildings, `⏎` jumps to
+  the open unit's details, `?` lists every key.
 
 ### The map
 

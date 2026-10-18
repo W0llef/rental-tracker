@@ -577,7 +577,7 @@ There are two places old data can come from — the browser's own database and o
 | `#/duplicates` | **Duplicate review** | candidate pairs with reason, MergeDialog (pick value per conflicting field) |
 | `#/settings/:section` | **Settings** | Cost profile, Baseline criteria, Labels & reasons, Display (theme; map and pin defaults), Photo archive, Backup & restore, Storage, Keyboard shortcuts, (API keys — shown disabled, "Phase 2") |
 | overlay | Lightbox | full-size original, zoom/pan, caption, delete |
-| panel | History | change log for one unit, or everything; undo to here |
+| `#/history` (panel, M7) | History | change log for one unit (`?unit=<id>`), or everything; Undo this, Restore to here, Deleted with Restore |
 | dialog | Reject reason | reusable reasons (checkboxes) + free text |
 
 Phone width: list and map become tabs; detail opens as a full-screen sheet; edit forms are usable but laid out for laptop (spec §11).
@@ -787,6 +787,11 @@ interface OriginalStore {
   4. Alternative or addition for the deletion case: a **Recently deleted** list (filter in History, or under Settings next to "Empty trash") with **Restore** per unit or building.
   History is kept 90 days or 10,000 changes (§5.6). These items make M7 larger; if it grows past one milestone, history can be split into its own milestone after M7 (owner to decide then).
 - The change log keeps 90 days or 10,000 entries (whichever is smaller), pruned after each action and only in whole actions; restores clear it after the snapshot.
+- **As built (M7; owner notes confirmed, Q21):**
+  - *Descriptions* (`domain/history.ts`): every action is said from its stored before/after records, per table (units field by field with values, opinions as "Flagged … as pick", "Rated … 4 stars", "Your label …", notes, listings, people, settings). The same thing done to several units is said once ("Status → Reviewing on 4 units"); a building deleted with its units, a unit added with its listing, or a reject with its new reason read as one line; undo and redo name what they went back on ("Undid: …"). Toasts and History use the same text.
+  - *Toasts* (`state/toasts.ts`, registered in `main.tsx`): after every action that changed something, with **Undo** (that action on its own, via Undo this; plain Undo when it's the latest) or **Redo** after an undo. A caller's own words ("Unit 1504 at Riverlight added.") keep the action's button. `⌘/Ctrl+Z`, `⇧⌘Z / Ctrl+Shift+Z` (and `Ctrl+Y`) outside text fields.
+  - *History panel* (`#/history`, `#/history?unit=<id>`; detail column; clock button in the top bar; "Open history" at the end of a unit's panel): Everything / This unit / Deleted, 40 rows a page with details per action. **Undo this** (`commands/history.ts` `planUndoThis`/`undoThis`) reverts each value the action changed (nested objects key by key, so `utilities.heat` and `utilities.electric` don't clash); values changed again later are listed as clashes and the person chooses *Undo the rest* or *Undo all of it*; it's a new action with `target` = the undone action, so the row shows "Undone". **Restore to here** writes, for every record changed later, the `before` of its first later change, as one new action. Both re-check inside the transaction (another tab). **Deleted** lists soft-deleted units and buildings (a building with the units deleted with it) with **Restore**; restoring a unit in a deleted building restores the building too.
+  - "Recently deleted" is the History panel's Deleted tab rather than a Settings page; Empty trash stays with photos (M12).
 - Photo files aren't in the change log; soft delete covers them.
 
 ### 5.7 Fast data entry and AI import
@@ -855,13 +860,15 @@ A draft for the M6 chat to confirm with the owner before building:
 - **Showing it.** `state/derive.ts` gives every unit row `mine` (your opinion or an empty one) and `opinions` (everyone, you first). Cards, pins, sorting by rating and the dimmed "rejected" look use yours; cards show everyone else in one fixed-size chip (`othersSummary`: up to 3 badges +N, star range, pick and reject counts; owner review, DESIGN §4.1); the detail panel has a **Ratings** section with everyone side by side, editable stars and flag per person (editing notes, reasons and labels comes with triage, M7).
 - **Backups and restore.** Backups carry `exportedBy` (this copy's person); snapshots record `meId`. After a restore, "me" is: you, if the file has you; else whoever made the file; else the file's only person; else a new person with your name (or "Me" if the file already has that name). An old (v1) file is migrated with you as "me", so its ratings become yours under your name.
 - **Sample data** (preview/dev) adds **Alex**, who rated about three in four units close to you (sometimes not) and wrote one note. *Load sample data* adds only the sample buildings you don't already have (same address, not deleted), so pressing it twice no longer makes duplicate buildings (owner review: three "The Larkin" cards on the map); it says "already loaded" when there's nothing to add. *Remove all data* keeps you.
-- Not yet: private labels can be stored but not set or shown (M7); filters by "everyone's lowest / average / both 4+" (M10); compare table columns per person (M10).
+- Not yet (after M7): filters by "everyone's lowest / average / both 4+" (M10); compare table columns per person (M10).
 
 ---
 
 ## 6. Keyboard (Phase 1)
 
 Shortcuts act on the selected unit (or all selected units). Full table in DESIGN.md.
+
+*As built (M7, `hooks/useListKeys.ts`, Q22):* labels by physical key (`e.code`), so ⇧6–9 set the shared label on any keyboard; `⏎` moves focus to the open unit's details; keys of later milestones (E, C, F, M, R) say which milestone brings them; `?` opens the sheet (`ui/triage/shortcuts.ts`). Targets are the multi-selection (⌘/Ctrl-click toggles, Shift-click selects the range from the last ⌘/Ctrl-clicked unit; plain click or Esc clears it), else the open unit.
 
 `P` pick · `X` reject (opens reason dialog) · `U` unflag · `0`–`5` stars · `6` red · `7` yellow · `8` green · `9` blue · `↑/↓` or `J/K` previous/next unit · `Enter` open detail · `E` edit · `N` quick-add · `C` add to compare · `/` search · `F` filters · `L` map layers · `M` toggle Explore/Shortlist · `B` toggle units/buildings view · `R` copy research prompt · `⌘/Ctrl+Z` undo · `⇧⌘/Ctrl+Shift+Z` redo · `?` shortcut sheet · `Esc` close panel. In forms: `⌘/Ctrl+↓` next empty field, `?` mark unknown, `⌘/Ctrl+S` save. Disabled while typing in a field (except the form keys).
 
@@ -870,7 +877,7 @@ Shortcuts act on the selected unit (or all selected units). Full table in DESIGN
 ## 7. Phase 1 scope boundaries
 
 In: everything in spec §12 Phase 1 and the MVP rows of §10 (total cost, price history, duplicate detection, undo, window directions, photo archive); plus base-map switching and pin options (§4.3), lease length (§5.3) and fast data entry with AI import (§5.7, Q11).
-Stored but not shown yet: destinations, travel-time cache, crime, OSM id, 3D placement, monitoring dates, private color labels (M7).
+Stored but not shown yet: destinations, travel-time cache, crime, OSM id, 3D placement, monitoring dates.
 People and per-person ratings are in Phase 1 (M6, Q15); household sync follows Phase 1 (§9).
 Not built: search-area drawing, travel times, overlays, buildings layer, keyed base maps, weighted score, monitoring, browser extension, sharing/merge import, CSV, share links, printable summary, Market history view, 3D, tour mode.
 
@@ -1000,6 +1007,7 @@ None. New questions will be added here as they come up.
 
 | Date | Change |
 | --- | --- |
+| 2026-10-18 | M7: **triage and bulk edit**. Marker controls in the unit panel and a selection bar (flag, stars, your label, shared label, status), Reject dialog with reusable and new reasons and a note, flag/rating notes per person, notes log (add, edit, delete your own; units and buildings), multi-select, **Edit together** (Q20 fields), all Phase 1 keys with a `?` sheet, toasts with Undo/Redo after every action, **History** (`#/history`: specific descriptions, Undo this with clash check, Restore to here, Deleted with Restore), Settings → **Labels and reasons**, pins colored by shared or your label (pin color option `myLabel`, kept in the browser like other pin choices). `setOpinion` now records "last reviewed" and skips changes that change nothing. No data-format change. |
 | 2026-10-18 | M7 chat: **Q19–Q22 decided** (labels on cards and pins, bulk edit fields, History stays in M7, label keys). |
 | 2026-10-18 | M6, owner review: the pin field and sort option are called **Your rating** (they show and sort by yours). Custom colors decided as **Q18**: a Colors editor in M14 (presets first, custom optional; display colors per person, badge colors shared; custom private or shared labels named after the nearest color), full themes after Phase 1. |
 | 2026-10-18 | M6, owner review: cards show other people in **one chip** of fixed size instead of one mark each (it overflowed with three people); a crowded card foot wraps instead of overlapping. *Load sample data* no longer duplicates buildings. Finding duplicates already in your list (and merging them) stays in M13. |
