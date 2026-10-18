@@ -95,7 +95,7 @@ Status is never shown by color alone: pills always carry the word, and the legen
 
 Names are set in Settings ("Blue = roommate likes") and shown in tooltips, filters and the legend.
 
-**Shared and private labels (M6, Q16).** A unit can carry two labels at once, each any of the five colors: one **shared** label (names are the household's) and one **private** label per person (each person names their own colors; other people's private labels aren't shown). Nothing converts between the two. Setting, naming and showing them arrives with triage (M7); proposed there: keys 6–9 for your private label and ⇧6–9 for the shared one, and the private label drawn beside the shared square on the thumbnail. Until then cards, pins and "color by label" show the shared label.
+**Shared and private labels (M6, Q16).** A unit can carry two labels at once, each any of the five colors: one **shared** label (names are the household's) and one **private** label per person (each person names their own colors; other people's private labels aren't shown). Nothing converts between the two. Setting, naming and showing them arrives with triage (M7, Q19, Q22): keys 6–9 set your private label and ⇧6–9 the shared one; cards draw the shared label as the square on the thumbnail and your private label as a second square beside it (a ring marks it as yours); the Pins panel colors by **Shared label** or **Your label**.
 
 ### 2.3a People (M6)
 
@@ -485,7 +485,8 @@ Shortcuts act on the selected unit, or every selected unit when several are sele
 | `X` | Flag as reject (opens reasons; ⏎ to confirm) |
 | `U` | Remove flag |
 | `0`–`5` | Set stars (0 clears) |
-| `6` / `7` / `8` / `9` | Toggle red / yellow / green / blue label (purple from the menu, Q8) |
+| `6` / `7` / `8` / `9` | Toggle your red / yellow / green / blue label (purple from the menu, Q8) |
+| `⇧6` … `⇧9` | Toggle the shared red / yellow / green / blue label (Q22) |
 | `↑` `↓` or `K` `J` | Previous / next unit in the list |
 | `⏎` | Open the selected unit's detail |
 | `Esc` | Close panel, close open buildings' cards, or clear selection |
