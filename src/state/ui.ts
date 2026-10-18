@@ -73,17 +73,45 @@ export interface Notice {
 /** A caller's notice this soon after an action's toast joins it (keeping its Undo). */
 const JOIN_MS = 1500;
 
-export interface UiState extends Remembered, MapUi {
+/** The Reject dialog, open for these units and this person's opinion (M7). */
+export interface Rejecting {
+  unitIds: string[];
+  personId: string;
+}
+
+/** Triage UI (M7): multi-selection, the Reject dialog, Edit together, the shortcut sheet. */
+interface TriageUi {
+  /** Units chosen with ⌘/Ctrl- or Shift-click; shortcuts act on all of them. */
+  picked: string[];
+  /** Where a Shift-click range starts. */
+  anchor: string | null;
+  rejecting: Rejecting | null;
+  editingTogether: boolean;
+  shortcutsOpen: boolean;
+  setPicked: (ids: string[], anchor?: string | null) => void;
+  clearPicked: () => void;
+  setRejecting: (r: Rejecting | null) => void;
+  setEditingTogether: (open: boolean) => void;
+  setShortcutsOpen: (open: boolean) => void;
+}
+
+export interface UiState extends Remembered, MapUi, TriageUi {
   query: string;
   placing: Placing | null;
   notice: Notice | null;
   setPlacing: (placing: Placing | null) => void;
   /** A confirmation; right after an action it joins that action's toast (and its Undo). */
   showNotice: (text: string, to?: string | null, undo?: (() => void) | null) => void;
-  /** The toast for an action (toasts.ts); `describe` fills in its words when ready. */
-  showActionToast: (toast: { actionId: string; text: string; button: NoticeButton | null }) => void;
-  /** Replaces a toast's provisional words with its description, if it's still showing. */
-  describeToast: (actionId: string, text: string) => void;
+  /**
+   * The toast for an action (toasts.ts), once its words are ready. If the code that ran
+   * the action has shown its own words since (`since`, ms), those stay and gain the button.
+   */
+  showActionToast: (toast: {
+    actionId: string;
+    text: string;
+    button: NoticeButton | null;
+    since: number;
+  }) => void;
   clearNotice: () => void;
   setView: (view: ListMode) => void;
   toggleView: () => void;
@@ -196,15 +224,30 @@ export const useUi = create<UiState>()((set, get) => {
         },
       });
     },
-    showActionToast: ({ actionId, text, button }) =>
+    showActionToast: ({ actionId, text, button, since }) => {
+      const current = get().notice;
+      // Words shown after this action started are about it (they may have joined an
+      // earlier action's toast in the meantime): keep them, with this action's button.
+      if (current?.custom && current.at >= since) {
+        const own = current.button && current.actionId === null ? current.button : button;
+        set({ notice: { ...current, button: own, actionId } });
+        return;
+      }
       set({
         notice: { id: Date.now(), text, to: null, button, actionId, at: Date.now(), custom: false },
-      }),
-    describeToast: (actionId, text) => {
-      const current = get().notice;
-      if (current?.actionId === actionId && !current.custom) set({ notice: { ...current, text } });
+      });
     },
     clearNotice: () => set({ notice: null }),
+    picked: [],
+    anchor: null,
+    rejecting: null,
+    editingTogether: false,
+    shortcutsOpen: false,
+    setPicked: (picked, anchor) => set({ picked, ...(anchor !== undefined ? { anchor } : {}) }),
+    clearPicked: () => set({ picked: [], anchor: null, editingTogether: false }),
+    setRejecting: (rejecting) => set({ rejecting }),
+    setEditingTogether: (editingTogether) => set({ editingTogether }),
+    setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
     setView: (view) => update({ view }),
     toggleView: () => update({ view: get().view === 'units' ? 'buildings' : 'units' }),
     setQuery: (query) => set({ query }),
@@ -260,7 +303,18 @@ export const useUi = create<UiState>()((set, get) => {
 
 /** Back to the starting state (tests). */
 export function resetUi() {
-  useUi.setState({ ...defaults, ...mapUiStart(), query: '', placing: null, notice: null });
+  useUi.setState({
+    ...defaults,
+    ...mapUiStart(),
+    query: '',
+    placing: null,
+    notice: null,
+    picked: [],
+    anchor: null,
+    rejecting: null,
+    editingTogether: false,
+    shortcutsOpen: false,
+  });
 }
 
 // ── Map viewport memory (PLAN.md §4.2: "Map viewport … remembered in localStorage") ──

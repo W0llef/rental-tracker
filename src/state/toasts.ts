@@ -46,10 +46,10 @@ async function redoFromToast(db: RentalDB, undoneId: string | null): Promise<voi
   await redo(db);
 }
 
-async function describeEvent(db: RentalDB, e: ActionEvent): Promise<string> {
+async function describeEvent(db: RentalDB, e: ActionEvent): Promise<string | null> {
   const [entries, lookup] = await Promise.all([entriesOf(db, e.actionId), readLookup(db)]);
   const head = entries[0];
-  if (!head) return e.label;
+  if (!head) return null; // nothing changed (e.g. rating a unit the stars it already has)
   const target = head.target ? await entriesOf(db, head.target) : null;
   const info = {
     actionId: e.actionId,
@@ -63,8 +63,10 @@ async function describeEvent(db: RentalDB, e: ActionEvent): Promise<string> {
 
 /** Shows a toast for every action from now on (registered once at startup). */
 export function watchActionsForToasts(db: RentalDB): () => void {
+  let latest: string | null = null;
   return onAction((e) => {
-    const ui = useUi.getState();
+    const since = Date.now();
+    latest = e.actionId;
     const button =
       e.kind === 'undo'
         ? {
@@ -72,9 +74,12 @@ export function watchActionsForToasts(db: RentalDB): () => void {
             run: () => void readTarget(db, e.actionId).then((t) => redoFromToast(db, t)),
           }
         : { label: 'Undo', run: () => void undoFromToast(db, e.actionId) };
-    ui.showActionToast({ actionId: e.actionId, text: e.label, button });
     void describeEvent(db, e)
-      .then((text) => useUi.getState().describeToast(e.actionId, text))
+      .then((text) => {
+        // A later action's toast replaces this one; don't show it after that.
+        if (text && latest === e.actionId)
+          useUi.getState().showActionToast({ actionId: e.actionId, text, button, since });
+      })
       .catch(() => undefined);
   });
 }

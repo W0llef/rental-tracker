@@ -431,3 +431,32 @@
 .confirmBox .text {
   margin: 0;
 }
+
+/* Labels and reasons (M7) */
+.labelList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.labelSwatch {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: var(--c);
+}
+
+.subTitle {
+  margin: var(--s4) 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--slate);
+}
+
+.row[data-archived] .input {
+  color: var(--slate);
+}

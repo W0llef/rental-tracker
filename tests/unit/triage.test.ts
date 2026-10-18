@@ -83,3 +83,15 @@ describe('history helpers', () => {
     expect(valueText('x'.repeat(60))).toHaveLength(40);
   });
 });
+
+describe('lease terms typed in Edit together', () => {
+  it('reads months, none and unknown', async () => {
+    const { parseMonths } = await import('../../src/domain/triage');
+    expect(parseMonths('12, 15')).toEqual([12, 15]);
+    expect(parseMonths('15 months or 12 months')).toEqual([12, 15]);
+    expect(parseMonths('none')).toEqual([]);
+    expect(parseMonths('?')).toBeNull();
+    expect(parseMonths('twelve')).toBeUndefined();
+    expect(parseMonths('0')).toBeUndefined();
+  });
+});

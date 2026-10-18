@@ -22,7 +22,7 @@ import {
   SITE_LABELS,
   STATUS_LABELS,
   UTILITY_LABELS,
-  unitTitle,
+  unitFullName,
   utilityLabel,
 } from './format';
 
@@ -151,11 +151,7 @@ const buildingOf = (lookup: HistoryLookup, id: ID | null | undefined) =>
 
 /** "Unit 1504 at Riverlight", "Plan C at The Larkin", "1840 Grand Ave". */
 export function unitName(u: Unit, lookup: HistoryLookup): string {
-  const b = buildingOf(lookup, u.buildingId);
-  const title = unitTitle(u, b);
-  if (!b) return title;
-  const bName = buildingName(b);
-  return bName === title ? title : `${title} at ${bName}`;
+  return unitFullName(u, buildingOf(lookup, u.buildingId));
 }
 
 function unitNameById(id: ID | null | undefined, lookup: HistoryLookup): string {

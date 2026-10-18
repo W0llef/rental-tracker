@@ -70,3 +70,18 @@ export function commonFlag(opinions: readonly Pick<OpinionFields, 'flag'>[]): Fl
 
 /** "5 units", "1 unit". */
 export const unitsCount = (n: number) => `${n} unit${n === 1 ? '' : 's'}`;
+
+/** "12, 15" → [12, 15]; "none" → []; "?" → null; anything unreadable → undefined. */
+export function parseMonths(text: string): number[] | null | undefined {
+  const t = text.trim().toLowerCase();
+  if (t === '?') return null;
+  if (t === 'none') return [];
+  const words = t.replace(/\b(months?|mos?|or|and)\b/g, ' ');
+  if (/[^\d\s,/.]/.test(words)) return undefined;
+  const nums = words
+    .split(/[\s,/]+/)
+    .filter(Boolean)
+    .map(Number);
+  if (!nums.length || nums.some((n) => !Number.isInteger(n) || n < 1 || n > 60)) return undefined;
+  return [...new Set(nums)].sort((a, b) => a - b);
+}

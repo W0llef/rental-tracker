@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
   buildingName,
@@ -66,9 +67,15 @@ export function UnitCard({
   selected,
   settings,
   hovered = false,
+  picked = false,
+  onPickClick,
 }: {
   row: UnitRow;
   selected: boolean;
+  /** Part of a multi-selection (⌘/Ctrl- or Shift-click; M7). */
+  picked?: boolean;
+  /** Every click; with ⌘/Ctrl or Shift it selects instead of opening (the link is held back). */
+  onPickClick?: (e: MouseEvent, unitId: string) => void;
   /** Its pin is under the pointer on the map. */
   hovered?: boolean;
   settings: Settings;
@@ -80,6 +87,7 @@ export function UnitCard({
   const mine = row.mine;
   const rejected = mine.flag === 'reject';
   const others = othersSummary(row.opinions);
+  const myNames = row.opinions.find((o) => o.isMe)?.person.labelNames;
 
   return (
     <Link
@@ -89,12 +97,35 @@ export function UnitCard({
       aria-current={selected ? 'true' : undefined}
       data-hover={hovered || undefined}
       data-key={`unit:${u.id}`}
+      data-picked={picked || undefined}
+      onClick={(e) => {
+        if (!onPickClick) return;
+        if (e.metaKey || e.ctrlKey || e.shiftKey) e.preventDefault();
+        onPickClick(e, u.id);
+      }}
     >
+      {picked && <span className={styles.visuallyHidden}>Selected: </span>}
       <span className={styles.thumb}>
         <TypeIcon type={u.type} />
-        {u.colorLabel && (
+        {(u.colorLabel || mine.colorLabel) && (
           <span className={styles.thumbLabel}>
-            <LabelSwatch color={u.colorLabel} name={settings.labelNames[u.colorLabel]} />
+            {u.colorLabel && (
+              <LabelSwatch color={u.colorLabel} name={settings.labelNames[u.colorLabel]} />
+            )}
+            {mine.colorLabel && (
+              <LabelSwatch
+                color={mine.colorLabel}
+                name={myNames?.[mine.colorLabel] ?? mine.colorLabel}
+                mine
+              />
+            )}
+          </span>
+        )}
+        {picked && (
+          <span className={styles.pickBox} aria-hidden="true">
+            <svg viewBox="0 0 12 12">
+              <path d="M2.5 6.2 5 8.5l4.5-5" fill="none" stroke="currentColor" strokeWidth="2" />
+            </svg>
           </span>
         )}
       </span>

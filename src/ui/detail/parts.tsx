@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
-import { shortDate } from '../../domain/format';
 import { AMENITY_KEYS } from '../../model';
-import type { AmenityKey, Building, ISODate, NoteEntry } from '../../model';
+import type { AmenityKey, Building } from '../../model';
 import { Value } from '../common/Markers';
 import { AMENITY_LABELS } from './text';
 import type { ExternalLink } from './text';
@@ -101,36 +100,6 @@ export function Amenities({ building }: { building: Building }) {
         );
       })}
     </ul>
-  );
-}
-
-const NOTE_KIND: Record<NoteEntry['kind'], string> = {
-  note: 'Note',
-  tour: 'Tour',
-  call: 'Call',
-  system: 'Change',
-};
-
-export function Notes({
-  notes,
-  today,
-}: {
-  notes: readonly (NoteEntry & { authorName?: string | null })[];
-  today: ISODate;
-}) {
-  if (!notes.length) return <p className={styles.muted}>No notes yet.</p>;
-  return (
-    <ol className={styles.notes}>
-      {notes.map((n) => (
-        <li key={n.id}>
-          <div className={styles.when}>
-            {shortDate(n.createdAt.slice(0, 10), today)}, {NOTE_KIND[n.kind].toLowerCase()}
-            {n.authorName && <span className={styles.author}> · {n.authorName}</span>}
-          </div>
-          {n.text}
-        </li>
-      ))}
-    </ol>
   );
 }
 

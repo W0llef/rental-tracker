@@ -55,6 +55,7 @@ describe('toasts', () => {
   it('Undo on an older toast undoes just that action', async () => {
     const u = await unit();
     await setStatus(db, u.id, 'toured');
+    await waitFor(() => expect(useUi.getState().notice?.text).toMatch(/Toured/));
     const toast = useUi.getState().notice;
     await updateUnit(db, u.id, { rent: 1500 });
     toast?.button?.run();
@@ -67,11 +68,8 @@ describe('toasts', () => {
     const u = await unit();
     await setStatus(db, u.id, 'applied');
     useUi.getState().showNotice('Applied. Good luck!');
-    const n = useUi.getState().notice;
-    expect(n?.text).toBe('Applied. Good luck!');
-    expect(n?.button?.label).toBe('Undo');
-    // The description arriving later doesn't replace the caller's words.
-    await new Promise((r) => setTimeout(r, 50));
+    // The action's toast arrives a moment later: the caller's words stay and gain Undo.
+    await waitFor(() => expect(useUi.getState().notice?.button?.label).toBe('Undo'));
     expect(useUi.getState().notice?.text).toBe('Applied. Good luck!');
   });
 });

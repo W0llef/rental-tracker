@@ -240,8 +240,11 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
   const summaryUnits = useMemo(() => placed.flatMap((b) => b.summary), [placed]);
   const scale: PriceScale | null = useMemo(() => priceScale(summaryUnits), [summaryUnits]);
   const legend = useMemo(
-    () => (placed.length ? legendFor(summaryUnits, prefs.colorBy, data.settings.labelNames) : null),
-    [placed.length, summaryUnits, prefs.colorBy, data.settings.labelNames],
+    () =>
+      placed.length
+        ? legendFor(summaryUnits, prefs.colorBy, data.settings.labelNames, data.me.labelNames)
+        : null,
+    [placed.length, summaryUnits, prefs.colorBy, data.settings.labelNames, data.me.labelNames],
   );
 
   // ── Base map style ──
@@ -340,7 +343,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
           key: unitKey(r),
           content: pinContent([r], prefs, false),
           type: r.unit.type,
-          stripe: edgeColor(r.unit, prefs.colorBy, scale),
+          stripe: edgeColor(r.unit, prefs.colorBy, scale, r.mine.colorLabel ?? null),
           newMark: newMark(isNew(r.unit)),
           selected: selectedKey === unitKey(r),
           rejected,
@@ -654,7 +657,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
         count={spec.count}
         stripes={
           single
-            ? [edgeColor(single.unit, prefs.colorBy, scale)]
+            ? [edgeColor(single.unit, prefs.colorBy, scale, single.mine.colorLabel ?? null)]
             : edgeStripes(b.summary, prefs.colorBy, scale)
         }
         selected={spec.selected}

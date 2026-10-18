@@ -1,0 +1,228 @@
+/* History panel (M7; PLAN.md §5.6). Lives in the detail column. */
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4) var(--s5, 32px);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.heading {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.muted {
+  margin: 0;
+  color: var(--slate);
+  font-size: 13px;
+}
+
+.tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.tabs button {
+  min-height: 32px;
+  padding: 2px 12px 0;
+  border: 0;
+  border-right: 1px solid var(--ice);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tabs button:last-child {
+  border-right: 0;
+}
+
+.tabs button[aria-pressed='true'] {
+  background: var(--river);
+  color: var(--on-river);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s2) 0 var(--s3);
+  border-bottom: 1px solid var(--ice);
+}
+
+.row[data-undone] .title {
+  color: var(--slate);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.rowHead {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.when {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--slate);
+}
+
+.tag {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--slate);
+  border: 1px solid var(--ice);
+  border-radius: 999px;
+  padding: 1px 7px 0;
+}
+
+.title {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.details {
+  font-size: 13px;
+  color: var(--slate);
+}
+
+.details summary {
+  cursor: pointer;
+  color: var(--lake);
+  font-weight: 600;
+}
+
+.details ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s4);
+  font-size: 13px;
+}
+
+.textButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--lake);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.textButton:disabled {
+  opacity: 0.6;
+}
+
+.primary,
+.secondary {
+  align-self: flex-start;
+  min-height: 32px;
+  padding: 2px 12px 0;
+  border-radius: var(--r-md);
+  border: 1px solid var(--ice);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.primary {
+  background: var(--river);
+  border-color: var(--river);
+  color: var(--on-river);
+}
+
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.55;
+}
+
+.confirm {
+  margin-top: var(--s2);
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-md);
+  background: var(--frost);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.confirmText {
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.clashes {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.confirmActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+}
+
+.message {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--slate);
+}
+
+.error {
+  margin: 0;
+  color: var(--reject-ink);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.deleted {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--ice);
+}

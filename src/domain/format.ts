@@ -228,3 +228,14 @@ export function whenLabel(iso: string, now: Date = new Date()): string {
   if (day === today) return `today ${time}`;
   return `${shortDate(day, today)}, ${time}`;
 }
+
+/** "Unit 1504 at Riverlight"; just the title when it already names the building. */
+export function unitFullName(
+  u: Pick<Unit, 'unitNumber' | 'isFloorPlanOnly' | 'floorPlanName'>,
+  b: Pick<Building, 'name' | 'complexName' | 'address'> | undefined,
+): string {
+  const title = unitTitle(u, b);
+  if (!b) return title;
+  const bName = buildingName(b);
+  return bName === title ? title : `${title} at ${bName}`;
+}

@@ -248,7 +248,8 @@ export function PinsPanel({
           value={prefs.colorBy}
           options={[
             { id: 'status', label: 'Status' },
-            { id: 'label', label: 'Label' },
+            { id: 'label', label: 'Shared label' },
+            { id: 'myLabel', label: 'Your label' },
             { id: 'price', label: PRICE_COLOR_LABEL },
           ]}
           onChange={(colorBy) => set({ colorBy })}
