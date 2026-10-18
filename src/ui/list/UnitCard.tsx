@@ -12,7 +12,7 @@ import type { UnitRow } from '../../state/derive';
 import { FlagMark, LabelSwatch, Stars, StatusPill, Tag, TypeIcon } from '../common/Markers';
 import styles from './list.module.css';
 
-/** One unit in the list (DESIGN.md §4.1). Rent is the headline until total cost (M8). */
+/** One unit in the list (DESIGN.md §4.1). Rent is the headline until total cost (M9). */
 export function UnitCard({
   row,
   selected,

@@ -27,7 +27,7 @@ export interface ActionEvent {
 type Listener = (event: ActionEvent) => void;
 const listeners = new Set<Listener>();
 
-/** Called after every committed action (toasts with Undo arrive in M6). */
+/** Called after every committed action (toasts with Undo arrive in M7). */
 export function onAction(listener: Listener): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);

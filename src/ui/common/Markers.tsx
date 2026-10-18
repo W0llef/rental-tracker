@@ -90,7 +90,7 @@ export function Value({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-/** Placeholder thumbnail until photos arrive (M11): the unit type's icon. */
+/** Placeholder thumbnail until photos arrive (M12): the unit type's icon. */
 export function TypeIcon({ type }: { type: UnitType | 'building' | null }) {
   const house = type === 'house' || type === 'townhome';
   return (

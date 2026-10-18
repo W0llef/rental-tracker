@@ -15,7 +15,7 @@ import { nowIso } from '../../model/factories';
  * Every data table, deleted records included (undo and the coming History panel depend on
  * them), at the current data format. Not included: the change log (undo history), caches
  * (geocoder, travel times), snapshots, photo thumbnails and originals, the photo folder
- * handle, and API keys (blanked). Photos come with the .zip backup in M11.
+ * handle, and API keys (blanked). Photos come with the .zip backup in M12.
  */
 
 export type BackupData = Record<string, unknown[]>;

@@ -22,7 +22,7 @@ import { sortBy } from './sort';
  * they share a type, one edge stripe per unit, and the New badge if any unit is new.
  */
 
-/** The price color option scales on rent until total cost exists (M8). */
+/** The price color option scales on rent until total cost exists (M9). */
 export const PRICE_COLOR_LABEL = 'Rent';
 
 export interface PinUnit {

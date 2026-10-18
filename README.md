@@ -84,10 +84,10 @@ note offers it too). Click the spot on the map, or pan the map's center onto it 
 **Deleting.** At the end of a unit's or building's panel, **Delete unit…** or **Delete
 building…** asks once, then deletes (a building takes its units with it). The confirmation that
 follows has **Undo**. Editing details by hand (a building's name, amenities and so on) arrives
-with the full forms in M7.
+with the full forms in M8.
 
 Each add, paste, placement or delete is one step in the undo history (Undo is on the Data check page
-until the keyboard shortcuts arrive in M6).
+until the keyboard shortcuts arrive in M7).
 
 ### Browsing your units
 
@@ -104,7 +104,7 @@ until the keyboard shortcuts arrive in M6).
 ### The map
 
 - Each building with units in the list gets a pin; the map follows your search and the
-  **Units / Buildings** switch. Pins show rent until total cost arrives (M8).
+  **Units / Buildings** switch. Pins show rent until total cost arrives (M9).
 - **Pins** (button on the map) sets how pins look for the view the list is showing (Units and
   Buildings keep separate settings):
   a sign plate, a dot or a photo; which details to print (rent, beds and size, unit number,

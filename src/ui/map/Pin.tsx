@@ -29,7 +29,7 @@ export interface PinProps {
   pinKey?: string;
   style: PinStyle;
   content: PinContent;
-  /** Placeholder for the photo until photos arrive (M11), and the icon of an empty plate. */
+  /** Placeholder for the photo until photos arrive (M12), and the icon of an empty plate. */
   type: UnitType | null;
   /** Units behind the pin; more than 1 shows a count. */
   count: number;

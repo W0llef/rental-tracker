@@ -45,7 +45,7 @@ const FIELD_LABELS: Record<PinView, Record<PinField, string>> = {
 };
 
 const PENDING_TITLE: Record<string, string> = {
-  M8: 'Arrives with total cost (M8)',
+  M9: 'Arrives with total cost (M9)',
   'Phase 2': 'Needs destinations (Phase 2)',
 };
 
@@ -155,7 +155,7 @@ export function PinsPanel({
         />
         {prefs.style === 'photo' && (
           <p className={styles.lnote}>
-            Fields print under the photo. Until photos arrive (M11) the frame shows the unit type.
+            Fields print under the photo. Until photos arrive (M12) the frame shows the unit type.
           </p>
         )}
         <div className={styles.sizeRow}>
@@ -254,7 +254,7 @@ export function PinsPanel({
           onChange={(colorBy) => set({ colorBy })}
         />
         {prefs.colorBy === 'price' && (
-          <p className={styles.lnote}>Uses rent until total cost arrives (M8).</p>
+          <p className={styles.lnote}>Uses rent until total cost arrives (M9).</p>
         )}
         {legend && (
           <div className={styles.inlineLegend}>

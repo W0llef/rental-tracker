@@ -71,7 +71,7 @@ rental-tracker/
 │  │  ├─ changeLog.ts        DBCore middleware that records before/after of every write
 │  │  └─ undo.ts             undo/redo stacks derived from the change log; retention
 │  ├─ commands/              the ONLY way the UI writes data (each = one undoable action)
-│  │  ├─ action.ts           action(label, fn): transaction + change log (+ toast in M6); systemWrite
+│  │  ├─ action.ts           action(label, fn): transaction + change log (+ toast in M7); systemWrite
 │  │  ├─ undo.ts             undo() and redo() commands
 │  │  ├─ records.ts          M1's basic create/update/delete for buildings, units, listings,
 │  │  │                      notes, settings; later milestones split commands by area:
@@ -97,7 +97,7 @@ rental-tracker/
 │  ├─ dev/                   sampleData.ts: made-up sample data (preview/dev builds only)
 │  ├─ state/                 ui.ts (Zustand), useDataset.ts (live queries), derive.ts (pure joins,
 │  │                         search + sort for the list)
-│  ├─ hooks/                 useListKeys.ts (M2), useKeyboardShortcuts.ts (M6)
+│  ├─ hooks/                 useListKeys.ts (M2), useKeyboardShortcuts.ts (M7)
 │  ├─ ui/
 │  │  ├─ shell/              AppShell, TopBar, ModeSwitch, Toasts, Banners
 │  │  ├─ list/               ListPanel (toolbar, sort, empty states), UnitCard, BuildingCard
@@ -328,7 +328,7 @@ export interface Unit extends Base {
   collectionIds: ID[];              // multi-entry index
   lastReviewedAt: Maybe<ISODateTime>;  // "date added" = createdAt
   addedVia: 'quick-add' | 'form' | 'ai-import' | 'backup' | 'share';
-  externalRatings: { by: string; rating: number; note: Maybe<string> }[]; // Phase 3 merges (Q1)
+  externalRatings: { by: string; rating: number; note: Maybe<string> }[]; // Phase 3 merges (Q1); replaced by opinions in M6 (§5.8)
   // Map (Phase 4)
   placement3d: Maybe<{ facadeBearingDeg: number; floor: number }>;
   // Media
@@ -616,7 +616,7 @@ Phone width: list and map become tabs; detail opens as a full-screen sheet; edit
 *As built in M3 (reworked after the owner's review):*
 
 - **Pins follow the list**: search and the Units/Buildings switch drive the map too.
-- **Pin options live in a Pins panel**, separate from Map layers. A pin has one *style* (sign plate, dot, or photo) and any number of *fields* printed on it (unit type icon, rent, beds and size, unit number or building name, rating), each in its own segment with a hairline between them; rent reads first. Dots carry no text, so their fields are greyed out; photos print the fields underneath. Total cost and cost per ft² (M8) and travel time (Phase 2) show disabled with their tag; until M8 pins show rent and the price color option reads *Rent*.
+- **Pin options live in a Pins panel**, separate from Map layers. A pin has one *style* (sign plate, dot, or photo) and any number of *fields* printed on it (unit type icon, rent, beds and size, unit number or building name, rating), each in its own segment with a hairline between them; rent reads first. Dots carry no text, so their fields are greyed out; photos print the fields underneath. Total cost and cost per ft² (M9) and travel time (Phase 2) show disabled with their tag; until M9 pins show rent and the price color option reads *Rent*.
 - **Settings are kept per view** (Units and Buildings); the Pins panel edits whichever view the list shows. They're remembered per database in the browser (`<db>.mapPrefs` in `localStorage`, like the list's sort), so they stay out of Undo and the data format is unchanged. The base map is remembered the same way. `Settings.map` stays in the model for the Settings → Display defaults of a later milestone.
 - **A building with several units** (and every Buildings-view pin) shows only what's true of all its units: rent as a range or as "lowest +" (a setting), ranges for beds, size and rating, the building's name, the type icon only if the units share a type, one edge stripe per unit (a pie ring on a dot), and the New badge if any unit is new.
 - **New units**: off, a dot, or a "New" tag (default). "New" means the unit's status is New: every unit starts there when added and stays until you move it on, so it means "not reviewed yet" (owner confirmed).
@@ -630,7 +630,7 @@ Phone width: list and map become tabs; detail opens as a full-screen sheet; edit
 - **Sharpness**: raster maps draw their tiles stretched between zoom levels (MapLibre rounds to the nearest tile zoom). Aerial now asks MnGeo for 512 px images per 256 px tile, so photos stay sharp on high-density screens. OpenStreetMap and Cycle map have no high-resolution tiles; *Sharper OpenStreetMap and Cycle maps* in Layers (off by default, owner's choice) fetches the next zoom's tiles (`tileSize` 128), about 4× the downloads from their volunteer-run servers. Wayfinding and Detailed streets are vector maps and always sharp.
 - **Legends**: the pin-color legend sits in the map corner on a laptop and inside the Pins panel everywhere (phones have no corner legend). The Map layers panel shows a key for the chosen base map: our own for Wayfinding, links to the publishers' keys for OpenStreetMap and CyclOSM, a note for Detailed streets and Aerial.
 - **Fit all units** leaves room for cards when the fit is close enough for them to open.
-- Photo pins show the unit-type icon until photos arrive (M11). "Place on map" for units without a location arrives with quick-add (M4); the map only counts them for now.
+- Photo pins show the unit-type icon until photos arrive (M12). "Place on map" for units without a location arrives with quick-add (M4); the map only counts them for now.
 
 **Interactive layers (Phase 2).** The raster base maps are pictures, so there is nothing on them to click. The Phase 2 overlays (skyway, transit, bike, neighborhoods, …) are built from data by the app, so each gets its own key and can be clicked to say what a trail, stop or route is.
 
@@ -736,9 +736,9 @@ interface OriginalStore {
 *As built in M5* (`services/backup/`, `services/storage.ts`, `db/upgradeCheck.ts`, `ui/settings/`):
 
 - **Settings** (`#/settings/backup`, `#/settings/storage`; the gear in the top bar) has only the two sections M5 needs; the others arrive with their milestones. Loaded on demand like the Data check page.
-- **Backup (data)**: every data table read in one transaction, ordered by id, deleted records included; API keys blanked; indented JSON so it can be read without the app. Preview and development builds name files `rental-tracker-preview-backup-…`. *Back up with photos (.zip)* stays in M11 with the photo archive.
+- **Backup (data)**: every data table read in one transaction, ordered by id, deleted records included; API keys blanked; indented JSON so it can be read without the app. Preview and development builds name files `rental-tracker-preview-backup-…`. *Back up with photos (.zip)* stays in M12 with the photo archive.
 - **Last backup time is kept per browser** in `meta` (`lastBackupAt`), not in `Settings.backup.lastBackupAt` (left in the model, always null): it isn't data, so it mustn't be undoable or travel in backups. After a restore it's set to the file's `exportedAt` (the data now matches that file), so restoring an old file shows the reminder until you back up again. The reminder interval (`Settings.backup.remindEveryDays`: 1, 3, 7, 14 or 30 days) is a normal undoable setting.
-- **Reminder banner** under the top bar on the main screen when there's a building or unit and no backup from this browser in the interval (or never). *Back up data* downloads at once; *Later* hides it for 24 hours (`meta.backupSnoozedUntil`). "After a bulk import" (M10) is left to that milestone.
+- **Reminder banner** under the top bar on the main screen when there's a building or unit and no backup from this browser in the interval (or never). *Back up data* downloads at once; *Later* hides it for 24 hours (`meta.backupSnoozedUntil`). "After a bulk import" (M11) is left to that milestone.
 - **Restore**: the file is checked before anything is written: envelope, migration chain, every record against the zod schemas (first three problems named), duplicate ids, one settings record. Unknown tables are ignored, missing ones are empty. The review shows what the file holds next to what's in the browser now, with *Replace with this backup*, *Download what's here first* and *Cancel*. One `systemWrite` transaction then saves a snapshot (skipped when the database is empty), empties and refills the data tables, keeps this browser's API keys, and clears the change log; a failure part-way changes nothing.
 - **Snapshots ("Safety copies")** now carry a `reason` (`migration` or `restore`; older ones read as migration) and the last 3 **of each kind** are kept, so restores never push out the copy from before an update. Each can be downloaded (`…-safety-copy-<date>.json`, in the data format it was taken in) or restored through the same review. `snapshots` isn't a data table, so this isn't a data-format change.
 - **Persistent storage**: `navigator.storage.persist()` is asked once by itself (`meta.persistAskedAt`), after the first change anywhere in the app or on opening the main screen with data. Settings → Storage shows the answer, space used and available, and can ask again.
@@ -752,12 +752,12 @@ interface OriginalStore {
 - The undo and redo stacks aren't stored separately: they're derived from the change log (do pushes, undo moves to redo, redo moves back; a new action clears redo). So they survive reloads and can't drift from the history.
 - Toasts after every action carry an Undo button ("Flagged as reject · Undo"). Bulk actions (multi-select, merge, restore) are single actions.
 - The **History panel** shows a unit's changes with time and field, and "Restore this version" for one record.
-- **Owner notes for M6 (M4 review, Oct 17)**, with the approach proposed in reply; the M6 chat confirms the details with the owner:
-  1. *Say what was done, specifically* ("Deleted Unit 1504 at Riverlight", "Rent $1,650 → $1,600 on Unit 908"). The History panel builds each line from the change log's stored before/after records rather than from the action's label, so entries recorded before M6 read specifically too. No data-format change.
+- **Owner notes for M7 (M4 review, Oct 17)**, with the approach proposed in reply; the M7 chat confirms the details with the owner:
+  1. *Say what was done, specifically* ("Deleted Unit 1504 at Riverlight", "Rent $1,650 → $1,600 on Unit 908"). The History panel builds each line from the change log's stored before/after records rather than from the action's label, so entries recorded before M7 read specifically too. No data-format change.
   2. *Go back to a point in time* without pressing Undo repeatedly: **Restore to here** on any history row reverses everything after it as one new, undoable action (the "undo to here" already listed in §4.1).
   3. *Undo one past action on its own*, out of order (e.g. bring back one deleted unit after adding others since): **Undo this** on a single row reverses just that action, recorded as a new action, so history stays linear and honest. When a record it touched was changed again later, the app shows what would be overwritten and asks first (or offers only the parts that don't clash). Restoring a deleted unit or building never clashes, since a delete only marks the record.
   4. Alternative or addition for the deletion case: a **Recently deleted** list (filter in History, or under Settings next to "Empty trash") with **Restore** per unit or building.
-  History is kept 90 days or 10,000 changes (§5.6). These items make M6 larger; if it grows past one milestone, history can be split into its own milestone after M6 (owner to decide then).
+  History is kept 90 days or 10,000 changes (§5.6). These items make M7 larger; if it grows past one milestone, history can be split into its own milestone after M7 (owner to decide then).
 - The change log keeps 90 days or 10,000 entries (whichever is smaller), pruned after each action and only in whole actions; restores clear it after the snapshot.
 - Photo files aren't in the change log; soft delete covers them.
 
@@ -807,6 +807,16 @@ Works with any AI assistant that can browse the web (for example Claude with web
 
 **Phase placement (decided, Q11).** All of §5.7 is in Phase 1, although spec §12 had paste-listing-text and AI import in Phase 3.
 
+### 5.8 People (M6, Q15)
+
+A draft for the M6 chat to confirm with the owner before building:
+
+- **People**: a `people` table (`id`, `name`, `color`). Each copy has one person who is "me" (its id in `meta`, so it never travels in a backup as "me"). First run, or the update to v2, asks for your name (default "Me"), editable in Settings → People.
+- **Per person**: rating, flag (pick/reject), flag and rating notes, and reject reasons move from the unit into an `opinions` table keyed by unit and person (`[unitId+personId]`), so each person only ever writes their own rows: that's what makes household sync (§9) mostly free of conflicts. Status, color label, facts and listings stay shared, one per unit (to confirm: color labels could be personal too).
+- **Notes** record their `authorId`; others' notes show their name.
+- **Migration v2** (the first): creates "me", moves each unit's rating/flag/notes/reasons into opinions for me, turns `externalRatings` (unused so far) into people and opinions, and drops those unit fields. Fixture `backup-v2.json`, migration test, and the M5 pre-update backup screen shows for the owner's real data.
+- **Showing it**: list cards, pins and the detail panel show **your** rating and flag by default; the detail panel shows everyone's ratings side by side ("You ★4 · Alex ★3"). Sorting and filtering by "everyone's lowest", "average" or "both rated 4+" join the filter panel (M10) and the compare table (M10). Until household sync exists, other people's ratings only arrive through sample data (preview builds get a sample roommate) or a restored backup that has them.
+
 ---
 
 ## 6. Keyboard (Phase 1)
@@ -821,6 +831,7 @@ Shortcuts act on the selected unit (or all selected units). Full table in DESIGN
 
 In: everything in spec §12 Phase 1 and the MVP rows of §10 (total cost, price history, duplicate detection, undo, window directions, photo archive); plus base-map switching and pin options (§4.3), lease length (§5.3) and fast data entry with AI import (§5.7, Q11).
 Stored but not shown yet: destinations, travel-time cache, crime, OSM id, 3D placement, monitoring dates, external ratings.
+People and per-person ratings are in Phase 1 (M6, Q15); household sync follows Phase 1 (§9).
 Not built: search-area drawing, travel times, overlays, buildings layer, keyed base maps, weighted score, monitoring, browser extension, sharing/merge import, CSV, share links, printable summary, Market history view, 3D, tour mode.
 
 ---
@@ -859,16 +870,19 @@ Each one ends with: tests green, the app running, and a short "how to try it" no
 | **M3** | L | Map: Wayfinding style, HTML pins, building grouping + fan-out (built as a card per building, Q12), low-zoom clusters, building view, list ↔ map selection sync, external links; **Map layers panel**: five base maps, all pin options, pin color, shrink-to-dots | Click pins and cards; try every pin style and base map |
 | **M4** | L | Quick-add: Photon suggestions, Nominatim fallback, Place on map, listing URL recognition, **paste listing text**, building match, duplicate-on-add banner, listings + first price observation, "add another in this building" | **Add your real units.** Under 30 s each |
 | **M5** | M | Backup export (JSON) and restore, persistent storage request, backup reminder banner, snapshots | Export, clear site data, restore; everything returns. **Safe to rely on from here.** |
-| **M6** | M | Triage: flag, stars, color labels (named), status, reject reasons, rating/flag notes, notes log, multi-select, **bulk edit**, all keyboard shortcuts, toasts with Undo, History panel (specific descriptions, restore to a point, undo one action: owner notes in §5.6) | Triage with the keyboard; undo anything |
-| **M7** | L | Full unit and building forms (every §3 field, unknown states, windows editor, exposure picker, utilities, parking/storage, recurring fees, rent by term), essentials + completeness meter, **research mode**, **copy from unit / new unit from plan**, listings and price-history editing | Fill a unit completely by keyboard; see price history |
-| **M8** | M | Cost profile in Settings, total monthly cost + breakdown, **lease length selector**, move-in cost, cost per sq ft, sort/filter by them | Change an electric estimate or lease length; totals update everywhere |
-| **M9** | L | Collections, full filter panel, saved filters (smart collections), Inbox, Explore/Shortlist mode, baseline criteria dimming, compare table | Build a shortlist and compare it |
-| **M10** | L | **Batch add grid** with table paste; **AI research prompts** (unit, building, selection); **import review** with tolerant parsing, matching, field-by-field accept, sources, one-step undo | Have an AI research a building; review and apply its reply |
-| **M11** | L | Photo archive: folder picker, OPFS/IDB fallback, thumbnails, drag/drop/paste, lightbox, sidecar `unit.json`, renames, trash, archive size, keep-originals option, backup with photos (.zip); photo pins come alive | Drop listing photos; find them in your folder; switch pins to Photo |
-| **M12** | M | Duplicate review page and merge | Merge a unit listed on two sites |
-| **M13** | M | Phone layout polish, PWA install + offline viewing, 500/200 performance pass, accessibility pass, **Clear all data** (Q14), acceptance test, final README | Install on your phone; run the acceptance test |
+| **M6** | M | **People** (Q15): your name in Settings; ratings, flags, flag/rating notes and reject reasons become per person; notes record their author; the first data-format change (v2: migration, fixture, pre-update backup screen); sample data with a second person on preview builds; detail panel and list show everyone's ratings side by side | Name yourself; see a sample roommate's ratings next to yours |
+| **M7** | M | Triage: flag, stars, color labels (named), status, reject reasons, rating/flag notes, notes log, multi-select, **bulk edit**, all keyboard shortcuts, toasts with Undo, History panel (specific descriptions, restore to a point, undo one action: owner notes in §5.6) | Triage with the keyboard; undo anything |
+| **M8** | L | Full unit and building forms (every §3 field, unknown states, windows editor, exposure picker, utilities, parking/storage, recurring fees, rent by term), essentials + completeness meter, **research mode**, **copy from unit / new unit from plan**, listings and price-history editing | Fill a unit completely by keyboard; see price history |
+| **M9** | M | Cost profile in Settings, total monthly cost + breakdown, **lease length selector**, move-in cost, cost per sq ft, sort/filter by them | Change an electric estimate or lease length; totals update everywhere |
+| **M10** | L | Collections, full filter panel, saved filters (smart collections), Inbox, Explore/Shortlist mode, baseline criteria dimming, compare table | Build a shortlist and compare it |
+| **M11** | L | **Batch add grid** with table paste; **AI research prompts** (unit, building, selection); **import review** with tolerant parsing, matching, field-by-field accept, sources, one-step undo | Have an AI research a building; review and apply its reply |
+| **M12** | L | Photo archive: folder picker, OPFS/IDB fallback, thumbnails, drag/drop/paste, lightbox, sidecar `unit.json`, renames, trash, archive size, keep-originals option, backup with photos (.zip); photo pins come alive | Drop listing photos; find them in your folder; switch pins to Photo |
+| **M13** | M | Duplicate review page and merge | Merge a unit listed on two sites |
+| **M14** | M | Phone layout polish, PWA install + offline viewing, 500/200 performance pass, accessibility pass, **Clear all data** (Q14), acceptance test, final README | Install on your phone; run the acceptance test |
 
-Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 14 milestones add up to about 20 "M-sized" units of work. M4 is where real use can start; M5 is where it becomes safe.
+Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 15 milestones add up to about 21 "M-sized" units of work. M4 is where real use can start; M5 is where it becomes safe.
+
+**After Phase 1: household sync (Q15, option C).** The first work after the M14 acceptance test, before Phase 2: about 2 L-sized milestones, numbered when Phase 1 is done. Each person's copy writes its own changes into a folder everyone shares through a cloud drive they already use (Dropbox, Google Drive or iCloud on a laptop) and reads the others' changes from it; no server, accounts or keys. Everyone can add and edit units; each keeps their own ratings, flags and filters. It replaces the merge import of spec §9 / Phase 3 (share links and CSV export stay in Phase 3). Limits to confirm then: Chrome/Edge on laptops (folder access), phones view-only; two edits to the same field at nearly the same time keep the later one and list what was overwritten; Undo undoes only your own changes.
 
 ---
 
@@ -900,7 +914,7 @@ Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 14
 
 | # | Question | Decision |
 | --- | --- | --- |
-| Q1 | Shared rating (§13) vs. per-person ratings (§9) | One rating per unit (yours). Ratings in files imported from others are kept read-only in `externalRatings` and shown as "Alex: ★4"; they never change yours. Used from Phase 3. |
+| Q1 | Shared rating (§13) vs. per-person ratings (§9) | ~~One rating per unit (yours)~~ **Superseded by Q15 (Oct 18):** ratings are per person from M6. |
 | Q2 | "Leased" status missing from §6 | Added **Leased** = you signed it, after Approved. "Rented by someone else" is Off market. |
 | Q3 | Exposure: one direction or a list | A list; the first item is the main direction. |
 | Q4 | Parking and storage listed twice | Only in the Parking & storage group; utilities are heat, electric, water/sewer, trash, gas, internet. |
@@ -911,16 +925,16 @@ Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 14
 | Q9 | Where the app lives | GitHub Pages under your account; localhost for development only. |
 | Q10 | Direct-sun estimate | Phase 4 with the sun slider; window directions captured from Phase 1. |
 
-| Q11 | Fast data entry (§5.7) in Phase 1? | **Yes.** Paste listing text, batch add, AI research prompts and import review are in Phase 1 (M4, M10). |
-| Q13 | Deleting a unit or building (M4 review, Oct 17): no milestone had a Delete button | **In M4.** **Delete unit…** and **Delete building…** at the end of their panels ask once inline, soft-delete (a building takes its units with it), close the panel and show a confirmation with **Undo** (undoes that delete only while it's still the latest action). Editing a building's details by hand stays in M7 (full forms). |
-| Q14 | **Clear all data** (DESIGN §4.5, Settings → Storage) wasn't in any milestone (M5 review, Oct 17) | **In M13** with the other Settings polish (type DELETE, offers a backup first). Preview builds keep *Remove all data* on the Data check page meanwhile. |
+| Q11 | Fast data entry (§5.7) in Phase 1? | **Yes.** Paste listing text, batch add, AI research prompts and import review are in Phase 1 (M4, M11). |
+| Q13 | Deleting a unit or building (M4 review, Oct 17): no milestone had a Delete button | **In M4.** **Delete unit…** and **Delete building…** at the end of their panels ask once inline, soft-delete (a building takes its units with it), close the panel and show a confirmation with **Undo** (undoes that delete only while it's still the latest action). Editing a building's details by hand stays in M8 (full forms). |
+| Q14 | **Clear all data** (DESIGN §4.5, Settings → Storage) wasn't in any milestone (M5 review, Oct 17) | **In M14** with the other Settings polish (type DELETE, offers a backup first). Preview builds keep *Remove all data* on the Data check page meanwhile. |
+| Q15 | Several people (e.g. future roommates) using the app together: their own ratings to compare, their own filters, adding and editing units; ideally live like Google Docs (owner, M5 review, Oct 17–18) | **Both B and C.** (B) **People in M6**, a new milestone before triage, because ratings are cheap to make per person now and expensive to retrofit once triage and real data are built around one rating (§5.8). (C) **Household sync through a shared cloud-drive folder** right after Phase 1 (§9). Real-time collaboration through a hosted service is ruled out (owner rule 1). Spec §13 "one shared rating per unit" and §9's merge import are superseded. |
 | Q12 | SPEC §5 "clicking it fans out the units" (M3 review 4, Oct 16) | The owner chose **one card per building** listing its units instead of fanning out separate plates: it can't scatter units or cross lines, and keeps dots visible. Clicking a grouped pin still shows every unit at the building, each clickable. |
 
 ### 11.2 Open
 
-| # | Question | Proposal |
-| --- | --- | --- |
-| Q15 | Several people (e.g. future roommates) using the app together: their own ratings to compare, their own filters, and adding/editing units, ideally live like Google Docs (owner, Oct 17, M5 review). Today's plan: one rating per unit (Q1); each person runs their own copy; sharing by file with a merge import in Phase 3, keeping others' ratings read-only as "Alex: ★4". | Options and sizes in the M5 chat: (A) keep the Phase 3 file plan; (B) add a **person** to each copy now (name in Settings, ratings and notes attributed to a person) so ratings from others merge cleanly and can be compared side by side; (C) **household sync through a shared cloud folder** (Dropbox/Google Drive/iCloud desktop folder, no server or keys, Chrome/Edge laptops); (D) real-time collaboration, which needs a hosted service and accounts and so breaks owner rule 1. Owner to decide which, and whether before or after Phase 1. |
+None. New questions will be added here as they come up.
+
 
 **Assumptions I'll proceed with unless you object**
 
@@ -929,7 +943,7 @@ Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 14
 - Photos come in by drop, file picker or paste; nothing is downloaded from listing sites. AI replies may include photo links; they're saved as links, not downloaded.
 - The §7 JSON example is illustrative. The AI-import format is generated from the internal zod schemas, so it matches the model rather than the example exactly (e.g. utilities as `{ "mode": "tenant-paid", "estimate": 45 }`).
 - Full photo-folder support on desktop Chrome/Edge; OPFS fallback on Safari/Firefox. Flags, stars and status can be changed on the phone; full editing is laptop-first.
-- Each friend runs their own copy in their own browser; there are no accounts.
+- Each person runs their own copy in their own browser; there are no accounts. From M6 each copy knows whose it is (§5.8); after Phase 1, copies can sync through a shared folder (§9).
 - Settings and the Map layers panel show Phase 2 items (API keys, overlays) disabled, so the layout doesn't change later.
 - The base-map and pin options (§4.3) are in Phase 1 because they're display choices over data Phase 1 already has; overlays that need new data stay in Phase 2.
 
@@ -939,6 +953,7 @@ Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 14
 
 | Date | Change |
 | --- | --- |
+| 2026-10-18 | M5, owner review: **Q15 decided**: per-person ratings in a new **M6 People** (§5.8), household sync through a shared cloud-drive folder right after Phase 1 (§9); Q1 superseded. Later milestones renumbered: old M6–M13 are now **M7–M14** (older log entries keep the numbers they had). |
 | 2026-10-17 | M5: backup (JSON) and restore in Settings (`#/settings/backup`, `#/settings/storage`, gear in the top bar), backup reminder banner, safety copies (snapshots with a reason, 3 kept per kind, downloadable and restorable), persistent storage request, and the pre-update backup screen (§3.7 step 7). Last backup time and the reminder's "Later" live in `meta` per browser, not in Settings (§5.5 "As built"). Backups with photos stay in M11. No data-format change. Owner review: Clear all data goes in M13 (Q14); Q15 opened (several people using the app together). |
 | 2026-10-15 | First draft for approval |
 | 2026-10-15 | Draft 2: direction C chosen; Q1–Q10 decided; lease length; base maps and pin options; fast data entry and AI import (§5.7); milestones revised to M0–M13; GitHub repo from M0; Q11 opened |
@@ -998,14 +1013,15 @@ The full working agreement for every session is in `CLAUDE.md`; this is the summ
 | M3 Map, pins, layers | Approved | v0.3.0 | 2026-10-16 |
 | M4 Quick-add and paste text | Approved | v0.4.0 | 2026-10-17 |
 | M5 Backup and restore | In review (preview) | 0.5.0 | — |
-| M6 Triage and bulk edit | Not started | — | — |
-| M7 Forms and research mode | Not started | — | — |
-| M8 Cost profile and lease length | Not started | — | — |
-| M9 Collections, filters, compare | Not started | — | — |
-| M10 Batch add and AI import | Not started | — | — |
-| M11 Photo archive | Not started | — | — |
-| M12 Duplicates and merge | Not started | — | — |
-| M13 Phone, PWA, acceptance | Not started | — | — |
+| M6 People and per-person ratings | Not started | — | — |
+| M7 Triage and bulk edit | Not started | — | — |
+| M8 Forms and research mode | Not started | — | — |
+| M9 Cost profile and lease length | Not started | — | — |
+| M10 Collections, filters, compare | Not started | — | — |
+| M11 Batch add and AI import | Not started | — | — |
+| M12 Photo archive | Not started | — | — |
+| M13 Duplicates and merge | Not started | — | — |
+| M14 Phone, PWA, acceptance | Not started | — | — |
 
 ### Session log
 

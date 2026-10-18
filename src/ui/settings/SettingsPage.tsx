@@ -7,8 +7,8 @@ import styles from './settings.module.css';
 
 /**
  * Settings (#/settings/:section; DESIGN.md §4.5). Sections arrive with the milestones that
- * need them: Backup and restore and Storage in M5; cost profile (M8), labels and reasons,
- * display, photo archive (M11) and keyboard shortcuts later.
+ * need them: Backup and restore and Storage in M5; cost profile (M9), labels and reasons,
+ * display, photo archive (M12) and keyboard shortcuts later.
  */
 const SECTIONS = [
   { id: 'backup', label: 'Backup and restore', Component: BackupSection },
