@@ -2,20 +2,35 @@ import { action } from '../commands/action';
 import type { RentalDB } from '../db/db';
 import { localDate } from '../domain/format';
 import { unitKeyOf } from '../domain/unitKey';
-import { building, listing, noteEntry, unit } from '../model';
+import { ensureMe, readMeId } from '../db/me';
+import { building, listing, noteEntry, opinion, opinionId, person, unit } from '../model';
 import type {
   Building,
   BuildingType,
   Direction,
+  Flag,
+  ID,
   ISODate,
   Listing,
   NoteEntry,
+  Opinion,
+  Person,
+  Rating,
   SiteKey,
   Unit,
   UnitStatus,
   UnitType,
 } from '../model';
-import { makeAddress, newBuilding, newListing, newNote, newUnit } from '../model/factories';
+import {
+  hasOpinion,
+  makeAddress,
+  newBuilding,
+  newListing,
+  newNote,
+  newOpinion,
+  newPerson,
+  newUnit,
+} from '../model/factories';
 
 /**
  * Made-up sample data for preview and development builds only (never offered on the live
@@ -193,11 +208,27 @@ export interface SampleData {
   units: Unit[];
   listings: Listing[];
   notes: NoteEntry[];
+  /** A sample roommate (you are `meId`, who already exists). */
+  people: Person[];
+  opinions: Opinion[];
 }
 
-/** Builds the sample records relative to `today` (YYYY-MM-DD). */
-export function makeSampleData(today: ISODate, at: string = new Date().toISOString()): SampleData {
+/** The sample roommate's name (preview builds: "see a sample roommate's ratings"). */
+export const SAMPLE_ROOMMATE = 'Alex';
+
+/**
+ * Builds the sample records relative to `today` (YYYY-MM-DD). Your opinions are written
+ * for `meId`; the sample roommate gets their own, mostly close to yours, sometimes not.
+ */
+export function makeSampleData(
+  today: ISODate,
+  at: string = new Date().toISOString(),
+  meId: ID = 'me',
+): SampleData {
   const rand = rng(1504);
+  const theirRand = rng(2027); // separate, so your sample units stay as they were
+  const roommate = person.parse(newPerson({ name: SAMPLE_ROOMMATE, color: 'plum' }, at));
+  const opinions: Opinion[] = [];
   const pick = <T>(list: readonly T[]): T => list[Math.floor(rand() * list.length)] as T;
   const day = (offset: number): ISODate => {
     const d = new Date(`${today}T12:00:00Z`);
@@ -291,15 +322,58 @@ export function makeSampleData(today: ISODate, at: string = new Date().toISOStri
             type: seed.type === 'house' ? 'surface' : seed.type === 'walk-up' ? 'street' : 'garage',
           },
           status,
-          rating: status === 'declined' ? 1 : (Math.floor(rand() * 6) as Unit['rating']),
-          flag: status === 'declined' ? 'reject' : status === 'shortlisted' ? 'pick' : 'none',
-          rejectReasonIds: status === 'declined' ? ['too-expensive'] : [],
-          colorLabel: rand() > 0.8 ? 'blue' : null,
+          colorLabel: null,
           addedVia: 'form',
         },
         at,
       );
+      // Same draws, in the same order, as before people existed (M6).
+      const myRating = status === 'declined' ? 1 : (Math.floor(rand() * 6) as Rating);
+      const myFlag: Flag =
+        status === 'declined' ? 'reject' : status === 'shortlisted' ? 'pick' : 'none';
+      u.colorLabel = rand() > 0.8 ? 'blue' : null;
       units.push(unit.parse(u));
+      const mine = newOpinion(
+        u.id,
+        meId,
+        {
+          rating: myRating,
+          flag: myFlag,
+          rejectReasonIds: myFlag === 'reject' ? ['too-expensive'] : [],
+        },
+        at,
+      );
+      if (hasOpinion(mine)) opinions.push(opinion.parse(mine));
+
+      // The roommate rates about three in four units, usually within a star of you.
+      if (!floorPlanOnly && theirRand() < 0.75) {
+        const drift = Math.floor(theirRand() * 3) - 1;
+        const base = myRating || 3;
+        const theirs = Math.min(5, Math.max(1, base + drift)) as Rating;
+        const theirFlag: Flag =
+          myFlag === 'reject'
+            ? theirRand() < 0.5
+              ? 'none'
+              : 'reject'
+            : theirs >= 5
+              ? 'pick'
+              : 'none';
+        opinions.push(
+          opinion.parse(
+            newOpinion(
+              u.id,
+              roommate.id,
+              {
+                rating: theirs,
+                flag: theirFlag,
+                rejectReasonIds: theirFlag === 'reject' ? ['too-far'] : [],
+                ratingNote: theirs >= 4 && theirRand() < 0.4 ? 'Short bike ride to my work.' : null,
+              },
+              at,
+            ),
+          ),
+        );
+      }
 
       const firstSeen = day(-Math.floor(rand() * 40) - 1);
       const raise = rand() > 0.6 ? 50 : 0;
@@ -330,6 +404,7 @@ export function makeSampleData(today: ISODate, at: string = new Date().toISOStri
                 unitId: u.id,
                 kind: 'tour',
                 text: 'Toured. Good light in the afternoon; hallway smelled of paint.',
+                authorId: meId,
               },
               at,
             ),
@@ -339,23 +414,84 @@ export function makeSampleData(today: ISODate, at: string = new Date().toISOStri
     }
   });
 
-  return { buildings, units, listings, notes };
+  const firstPick = units.find((u) => u.status === 'shortlisted');
+  if (firstPick) {
+    notes.push(
+      noteEntry.parse(
+        newNote(
+          {
+            unitId: firstPick.id,
+            text: 'Love the kitchen. Ask whether the bike room has space.',
+            authorId: roommate.id,
+          },
+          at,
+        ),
+      ),
+    );
+  }
+
+  return { buildings, units, listings, notes, people: [roommate], opinions };
 }
 
-/** Adds the sample data as one undoable action. */
-export async function loadSampleData(db: RentalDB, today = localDate()) {
-  const data = makeSampleData(today);
-  await action(db, 'Load sample data', async () => {
+/**
+ * Leaves out sample buildings you already have (same address, not deleted), with their
+ * units and everything attached to them, so loading twice never makes duplicates.
+ */
+export function withoutLoaded(data: SampleData, haveAddresses: ReadonlySet<string>): SampleData {
+  const buildings = data.buildings.filter((b) => !haveAddresses.has(b.address.normalized));
+  const keep = new Set(buildings.map((b) => b.id));
+  const units = data.units.filter((u) => keep.has(u.buildingId));
+  const unitIds = new Set(units.map((u) => u.id));
+  return {
+    buildings,
+    units,
+    listings: data.listings.filter((l) => unitIds.has(l.unitId)),
+    notes: data.notes.filter((n) => (n.unitId ? unitIds.has(n.unitId) : true)),
+    people: data.people,
+    opinions: data.opinions.filter((o) => unitIds.has(o.unitId)),
+  };
+}
+
+/**
+ * Adds the sample data as one undoable action: only the sample buildings that aren't in
+ * your list yet (none if it's already loaded). The sample roommate is added only if nobody
+ * by that name exists yet.
+ */
+export async function loadSampleData(db: RentalDB, today = localDate()): Promise<SampleData> {
+  const meId = await ensureMe(db);
+  const { value } = await action(db, 'Load sample data', async () => {
+    const have = new Set(
+      (await db.buildings.toArray()).filter((b) => !b.deletedAt).map((b) => b.address.normalized),
+    );
+    const data = withoutLoaded(makeSampleData(today, undefined, meId), have);
+    if (!data.units.length && !data.buildings.length) return data;
+    const existing = (await db.people.toArray()).find(
+      (p) => !p.deletedAt && p.name.toLowerCase() === SAMPLE_ROOMMATE.toLowerCase(),
+    );
+    const sampleId = data.people[0]!.id;
+    const roommateId = existing?.id ?? sampleId;
+    if (!existing) await db.people.bulkAdd(data.people);
     await db.buildings.bulkAdd(data.buildings);
     await db.units.bulkAdd(data.units);
     await db.listings.bulkAdd(data.listings);
-    await db.notes.bulkAdd(data.notes);
+    await db.notes.bulkAdd(
+      data.notes.map((n) => (n.authorId === sampleId ? { ...n, authorId: roommateId } : n)),
+    );
+    await db.opinions.bulkAdd(
+      data.opinions.map((o) =>
+        o.personId === sampleId
+          ? { ...o, personId: roommateId, id: opinionId(o.unitId, roommateId) }
+          : o,
+      ),
+    );
+    return data;
   });
-  return data;
+  return value;
 }
 
 /** Permanently removes every record in the data tables, as one undoable action. */
 export async function removeAllData(db: RentalDB) {
+  const meId = await readMeId(db); // meta isn't part of an action's transaction
   await action(db, 'Remove all data', async () => {
     await Promise.all([
       db.buildings.clear(),
@@ -367,6 +503,10 @@ export async function removeAllData(db: RentalDB) {
       db.photos.clear(),
       db.imports.clear(),
       db.settings.clear(),
+      db.opinions.clear(),
     ]);
+    // Everyone but you: this copy keeps its person.
+    const others = (await db.people.toArray()).filter((p) => p.id !== meId).map((p) => p.id);
+    await db.people.bulkDelete(others);
   });
 }

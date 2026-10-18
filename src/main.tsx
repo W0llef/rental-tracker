@@ -13,7 +13,10 @@ const element = document.getElementById('root');
 if (!element) throw new Error('Missing #root element');
 const root = createRoot(element);
 
-function renderApp() {
+async function renderApp() {
+  // Opens the database (running any update) and makes sure this copy has its person.
+  const [{ db }, { ensureMe }] = await Promise.all([import('./db/db'), import('./db/me')]);
+  await ensureMe(db).catch((e: unknown) => console.error('Couldn’t set up your person.', e));
   watchForFirstChange();
   root.render(
     <StrictMode>
@@ -31,7 +34,7 @@ async function start() {
   const pending = await checkPendingUpgrade(dbName);
   const data = pending ? await readStoredData(dbName).catch(() => null) : null;
   if (!pending || !data || !hasRecords(data)) {
-    renderApp();
+    await renderApp();
     return;
   }
   const [{ UpgradeGate }, { db }, { META_KEYS, setMeta }] = await Promise.all([
@@ -46,7 +49,7 @@ async function start() {
         data={data}
         onContinue={(backedUpAt) => {
           if (backedUpAt) void setMeta(db, META_KEYS.lastBackupAt, backedUpAt);
-          renderApp();
+          void renderApp();
         }}
       />
     </StrictMode>,

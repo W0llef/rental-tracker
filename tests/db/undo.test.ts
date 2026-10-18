@@ -10,6 +10,8 @@ import {
   updateSettings,
   updateUnit,
 } from '../../src/commands/records';
+import { setOpinion } from '../../src/commands/people';
+import { ensureMe } from '../../src/db/me';
 import { redo, undo } from '../../src/commands/undo';
 import { RentalDB } from '../../src/db/db';
 import { deriveStacks, groupActions, pruneChangeLog, readStacks } from '../../src/db/undo';
@@ -241,7 +243,7 @@ describe('undo property: any sequence of commands undoes back to the start', () 
       }
       case 'rate': {
         const u = pickU(s.u);
-        return u && updateUnit(db, u.id, { rating: s.rating });
+        return u && !u.deletedAt && setOpinion(db, u.id, await ensureMe(db), { rating: s.rating });
       }
       case 'deleteUnit': {
         const u = pickU(s.u);
@@ -267,6 +269,7 @@ describe('undo property: any sequence of commands undoes back to the start', () 
     await fc.assert(
       fc.asyncProperty(fc.array(step, { minLength: 1, maxLength: 12 }), async (steps) => {
         const db = makeDb();
+        await ensureMe(db); // the app sets this copy's person up before anything else
         // A starting dataset that is not empty, so "undo too far" would show.
         await createBuilding(db, { address, name: 'Start' });
         const start = await dumpData(db);

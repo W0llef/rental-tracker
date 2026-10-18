@@ -317,18 +317,11 @@ export interface Unit extends Base {
   };
   storage: { included: Tri; cost: Maybe<USD> };
   costOverrides: Partial<Record<CostItemKey, USD>>; // per-unit override of cost-profile estimates
-  // Status & review
+  // Status & review (each person's rating, flag and notes: Opinion, §3.4a; v2, M6)
   status: UnitStatus;
-  rating: 0 | 1 | 2 | 3 | 4 | 5;
-  ratingNote: Maybe<string>;
-  flag: Flag;
-  flagNote: Maybe<string>;
-  rejectReasonIds: ID[];
-  colorLabel: Maybe<LabelColor>;
-  collectionIds: ID[];              // multi-entry index
-  lastReviewedAt: Maybe<ISODateTime>;  // "date added" = createdAt
+  colorLabel: Maybe<LabelColor>;    // the shared label; each person also has a private one (Q16)
+  collectionIds: ID[];              // multi-entry index ("date added" = createdAt)
   addedVia: 'quick-add' | 'form' | 'ai-import' | 'backup' | 'share';
-  externalRatings: { by: string; rating: number; note: Maybe<string> }[]; // Phase 3 merges (Q1); replaced by opinions in M6 (§5.8)
   // Map (Phase 4)
   placement3d: Maybe<{ facadeBearingDeg: number; floor: number }>;
   // Media
@@ -382,6 +375,7 @@ export interface NoteEntry extends Base {
   buildingId: Maybe<ID>;
   text: string;
   kind: 'note' | 'tour' | 'call' | 'system';  // system = "Status → Toured"
+  authorId: Maybe<ID>;                         // v2 (M6): who wrote it; null for the app's own notes
 }
 
 export interface Photo extends Base {
@@ -408,6 +402,32 @@ export interface ImportBatch extends Base {  // one paste of AI output, listing 
   actionId: Maybe<string>;            // change-log action, so the whole import undoes as one step
 }
 ```
+
+### 3.4a People and opinions (v2, M6)
+
+```ts
+export type PersonColor = 'teal' | 'plum' | 'rust' | 'navy' | 'olive' | 'rose';
+
+export interface Person extends Base {
+  name: string;                         // 1–40 characters, unique among live people (any case)
+  color: PersonColor;                   // badge color (DESIGN §2.3a)
+  labelNames: Record<LabelColor, string>;  // this person's private label names (Q16)
+}
+
+export interface Opinion extends Base { // one per unit and person; id = `${personId}:${unitId}`
+  unitId: ID;
+  personId: ID;
+  rating: 0 | 1 | 2 | 3 | 4 | 5;
+  ratingNote: Maybe<string>;
+  flag: Flag;
+  flagNote: Maybe<string>;
+  rejectReasonIds: ID[];
+  colorLabel: Maybe<LabelColor>;        // private label (the shared one is unit.colorLabel)
+  lastReviewedAt: Maybe<ISODateTime>;
+}
+```
+
+Which person is "me" is a fact about each browser's copy, kept in `meta.meId`, never in the shared data. A backup records who made it (`exportedBy` in the envelope) so a restore can work out who "me" is (§5.8 "As built"). The opinion id is made from the person and unit so two copies that create the same opinion (after household sync) get the same record.
 
 ### 3.5 Settings (one record) and supporting types
 
@@ -512,6 +532,13 @@ db.version(1).stores({
   travelCache:  'key, at',                 // Phase 2
   meta:         'key',                     // schemaVersion, installId, first-run flags
 });
+
+// v2 (M6): people and opinions; units drop the per-person indexes
+db.version(2).stores({
+  units:    'id, buildingId, [buildingId+unitKey], status, colorLabel, *collectionIds, updatedAt, deletedAt',
+  people:   'id, deletedAt',
+  opinions: 'id, &[unitId+personId], unitId, personId, deletedAt',
+});
 ```
 
 ### 3.7 Schema changes (migrations)
@@ -524,7 +551,8 @@ There are two places old data can come from — the browser's own database and o
 4. Backup import runs the same chain: `v1 → v2 → … → current`, then validates against the current zod schemas. A backup from a *newer* app version is refused with a clear message instead of being half-imported.
 5. Old migrations are never edited. Each one ships with a fixture backup (`tests/fixtures/backup-vN.json`) and a test that it migrates to the current version and passes validation. Fixtures are frozen: never regenerate an old one. The framework itself is tested with throwaway v2–v6 versions (`tests/db/versions.test.ts`).
 6. Rule for the build: from Milestone 1 on, data is never wiped to change its shape. You can start entering real units at Milestone 4 and keep them through Phase 4.
-7. **Before any migration runs on real data**, the app asks you to download a backup file first (built in M5 with backup export; no migration ships before then) ("This update changes how your data is stored. Download a backup before continuing."). That file is what makes rolling back to an older version possible, because an older version can't open a database a newer one has upgraded (§13). *As built in M5:* before the database is opened, `main.tsx` reads the stored version with plain IndexedDB (`indexedDB.databases()`, or opening without a version and never creating one) and, if it's older than `SCHEMA_VERSION` and holds data, shows that screen instead of the app. *Download backup* reads the stored records as they are, so the file is in the old format and opens in the previous app version too; *Continue* (or *Continue without a backup*) opens the database, which runs the upgrade and its snapshot. Tested with a throwaway v2 (`tests/db/upgradeCheck.test.ts`); no real v2 exists yet.
+7. **Before any migration runs on real data**, the app asks you to download a backup file first (built in M5 with backup export; no migration ships before then) ("This update changes how your data is stored. Download a backup before continuing."). That file is what makes rolling back to an older version possible, because an older version can't open a database a newer one has upgraded (§13). *As built in M5:* before the database is opened, `main.tsx` reads the stored version with plain IndexedDB (`indexedDB.databases()`, or opening without a version and never creating one) and, if it's older than `SCHEMA_VERSION` and holds data, shows that screen instead of the app. *Download backup* reads the stored records as they are, so the file is in the old format and opens in the previous app version too; *Continue* (or *Continue without a backup*) opens the database, which runs the upgrade and its snapshot. Tested against a real v1 database (`tests/db/upgradeCheck.test.ts`, `tests/db/upgradeV2.test.ts`, and in the browser by `tests/e2e/people.spec.ts`, which builds a v0.5 database before the app opens it).
+9. **v2 (M6, the first real change)**: `db/migrations/v2.ts`. A migration can now also transform several tables at once (`transform`, for records that move between tables), say that the undo history can't survive it (`clearsHistory`: the browser's database clears the change log after the snapshot; restores always did), and create this copy's person (`createsMe`: the browser records the new person in `meta.meId`). Backup files run the same transform with "me" being the person already using the browser (`checkBackup(file, me)`), so an old file's ratings become yours.
 8. **Preview builds use a separate database** (`rental-tracker-preview`) and show a "Preview" banner, so testing a milestone never touches your real data even though both live at the same web address.
 
 ---
@@ -817,6 +845,18 @@ A draft for the M6 chat to confirm with the owner before building:
 - **Migration v2** (the first): creates "me", moves each unit's rating/flag/notes/reasons into opinions for me, turns `externalRatings` (unused so far) into people and opinions, and drops those unit fields. Fixture `backup-v2.json`, migration test, and the M5 pre-update backup screen shows for the owner's real data.
 - **Showing it**: list cards, pins and the detail panel show **your** rating and flag by default; the detail panel shows everyone's ratings side by side ("You ★4 · Alex ★3"). Sorting and filtering by "everyone's lowest", "average" or "both rated 4+" join the filter panel (M10) and the compare table (M10). Until household sync exists, other people's ratings only arrive through sample data (preview builds get a sample roommate) or a restored backup that has them.
 
+**Confirmed with the owner (M6 chat, Oct 18):** per person: rating, rating note, flag, flag note, reject reasons, "last reviewed" and a **private color label** (Q16); shared: status, facts, listings and the **shared color label**. Other people can be **added by hand** in Settings → People and their ratings entered for them (Q15 addition), not only through sample data or backups. The update to v2 **clears the undo history** after its safety copy (Q17).
+
+**As built (M6):**
+- `model/people.ts` (Person, Opinion, `opinionId`), `db/me.ts` (`readMeId`, `ensureMe`, `getMe`), `commands/people.ts` (`addPerson`, `updatePerson`, `removePerson`, `setOpinion`, each one undo step), `domain/people.ts` (colors, names, `resolveMe`, summaries).
+- **Me.** `main.tsx` calls `ensureMe` after the database opens: a new database (or one after *Remove all data*) gets a person "Me" in a system write (not undoable; it's the copy's setup). The v2 upgrade creates "Me" from the old data and records it. The main screen asks once for your name in a banner, only once there are units (*Save* / *Not now*, remembered in `meta.nameAskedAt`); Settings → People changes it any time.
+- **Opinions.** `setOpinion(db, unitIds, personId, changes)` stores one record per unit and person (empty opinions aren't created); un-rejecting clears reject reasons. Removing a person soft-deletes them with their opinions (Undo brings both back); notes they wrote stay and keep their name. You can't remove yourself.
+- **Notes** get `authorId` (yours by default); notes by others show "· Alex" after the date.
+- **Showing it.** `state/derive.ts` gives every unit row `mine` (your opinion or an empty one) and `opinions` (everyone, you first). Cards, pins, sorting by rating and the dimmed "rejected" look use yours; cards show everyone else in one fixed-size chip (`othersSummary`: up to 3 badges +N, star range, pick and reject counts; owner review, DESIGN §4.1); the detail panel has a **Ratings** section with everyone side by side, editable stars and flag per person (editing notes, reasons and labels comes with triage, M7).
+- **Backups and restore.** Backups carry `exportedBy` (this copy's person); snapshots record `meId`. After a restore, "me" is: you, if the file has you; else whoever made the file; else the file's only person; else a new person with your name (or "Me" if the file already has that name). An old (v1) file is migrated with you as "me", so its ratings become yours under your name.
+- **Sample data** (preview/dev) adds **Alex**, who rated about three in four units close to you (sometimes not) and wrote one note. *Load sample data* adds only the sample buildings you don't already have (same address, not deleted), so pressing it twice no longer makes duplicate buildings (owner review: three "The Larkin" cards on the map); it says "already loaded" when there's nothing to add. *Remove all data* keeps you.
+- Not yet: private labels can be stored but not set or shown (M7); filters by "everyone's lowest / average / both 4+" (M10); compare table columns per person (M10).
+
 ---
 
 ## 6. Keyboard (Phase 1)
@@ -830,7 +870,7 @@ Shortcuts act on the selected unit (or all selected units). Full table in DESIGN
 ## 7. Phase 1 scope boundaries
 
 In: everything in spec §12 Phase 1 and the MVP rows of §10 (total cost, price history, duplicate detection, undo, window directions, photo archive); plus base-map switching and pin options (§4.3), lease length (§5.3) and fast data entry with AI import (§5.7, Q11).
-Stored but not shown yet: destinations, travel-time cache, crime, OSM id, 3D placement, monitoring dates, external ratings.
+Stored but not shown yet: destinations, travel-time cache, crime, OSM id, 3D placement, monitoring dates, private color labels (M7).
 People and per-person ratings are in Phase 1 (M6, Q15); household sync follows Phase 1 (§9).
 Not built: search-area drawing, travel times, overlays, buildings layer, keyed base maps, weighted score, monitoring, browser extension, sharing/merge import, CSV, share links, printable summary, Market history view, 3D, tour mode.
 
@@ -878,7 +918,7 @@ Each one ends with: tests green, the app running, and a short "how to try it" no
 | **M11** | L | **Batch add grid** with table paste; **AI research prompts** (unit, building, selection); **import review** with tolerant parsing, matching, field-by-field accept, sources, one-step undo | Have an AI research a building; review and apply its reply |
 | **M12** | L | Photo archive: folder picker, OPFS/IDB fallback, thumbnails, drag/drop/paste, lightbox, sidecar `unit.json`, renames, trash, archive size, keep-originals option, backup with photos (.zip); photo pins come alive | Drop listing photos; find them in your folder; switch pins to Photo |
 | **M13** | M | Duplicate review page and merge | Merge a unit listed on two sites |
-| **M14** | M | Phone layout polish, PWA install + offline viewing, 500/200 performance pass, accessibility pass, **Clear all data** (Q14), acceptance test, final README | Install on your phone; run the acceptance test |
+| **M14** | M | Phone layout polish, PWA install + offline viewing, 500/200 performance pass, accessibility pass, **Clear all data** (Q14), **Colors editor** (Q18: status, New badge, badge colors, custom labels), acceptance test, final README | Install on your phone; pick your own colors; run the acceptance test |
 
 Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 15 milestones add up to about 21 "M-sized" units of work. M4 is where real use can start; M5 is where it becomes safe.
 
@@ -928,7 +968,10 @@ Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 15
 | Q11 | Fast data entry (§5.7) in Phase 1? | **Yes.** Paste listing text, batch add, AI research prompts and import review are in Phase 1 (M4, M11). |
 | Q13 | Deleting a unit or building (M4 review, Oct 17): no milestone had a Delete button | **In M4.** **Delete unit…** and **Delete building…** at the end of their panels ask once inline, soft-delete (a building takes its units with it), close the panel and show a confirmation with **Undo** (undoes that delete only while it's still the latest action). Editing a building's details by hand stays in M8 (full forms). |
 | Q14 | **Clear all data** (DESIGN §4.5, Settings → Storage) wasn't in any milestone (M5 review, Oct 17) | **In M14** with the other Settings polish (type DELETE, offers a backup first). Preview builds keep *Remove all data* on the Data check page meanwhile. |
-| Q15 | Several people (e.g. future roommates) using the app together: their own ratings to compare, their own filters, adding and editing units; ideally live like Google Docs (owner, M5 review, Oct 17–18) | **Both B and C.** (B) **People in M6**, a new milestone before triage, because ratings are cheap to make per person now and expensive to retrofit once triage and real data are built around one rating (§5.8). (C) **Household sync through a shared cloud-drive folder** right after Phase 1 (§9). Real-time collaboration through a hosted service is ruled out (owner rule 1). Spec §13 "one shared rating per unit" and §9's merge import are superseded. |
+| Q15 | Several people (e.g. future roommates) using the app together: their own ratings to compare, their own filters, adding and editing units; ideally live like Google Docs (owner, M5 review, Oct 17–18) | **Both B and C.** (M6 chat: other people can also be added by hand in Settings → People and rated for, until sync.) (B) **People in M6**, a new milestone before triage, because ratings are cheap to make per person now and expensive to retrofit once triage and real data are built around one rating (§5.8). (C) **Household sync through a shared cloud-drive folder** right after Phase 1 (§9). Real-time collaboration through a hosted service is ruled out (owner rule 1). Spec §13 "one shared rating per unit" and §9's merge import are superseded. |
+| Q16 | Color labels: shared or per person? (M6 chat, Oct 18) | **Both, independently.** Every unit has one **shared** label (household names) and each person one **private** label (their own names; others' private labels aren't shown). Any of the five colors in either; nothing converts between them. Stored from M6 (`unit.colorLabel`, `opinion.colorLabel`, `person.labelNames`); setting and showing them in M7. |
+| Q17 | Undo history across the first data-format update (M6 chat, Oct 18) | **Cleared** by the v2 update after its safety copy: its before/after copies are in the old shape. The safety copy and the pre-update backup keep everything. |
+| Q18 | Custom colors (owner, M6 review, Oct 18) | **Step 1 in M14: a Colors editor** (Settings → Display). Presets stay the default and the app looks the same for anyone who never opens it: every color picker offers the preset swatches first, plus *Custom color…*, plus *Reset to default*; a warning shows when text on a chosen color would be hard to read in light or dark mode. **Whose:** status colors (pin edges, pills, legend), the New badge and other display colors are **per person** (kept per browser, like pin choices); **people's badge colors are shared** (everyone sees a person in the same color). **Labels:** the five default colors stay for now; in M14 a person can also make **custom-colored labels**, private (theirs) or shared (same color for everyone). A custom label's name starts as the nearest named color ("Teal") and can be renamed. This will likely be a data-format change (labels stored by id with a color; badge colors beyond the six presets), so M14 says so. **Step 2, full custom themes** (sidebar, cards, pins), after Phase 1. |
 | Q12 | SPEC §5 "clicking it fans out the units" (M3 review 4, Oct 16) | The owner chose **one card per building** listing its units instead of fanning out separate plates: it can't scatter units or cross lines, and keeps dots visible. Clicking a grouped pin still shows every unit at the building, each clickable. |
 
 ### 11.2 Open
@@ -953,6 +996,9 @@ None. New questions will be added here as they come up.
 
 | Date | Change |
 | --- | --- |
+| 2026-10-18 | M6, owner review: the pin field and sort option are called **Your rating** (they show and sort by yours). Custom colors decided as **Q18**: a Colors editor in M14 (presets first, custom optional; display colors per person, badge colors shared; custom private or shared labels named after the nearest color), full themes after Phase 1. |
+| 2026-10-18 | M6, owner review: cards show other people in **one chip** of fixed size instead of one mark each (it overflowed with three people); a crowded card foot wraps instead of overlapping. *Load sample data* no longer duplicates buildings. Finding duplicates already in your list (and merging them) stays in M13. |
+| 2026-10-18 | M6: **people and per-person ratings**, the first data-format change (**v2**). §5.8 confirmed with the owner (Q16: shared and private color labels; Q17: undo history cleared at the update; Q15: people can be added by hand). Model §3.3/§3.4a, Dexie v2 §3.6, migration framework additions §3.7 step 9, "As built" in §5.8. The name banner shows only once there are units. Settings → People. A slice of M7 came early: the detail panel's Ratings section sets stars and flags (per person); notes, reasons and labels stay in M7. |
 | 2026-10-18 | M5, owner review: **Q15 decided**: per-person ratings in a new **M6 People** (§5.8), household sync through a shared cloud-drive folder right after Phase 1 (§9); Q1 superseded. Later milestones renumbered: old M6–M13 are now **M7–M14** (older log entries keep the numbers they had). |
 | 2026-10-17 | M5: backup (JSON) and restore in Settings (`#/settings/backup`, `#/settings/storage`, gear in the top bar), backup reminder banner, safety copies (snapshots with a reason, 3 kept per kind, downloadable and restorable), persistent storage request, and the pre-update backup screen (§3.7 step 7). Last backup time and the reminder's "Later" live in `meta` per browser, not in Settings (§5.5 "As built"). Backups with photos stay in M11. No data-format change. Owner review: Clear all data goes in M13 (Q14); Q15 opened (several people using the app together). |
 | 2026-10-15 | First draft for approval |
@@ -1013,7 +1059,7 @@ The full working agreement for every session is in `CLAUDE.md`; this is the summ
 | M3 Map, pins, layers | Approved | v0.3.0 | 2026-10-16 |
 | M4 Quick-add and paste text | Approved | v0.4.0 | 2026-10-17 |
 | M5 Backup and restore | Approved | v0.5.0 | 2026-10-18 |
-| M6 People and per-person ratings | Not started | — | — |
+| M6 People and per-person ratings | In review (preview) | 0.6.0 | — |
 | M7 Triage and bulk edit | Not started | — | — |
 | M8 Forms and research mode | Not started | — | — |
 | M9 Cost profile and lease length | Not started | — | — |

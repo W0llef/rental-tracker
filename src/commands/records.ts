@@ -1,4 +1,5 @@
 import type { RentalDB } from '../db/db';
+import { ensureMe } from '../db/me';
 import { unitKeyOf } from '../domain/unitKey';
 import { building, defaultSettings, listing, noteEntry, settings, unit } from '../model';
 import type { Building, ID, Listing, NoteEntry, Settings, Unit } from '../model';
@@ -121,8 +122,10 @@ export async function addListing(db: RentalDB, input: ListingInput): Promise<Lis
   return record;
 }
 
+/** Notes record who wrote them: you, unless the caller says otherwise (M6, §5.8). */
 export async function addNote(db: RentalDB, input: NoteInput): Promise<NoteEntry> {
-  const record = noteEntry.parse(newNote(input));
+  const authorId = input.authorId !== undefined ? input.authorId : await ensureMe(db);
+  const record = noteEntry.parse(newNote({ ...input, authorId }));
   await action(db, 'Add note', () => db.notes.add(record));
   return record;
 }

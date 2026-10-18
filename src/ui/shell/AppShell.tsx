@@ -18,6 +18,9 @@ import { MapPanel } from '../map/MapPanel';
 import { UnitPanel } from '../detail/UnitPanel';
 import { ListPanel } from '../list/ListPanel';
 import { BackupBanner } from './BackupBanner';
+import { NameBanner } from './NameBanner';
+import { backupReminder } from '../../services/backup/reminders';
+import { useBackupMeta } from '../../state/useBackup';
 import { Notice } from './Notice';
 import { useStorageSafety } from './useStorageSafety';
 import { PreviewBanner } from './PreviewBanner';
@@ -64,6 +67,18 @@ export function AppShell() {
   const today = localDate();
   const hasData = !!data && (data.units.length > 0 || data.buildings.length > 0);
   useStorageSafety(hasData);
+  // One banner at a time: the backup reminder first, then the question about your name.
+  const backupMeta = useBackupMeta();
+  const backupDue =
+    !backupMeta ||
+    (!!data &&
+      backupReminder({
+        hasData,
+        lastBackupAt: backupMeta.lastBackupAt,
+        remindEveryDays: data.settings.backup.remindEveryDays,
+        snoozedUntil: backupMeta.snoozedUntil,
+        now: new Date(),
+      }).due);
 
   // Phone tabs: selecting something opens the Unit tab; closing it returns to the list.
   const [tab, setTab] = useState<Tab>(selectedKey ? 'unit' : 'list');
@@ -203,6 +218,7 @@ export function AppShell() {
           </svg>
         </Link>
       </header>
+      {data && !backupDue && <NameBanner me={data.me} hasData={hasData} />}
       {data && (
         <BackupBanner hasData={hasData} remindEveryDays={data.settings.backup.remindEveryDays} />
       )}

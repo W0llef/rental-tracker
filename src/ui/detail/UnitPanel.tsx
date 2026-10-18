@@ -19,7 +19,7 @@ import {
 } from '../../domain/format';
 import { listingPrices, priceHistory } from '../../domain/listings';
 import { UTILITY_KEYS } from '../../model';
-import type { ISODate, Settings, Unit } from '../../model';
+import type { ISODate, OpinionFields, Settings, Unit } from '../../model';
 import type { UnitRow } from '../../state/derive';
 import { PasteIntoUnit } from '../add/PasteIntoUnit';
 import { PlaceOnMapButton } from '../add/PlaceOnMap';
@@ -31,6 +31,7 @@ import { Amenities, Facts, Links, Notes, Rows, Section } from './parts';
 import { fromLinkRecords, isWebUrl, petsText, structureText, tri } from './text';
 import type { ExternalLink } from './text';
 import { PriceChart } from './PriceChart';
+import { RatingsSection } from './Ratings';
 import styles from './detail.module.css';
 
 const usd = (v: number | null) => (v === null ? null : money(v));
@@ -40,13 +41,14 @@ function floorText(u: Unit, floors: number | null): string | null {
   return floors !== null ? `${u.floor} of ${floors}` : String(u.floor);
 }
 
-function Markers({ u, settings }: { u: Unit; settings: Settings }) {
-  const reasons = rejectReasonText(u.rejectReasonIds, settings);
+/** Your flag and stars, the shared label and the status (everyone's: Ratings below). */
+function Markers({ u, mine, settings }: { u: Unit; mine: OpinionFields; settings: Settings }) {
+  const reasons = rejectReasonText(mine.rejectReasonIds, settings);
   return (
     <div className={styles.markers}>
       <div className={styles.markerRow}>
-        <FlagMark flag={u.flag} reasons={reasons} showNone />
-        <Stars rating={u.rating} size="large" />
+        <FlagMark flag={mine.flag} reasons={reasons} showNone />
+        <Stars rating={mine.rating} size="large" />
         {u.colorLabel && (
           <span className={styles.labelName}>
             <LabelSwatch color={u.colorLabel} name={settings.labelNames[u.colorLabel]} />
@@ -57,12 +59,6 @@ function Markers({ u, settings }: { u: Unit; settings: Settings }) {
           <StatusPill status={u.status} />
         </span>
       </div>
-      {(u.flagNote || u.ratingNote) && (
-        <div className={styles.markerNotes}>
-          {u.flagNote && <p>{u.flagNote}</p>}
-          {u.ratingNote && <p>{u.ratingNote}</p>}
-        </div>
-      )}
     </div>
   );
 }
@@ -349,7 +345,8 @@ export function UnitPanel({
         )}
       </header>
 
-      <Markers u={u} settings={settings} />
+      <Markers u={u} mine={row.mine} settings={settings} />
+      <RatingsSection unitId={u.id} rows={row.opinions} settings={settings} />
       <LeaseSection u={u} today={today} />
       <UnitFacts u={u} floors={b?.floors ?? null} />
       <WindowsSection u={u} />

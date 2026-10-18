@@ -1,7 +1,9 @@
 import type Dexie from 'dexie';
 import type { Transaction } from 'dexie';
 import { DATA_TABLES } from '../model';
-import type { Migration } from './migrations';
+import { migrationContext } from './migrations';
+import type { Migration, MigrationContext } from './migrations';
+import { v2 } from './migrations/v2';
 
 /**
  * Every Dexie version the app has ever had (PLAN.md §3.6–3.7). Never edit a released entry;
@@ -30,6 +32,14 @@ export const STORES_V1 = {
   meta: 'key', // schemaVersion, installId, first-run flags
 } as const;
 
+/** Version 2 (M6): people and their opinions; units lose the per-person indexes. */
+export const STORES_V2 = {
+  units:
+    'id, buildingId, [buildingId+unitKey], status, colorLabel, *collectionIds, updatedAt, deletedAt',
+  people: 'id, deletedAt',
+  opinions: 'id, &[unitId+personId], unitId, personId, deletedAt',
+} as const;
+
 export interface VersionSpec {
   version: number;
   /** Dexie store declarations that change in this version (null deletes a table). */
@@ -40,8 +50,12 @@ export interface VersionSpec {
 
 export const versions: VersionSpec[] = [
   { version: 1, stores: STORES_V1 },
-  // Next: { version: 2, stores: { …only changed stores… }, migration: v2 },
+  { version: 2, stores: STORES_V2, migration: v2 },
+  // Next: { version: 3, stores: { …only changed stores… }, migration: v3 },
 ];
+
+/** The meta key holding which person this browser's copy belongs to (db/me.ts). */
+export const ME_META_KEY = 'meId';
 
 /** How many snapshots of each kind to keep. */
 export const SNAPSHOTS_KEPT = 3;
@@ -60,6 +74,8 @@ export interface Snapshot {
   toVersion: number;
   /** Why it was taken. Missing on snapshots from before M5, which were all migrations. */
   reason?: SnapshotReason;
+  /** Whose copy it was ("me" when it was taken; from M6), so restoring it keeps you you. */
+  meId?: string | null;
   data: Record<string, unknown[]>;
 }
 
@@ -73,7 +89,12 @@ export function declareVersions(db: Dexie, list: VersionSpec[] = versions): void
     if (migration) {
       version.upgrade(async (tx) => {
         await takeSnapshot(tx, spec.version - 1, spec.version);
-        await runMigration(tx, migration);
+        const ctx = await upgradeContext(tx);
+        await runMigration(tx, migration, ctx);
+        if (migration.clearsHistory) await tx.table('changeLog').clear();
+        if (migration.createsMe) {
+          await tx.table('meta').put({ key: ME_META_KEY, value: ctx.meId });
+        }
       });
     }
   }
@@ -95,11 +116,15 @@ export async function takeSnapshot(
     data[table] = await tx.table(table).toArray();
   }
   const snapshots = tx.table<Snapshot, number>('snapshots');
+  const me = tx.storeNames.includes('meta')
+    ? ((await tx.table('meta').get(ME_META_KEY)) as { value?: unknown } | undefined)
+    : undefined;
   const seq = await snapshots.add({
     at: new Date().toISOString(),
     fromVersion,
     toVersion,
     reason,
+    ...(typeof me?.value === 'string' ? { meId: me.value } : {}),
     data,
   });
   const all = await snapshots.orderBy('seq').toArray();
@@ -109,7 +134,13 @@ export async function takeSnapshot(
   return seq;
 }
 
-async function runMigration(tx: Transaction, migration: Migration) {
+/** In the browser's own database "me" is the person already stored, or a new one. */
+async function upgradeContext(tx: Transaction): Promise<MigrationContext> {
+  const row = (await tx.table('meta').get(ME_META_KEY)) as { value?: unknown } | undefined;
+  return migrationContext(typeof row?.value === 'string' ? { meId: row.value } : {});
+}
+
+async function runMigration(tx: Transaction, migration: Migration, ctx: MigrationContext) {
   for (const [table, transform] of Object.entries(migration.tables)) {
     if (!transform) continue;
     await tx
@@ -118,5 +149,16 @@ async function runMigration(tx: Transaction, migration: Migration) {
       .modify((value, ref) => {
         ref.value = transform(value as Record<string, unknown>);
       });
+  }
+  const multi = migration.transform;
+  if (multi) {
+    const input: Record<string, unknown[]> = {};
+    for (const table of multi.tables) input[table] = await tx.table(table).toArray();
+    const output = multi.run(input, ctx);
+    for (const table of multi.tables) {
+      await tx.table(table).clear();
+      const rows = output[table] ?? [];
+      if (rows.length) await tx.table(table).bulkAdd(rows);
+    }
   }
 }

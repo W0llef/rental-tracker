@@ -23,7 +23,7 @@ describe('data model', () => {
     expect(Object.values(b.amenities).every((v) => v === null)).toBe(true);
 
     const u = unit.parse(newUnit({ buildingId: b.id }));
-    expect(u).toMatchObject({ rent: null, status: 'new', rating: 0, flag: 'none', exposure: null });
+    expect(u).toMatchObject({ rent: null, status: 'new', colorLabel: null, exposure: null });
     expect(Object.values(u.utilities).every((v) => v === null)).toBe(true);
 
     expect(listing.parse(newListing({ unitId: u.id, firstSeen: '2026-10-15' })).lastSeen).toBe(
@@ -54,7 +54,6 @@ describe('data model', () => {
     expect(() => unit.parse({ ...u, rent: 1650.5 })).toThrow(); // whole dollars
     expect(() => unit.parse({ ...u, bathrooms: 1.25 })).toThrow(); // half steps
     expect(() => unit.parse({ ...u, status: 'maybe' })).toThrow();
-    expect(() => unit.parse({ ...u, rating: 6 })).toThrow();
     expect(() => unit.parse({ ...u, availableDate: 'June 1' })).toThrow();
     expect(() =>
       unit.parse({ ...u, utilities: { ...u.utilities, heat: { mode: 'free' } } }),

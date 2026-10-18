@@ -39,6 +39,8 @@ export function sortBy<T>(
 
 export interface UnitSortInput {
   unit: Unit;
+  /** Your rating: sorting by rating sorts by yours (PLAN.md §5.8). */
+  mine: { rating: number };
   building: Building | undefined;
   /** Days since the unit was first seen listed; null when it has no listings. */
   listingAgeDays: number | null;
@@ -75,7 +77,7 @@ export const UNIT_SORTS: Record<
   bedrooms: { label: 'Bedrooms', dir: 'desc', asc: 'fewest first', desc: 'most first' },
   bathrooms: { label: 'Bathrooms', dir: 'desc', asc: 'fewest first', desc: 'most first' },
   floor: { label: 'Floor', dir: 'desc', asc: 'lowest first', desc: 'highest first' },
-  rating: { label: 'Rating', dir: 'desc', asc: 'lowest first', desc: 'highest first' },
+  rating: { label: 'Your rating', dir: 'desc', asc: 'lowest first', desc: 'highest first' },
   listingAge: { label: 'Listing age', dir: 'asc', asc: 'newest first', desc: 'oldest first' },
   createdAt: { label: 'Date added', dir: 'desc', asc: 'oldest first', desc: 'newest first' },
   status: { label: 'Status', dir: 'asc', asc: 'pipeline order', desc: 'reverse order' },
@@ -105,7 +107,7 @@ export function unitSortValue(row: UnitSortInput, key: UnitSortKey): SortValue {
     case 'floor':
       return u.floor;
     case 'rating':
-      return u.rating === 0 ? null : u.rating; // 0 = not rated yet
+      return row.mine.rating === 0 ? null : row.mine.rating; // 0 = not rated yet
     case 'listingAge':
       return row.listingAgeDays;
     case 'createdAt':

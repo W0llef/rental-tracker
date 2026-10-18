@@ -1,0 +1,655 @@
+{
+  "format": "rental-tracker-backup",
+  "schemaVersion": 2,
+  "exportedAt": "2026-10-18T16:00:00.000Z",
+  "appVersion": "0.6.0",
+  "exportedBy": "p-me",
+  "data": {
+    "buildings": [
+      {
+        "id": "b-1",
+        "createdAt": "2026-10-15T21:12:00.000Z",
+        "updatedAt": "2026-10-15T21:12:00.000Z",
+        "deletedAt": null,
+        "name": "Example Tower",
+        "complexName": null,
+        "location": {
+          "lat": 44.98,
+          "lng": -93.27,
+          "source": "photon",
+          "precision": "address"
+        },
+        "website": null,
+        "managementCompany": null,
+        "phone": null,
+        "email": null,
+        "yearBuilt": null,
+        "yearRenovated": null,
+        "floors": 20,
+        "totalUnits": null,
+        "buildingType": "high-rise",
+        "elevator": null,
+        "amenities": {
+          "fitness": null,
+          "pool": null,
+          "studyRooms": null,
+          "outdoorDeck": null,
+          "packageRoom": null,
+          "bikeStorage": null,
+          "evCharging": null,
+          "guestSuites": null,
+          "petArea": null,
+          "frontDesk": null,
+          "skywayConnected": true
+        },
+        "amenitiesNotes": null,
+        "pets": {
+          "cats": null,
+          "dogs": null,
+          "limits": null,
+          "deposit": null,
+          "oneTimeFee": null,
+          "monthlyRent": null
+        },
+        "smoking": null,
+        "guestParking": null,
+        "subletPolicy": null,
+        "policyNotes": null,
+        "neighborhood": null,
+        "crime": null,
+        "links": [],
+        "notes": null,
+        "availabilityUrl": null,
+        "lastCheckedAt": null,
+        "osmId": null,
+        "floorHeightFt": null,
+        "address": {
+          "line1": "123 Example Ave S",
+          "city": "Minneapolis",
+          "state": "MN",
+          "zip": "55401",
+          "formatted": "123 Example Ave S, Minneapolis, MN 55401",
+          "normalized": "123 example ave s|minneapolis"
+        }
+      }
+    ],
+    "units": [
+      {
+        "id": "u-1",
+        "createdAt": "2026-10-15T21:12:00.000Z",
+        "updatedAt": "2026-10-15T21:12:00.000Z",
+        "deletedAt": null,
+        "unitNumber": "1504",
+        "unitKey": "1504",
+        "floorPlanName": null,
+        "isFloorPlanOnly": false,
+        "type": null,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "squareFeet": 720,
+        "floor": 15,
+        "exposure": ["SW", "W"],
+        "windows": [
+          {
+            "id": "w-1",
+            "room": "Living",
+            "direction": "SW",
+            "size": "floor-to-ceiling",
+            "obstruction": null
+          }
+        ],
+        "viewNotes": null,
+        "layoutNotes": null,
+        "laundry": null,
+        "dishwasher": null,
+        "acType": null,
+        "heatingType": null,
+        "balcony": null,
+        "fireplace": null,
+        "flooring": null,
+        "furnished": null,
+        "rent": 1650,
+        "rentIsFrom": false,
+        "rentByTerm": [
+          {
+            "months": 15,
+            "rent": 1610
+          }
+        ],
+        "availableDate": null,
+        "leaseTermsMonths": null,
+        "plannedLeaseMonths": null,
+        "deposit": null,
+        "applicationFee": null,
+        "adminFee": null,
+        "recurringFees": [
+          {
+            "id": "f-1",
+            "label": "Amenity fee",
+            "amount": 25
+          }
+        ],
+        "moveInSpecial": null,
+        "utilities": {
+          "heat": {
+            "mode": "included"
+          },
+          "electric": {
+            "mode": "tenant-paid",
+            "estimate": null
+          },
+          "waterSewer": {
+            "mode": "extra",
+            "amount": 55
+          },
+          "trash": null,
+          "gas": null,
+          "internet": null
+        },
+        "parking": {
+          "spacesIncluded": null,
+          "extraSpaceCost": null,
+          "type": null
+        },
+        "storage": {
+          "included": null,
+          "cost": null
+        },
+        "costOverrides": {
+          "electric": 40
+        },
+        "status": "shortlisted",
+        "colorLabel": "blue",
+        "collectionIds": ["c-1"],
+        "addedVia": "form",
+        "placement3d": null,
+        "links": [],
+        "fieldSources": [
+          {
+            "field": "unit.rent",
+            "url": "https://example.com/1504",
+            "seen": "2026-10-15",
+            "via": "manual",
+            "importId": null
+          }
+        ],
+        "buildingId": "b-1"
+      },
+      {
+        "id": "u-2",
+        "createdAt": "2026-10-15T21:12:00.000Z",
+        "updatedAt": "2026-10-15T21:12:00.000Z",
+        "deletedAt": "2026-10-15T21:12:00.000Z",
+        "unitNumber": null,
+        "unitKey": null,
+        "floorPlanName": "Plan C",
+        "isFloorPlanOnly": true,
+        "type": null,
+        "bedrooms": 2,
+        "bathrooms": null,
+        "squareFeet": null,
+        "floor": null,
+        "exposure": null,
+        "windows": null,
+        "viewNotes": null,
+        "layoutNotes": null,
+        "laundry": null,
+        "dishwasher": null,
+        "acType": null,
+        "heatingType": null,
+        "balcony": null,
+        "fireplace": null,
+        "flooring": null,
+        "furnished": null,
+        "rent": 2100,
+        "rentIsFrom": true,
+        "rentByTerm": null,
+        "availableDate": null,
+        "leaseTermsMonths": null,
+        "plannedLeaseMonths": null,
+        "deposit": null,
+        "applicationFee": null,
+        "adminFee": null,
+        "recurringFees": null,
+        "moveInSpecial": null,
+        "utilities": {
+          "heat": null,
+          "electric": null,
+          "waterSewer": null,
+          "trash": null,
+          "gas": null,
+          "internet": null
+        },
+        "parking": {
+          "spacesIncluded": null,
+          "extraSpaceCost": null,
+          "type": null
+        },
+        "storage": {
+          "included": null,
+          "cost": null
+        },
+        "costOverrides": {},
+        "status": "new",
+        "colorLabel": null,
+        "collectionIds": [],
+        "addedVia": "form",
+        "placement3d": null,
+        "links": [],
+        "fieldSources": [],
+        "buildingId": "b-1"
+      }
+    ],
+    "people": [
+      {
+        "id": "p-me",
+        "createdAt": "2026-10-18T15:30:00.000Z",
+        "updatedAt": "2026-10-18T15:30:00.000Z",
+        "deletedAt": null,
+        "name": "Jordan",
+        "color": "teal",
+        "labelNames": {
+          "red": "Red",
+          "yellow": "Yellow",
+          "green": "Green",
+          "blue": "Blue",
+          "purple": "Purple"
+        }
+      },
+      {
+        "id": "p-alex",
+        "createdAt": "2026-10-18T15:30:00.000Z",
+        "updatedAt": "2026-10-18T15:30:00.000Z",
+        "deletedAt": null,
+        "name": "Alex",
+        "color": "plum",
+        "labelNames": {
+          "red": "Too far?",
+          "yellow": "Yellow",
+          "green": "Green",
+          "blue": "Blue",
+          "purple": "Purple"
+        }
+      },
+      {
+        "id": "p-sam",
+        "createdAt": "2026-10-18T15:30:00.000Z",
+        "updatedAt": "2026-10-18T15:30:00.000Z",
+        "deletedAt": "2026-10-18T15:30:00.000Z",
+        "name": "Sam",
+        "color": "rust",
+        "labelNames": {
+          "red": "Red",
+          "yellow": "Yellow",
+          "green": "Green",
+          "blue": "Blue",
+          "purple": "Purple"
+        }
+      }
+    ],
+    "opinions": [
+      {
+        "id": "p-me:u-1",
+        "createdAt": "2026-10-18T15:30:00.000Z",
+        "updatedAt": "2026-10-18T15:30:00.000Z",
+        "deletedAt": null,
+        "unitId": "u-1",
+        "personId": "p-me",
+        "rating": 4,
+        "ratingNote": "Best light so far.",
+        "flag": "pick",
+        "flagNote": null,
+        "rejectReasonIds": [],
+        "colorLabel": null,
+        "lastReviewedAt": null
+      },
+      {
+        "id": "p-alex:u-1",
+        "createdAt": "2026-10-18T15:30:00.000Z",
+        "updatedAt": "2026-10-18T15:30:00.000Z",
+        "deletedAt": null,
+        "unitId": "u-1",
+        "personId": "p-alex",
+        "rating": 3,
+        "ratingNote": null,
+        "flag": "reject",
+        "flagNote": "45 minutes to my office.",
+        "rejectReasonIds": ["too-far"],
+        "colorLabel": "red",
+        "lastReviewedAt": null
+      },
+      {
+        "id": "p-sam:u-2",
+        "createdAt": "2026-10-18T15:30:00.000Z",
+        "updatedAt": "2026-10-18T15:30:00.000Z",
+        "deletedAt": "2026-10-18T15:30:00.000Z",
+        "unitId": "u-2",
+        "personId": "p-sam",
+        "rating": 2,
+        "ratingNote": null,
+        "flag": "none",
+        "flagNote": null,
+        "rejectReasonIds": [],
+        "colorLabel": null,
+        "lastReviewedAt": null
+      }
+    ],
+    "listings": [
+      {
+        "id": "l-1",
+        "createdAt": "2026-10-15T21:12:00.000Z",
+        "updatedAt": "2026-10-15T21:12:00.000Z",
+        "deletedAt": null,
+        "url": "https://example.com/1504",
+        "site": "building-site",
+        "lastSeen": "2026-10-15",
+        "observations": [
+          {
+            "date": "2026-10-01",
+            "rent": 1700,
+            "note": null
+          },
+          {
+            "date": "2026-10-15",
+            "rent": 1650,
+            "note": "Price drop"
+          }
+        ],
+        "offMarketAt": null,
+        "unitId": "u-1",
+        "firstSeen": "2026-10-01"
+      }
+    ],
+    "destinations": [
+      {
+        "id": "d-1",
+        "createdAt": "2026-10-15T21:12:00.000Z",
+        "updatedAt": "2026-10-15T21:12:00.000Z",
+        "deletedAt": null,
+        "name": "Work",
+        "address": {
+          "line1": "50 S 6th St",
+          "city": "Minneapolis",
+          "state": "MN",
+          "zip": null,
+          "formatted": "50 S 6th St, Minneapolis, MN",
+          "normalized": "50 s 6th st|minneapolis"
+        },
+        "location": {
+          "lat": 44.977,
+          "lng": -93.272,
+          "source": "nominatim",
+          "precision": "address"
+        },
+        "weight": 5,
+        "modes": ["transit", "bike"],
+        "maxMinutes": {
+          "transit": 30
+        },
+        "departure": {
+          "days": "weekday",
+          "time": "08:00"
+        }
+      }
+    ],
+    "collections": [
+      {
+        "id": "c-1",
+        "createdAt": "2026-10-15T21:12:00.000Z",
+        "updatedAt": "2026-10-15T21:12:00.000Z",
+        "deletedAt": null,
+        "name": "Shortlist",
+        "kind": "manual",
+        "filter": null,
+        "sort": null,
+        "order": 0
+      },
+      {
+        "id": "c-2",
+        "createdAt": "2026-10-15T21:12:00.000Z",
+        "updatedAt": "2026-10-15T21:12:00.000Z",
+        "deletedAt": null,
+        "name": "Cheap 1 bd",
+        "kind": "smart",
+        "filter": {
+          "ranges": {
+            "rent": {
+              "max": 1600,
+              "includeUnknown": false
+            }
+          },
+          "enums": {
+            "laundry": ["in-unit"]
+          }
+        },
+        "sort": {
+          "key": "rent",
+          "dir": "asc"
+        },
+        "order": 1
+      }
+    ],
+    "notes": [
+      {
+        "id": "n-1",
+        "createdAt": "2026-10-15T21:12:00.000Z",
+        "updatedAt": "2026-10-15T21:12:00.000Z",
+        "deletedAt": null,
+        "unitId": "u-1",
+        "buildingId": null,
+        "kind": "tour",
+        "text": "Toured; bright living room.",
+        "authorId": "p-me"
+      },
+      {
+        "id": "n-2",
+        "createdAt": "2026-10-18T15:30:00.000Z",
+        "updatedAt": "2026-10-18T15:30:00.000Z",
+        "deletedAt": null,
+        "unitId": "u-1",
+        "buildingId": null,
+        "kind": "note",
+        "text": "Ask about the bike room.",
+        "authorId": "p-alex"
+      }
+    ],
+    "photos": [
+      {
+        "id": "p-1",
+        "createdAt": "2026-10-15T21:12:00.000Z",
+        "updatedAt": "2026-10-15T21:12:00.000Z",
+        "deletedAt": null,
+        "ownerType": "unit",
+        "ownerId": "u-1",
+        "kind": "floor-plan",
+        "fileName": "floor-plan_01.png",
+        "archivePath": "Example Tower/Unit 1504/floor-plan_01.png",
+        "store": "opfs",
+        "mime": "image/png",
+        "bytes": 123456,
+        "width": 1200,
+        "height": 900,
+        "caption": null,
+        "sourceUrl": null,
+        "order": 0
+      }
+    ],
+    "imports": [
+      {
+        "id": "i-1",
+        "createdAt": "2026-10-15T21:12:00.000Z",
+        "updatedAt": "2026-10-15T21:12:00.000Z",
+        "deletedAt": null,
+        "kind": "listing-text",
+        "raw": "1 bd · 720 sq ft · $1,650/mo",
+        "prompt": null,
+        "summary": {
+          "created": 0,
+          "filled": 3,
+          "changed": 0,
+          "skipped": 0
+        },
+        "actionId": null
+      }
+    ],
+    "settings": [
+      {
+        "id": "app",
+        "costProfile": {
+          "items": {
+            "heat": {
+              "monthly": 50,
+              "scaleBy": "sqft",
+              "basis": 750
+            },
+            "electric": {
+              "monthly": 55,
+              "scaleBy": "sqft",
+              "basis": 750
+            },
+            "waterSewer": {
+              "monthly": 45,
+              "scaleBy": "bedrooms",
+              "basis": 1
+            },
+            "trash": {
+              "monthly": 15,
+              "scaleBy": "none",
+              "basis": 1
+            },
+            "gas": {
+              "monthly": 25,
+              "scaleBy": "none",
+              "basis": 1
+            },
+            "internet": {
+              "monthly": 60,
+              "scaleBy": "none",
+              "basis": 1
+            },
+            "parking": {
+              "monthly": 100,
+              "scaleBy": "none",
+              "basis": 1
+            },
+            "storage": {
+              "monthly": 40,
+              "scaleBy": "none",
+              "basis": 1
+            },
+            "renters-insurance": {
+              "monthly": 15,
+              "scaleBy": "none",
+              "basis": 1
+            },
+            "pet-rent": {
+              "monthly": 35,
+              "scaleBy": "none",
+              "basis": 1
+            }
+          },
+          "parkingSpacesNeeded": 1,
+          "needsStorage": false,
+          "hasPets": {
+            "cats": 0,
+            "dogs": 0
+          },
+          "amortizeOneTimeFees": false,
+          "amortizeSpecials": false,
+          "defaultLeaseMonths": 12
+        },
+        "baseline": {
+          "maxRent": null,
+          "maxTotalMonthly": null,
+          "minBedrooms": null,
+          "minBathrooms": null,
+          "unitTypes": [],
+          "moveIn": null,
+          "mustHaves": {}
+        },
+        "labelNames": {
+          "red": "Red",
+          "yellow": "Yellow",
+          "green": "Green",
+          "blue": "Roommate likes",
+          "purple": "Purple"
+        },
+        "rejectReasons": [
+          {
+            "id": "too-far",
+            "label": "Too far",
+            "archived": false
+          },
+          {
+            "id": "too-expensive",
+            "label": "Too expensive",
+            "archived": false
+          },
+          {
+            "id": "no-laundry",
+            "label": "No laundry",
+            "archived": false
+          },
+          {
+            "id": "bad-reviews",
+            "label": "Bad reviews",
+            "archived": false
+          },
+          {
+            "id": "too-small",
+            "label": "Too small",
+            "archived": false
+          },
+          {
+            "id": "not-available",
+            "label": "Not available in time",
+            "archived": false
+          }
+        ],
+        "map": {
+          "baseLayer": "wayfinding",
+          "pins": {
+            "show": "total",
+            "extras": {
+              "typeIcon": true,
+              "stars": true,
+              "newBadge": true
+            },
+            "colorBy": "status",
+            "simplifyWhenCrowded": true,
+            "fadeRejected": true
+          },
+          "overlays": []
+        },
+        "theme": "system",
+        "mapStyleUrl": "https://tiles.openfreemap.org/styles/positron",
+        "essentialFields": [
+          "unit.rent",
+          "unit.bedrooms",
+          "unit.bathrooms",
+          "unit.squareFeet",
+          "unit.availableDate",
+          "unit.laundry",
+          "unit.parking",
+          "unit.utilities.heat",
+          "unit.utilities.electric",
+          "building.pets",
+          "unit.leaseTermsMonths"
+        ],
+        "photoArchive": {
+          "store": "none",
+          "folderName": null,
+          "keepOriginalsFor": "all"
+        },
+        "backup": {
+          "lastBackupAt": null,
+          "remindEveryDays": 7
+        },
+        "apiKeys": {
+          "openRouteService": null,
+          "google": null
+        }
+      }
+    ]
+  }
+}

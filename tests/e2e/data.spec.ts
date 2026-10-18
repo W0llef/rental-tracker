@@ -33,6 +33,7 @@ test.describe('data check page (preview/dev build)', () => {
 
     await page.getByRole('button', { name: 'Load sample data' }).click();
     await expect(page.getByTestId('debug-message')).toContainText('Loaded');
+    await expect(unitsStored(page)).not.toHaveText('0'); // the counts follow the database
     const loaded = Number(await unitsStored(page).textContent());
     expect(loaded).toBeGreaterThan(20);
 

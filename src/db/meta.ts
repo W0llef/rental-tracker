@@ -12,6 +12,10 @@ export const META_KEYS = {
   backupSnoozedUntil: 'backupSnoozedUntil',
   /** When the app last asked the browser to keep the data (persistent storage). */
   persistAskedAt: 'persistAskedAt',
+  /** Which person this browser's copy belongs to ("me"; PLAN.md §5.8). */
+  meId: 'meId',
+  /** When the app last asked for your name (saved or "Not now"). */
+  nameAskedAt: 'nameAskedAt',
 } as const;
 
 export type MetaKey = (typeof META_KEYS)[keyof typeof META_KEYS];

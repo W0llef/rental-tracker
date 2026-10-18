@@ -21,6 +21,8 @@ import styles from './DebugPage.module.css';
 const TABLES: { table: DataTable; label: string }[] = [
   { table: 'buildings', label: 'Buildings' },
   { table: 'units', label: 'Units' },
+  { table: 'people', label: 'People' },
+  { table: 'opinions', label: 'Ratings and flags' },
   { table: 'listings', label: 'Listings' },
   { table: 'notes', label: 'Notes' },
   { table: 'collections', label: 'Collections' },
@@ -177,7 +179,9 @@ export function DebugPage() {
                     run(async () => {
                       const { loadSampleData } = await import('../../dev/sampleData');
                       const data = await loadSampleData(db);
-                      return `Loaded ${data.units.length} units in ${data.buildings.length} buildings`;
+                      return data.units.length
+                        ? `Loaded ${data.units.length} units in ${data.buildings.length} buildings`
+                        : 'Sample data is already loaded: nothing added.';
                     })
                   }
                 >

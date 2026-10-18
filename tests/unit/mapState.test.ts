@@ -29,6 +29,9 @@ const data = deriveDataset(
     listings: [],
     notes: [],
     settings: defaultSettings(),
+    people: [],
+    opinions: [],
+    meId: null,
   },
   '2026-10-15',
 );

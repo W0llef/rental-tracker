@@ -5,6 +5,7 @@ import { legendFor } from '../../src/domain/pins';
 import { defaultMapMemory } from '../../src/domain/pinPrefs';
 import type { BaseLayer, PinPrefs, PinView } from '../../src/domain/pinPrefs';
 import { defaultSettings } from '../../src/model';
+import type { Unit } from '../../src/model';
 import { newUnit } from '../../src/model/factories';
 import { LayersPanel } from '../../src/ui/map/LayersPanel';
 import { Legend } from '../../src/ui/map/Legend';
@@ -49,7 +50,7 @@ describe('PinsPanel', () => {
     const user = userEvent.setup();
     const log: PinPrefs[] = [];
     render(<PinsHarness log={log} />);
-    await user.click(screen.getByRole('checkbox', { name: 'Rating' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Your rating' }));
     await user.click(screen.getByRole('checkbox', { name: 'Unit type icon' }));
     expect(log.at(-1)?.fields).toEqual(['type', 'rent', 'rating']);
     expect(screen.getByRole('checkbox', { name: /Total cost/ })).toBeDisabled();
@@ -183,10 +184,17 @@ describe('LayersPanel', () => {
   });
 });
 
+const asRows = (units: Unit[]) =>
+  units.map((unit) => ({
+    unit,
+    building: undefined,
+    mine: { rating: 0 as const, flag: 'none' as const },
+  }));
+
 describe('Legend', () => {
   it('names each status color on the map', () => {
     const units = [newUnit({ buildingId: 'b', status: 'toured' }), newUnit({ buildingId: 'b' })];
-    render(<Legend legend={legendFor(units, 'status', defaultSettings().labelNames)} />);
+    render(<Legend legend={legendFor(asRows(units), 'status', defaultSettings().labelNames)} />);
     const legend = screen.getByRole('region', { name: 'Pin color: status' });
     expect(
       within(legend)
@@ -200,7 +208,7 @@ describe('Legend', () => {
       newUnit({ buildingId: 'b', rent: 1200 }),
       newUnit({ buildingId: 'b', rent: 2400 }),
     ];
-    render(<Legend legend={legendFor(units, 'price', defaultSettings().labelNames)} />);
+    render(<Legend legend={legendFor(asRows(units), 'price', defaultSettings().labelNames)} />);
     expect(screen.getByRole('region', { name: 'Pin color: rent' })).toHaveTextContent(
       'Lightest $1,200to darkest $2,400',
     );

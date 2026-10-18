@@ -2,11 +2,18 @@ import Dexie from 'dexie';
 import { systemWrite } from '../../commands/action';
 import type { RentalDB } from '../../db/db';
 import { META_KEYS, setMeta } from '../../db/meta';
-import { migrateBackupData, NewerVersionError } from '../../db/migrations';
+import {
+  migrateBackupData,
+  migrationContext,
+  migrations,
+  NewerVersionError,
+} from '../../db/migrations';
 import { takeSnapshot } from '../../db/versions';
 import type { Snapshot, SnapshotReason } from '../../db/versions';
-import { DATA_TABLES, SCHEMA_VERSION } from '../../model';
-import type { Settings } from '../../model';
+import { nameTaken, nextPersonColor, resolveMe } from '../../domain/people';
+import { DATA_TABLES, person, SCHEMA_VERSION } from '../../model';
+import type { Person, Settings } from '../../model';
+import { newPerson } from '../../model/factories';
 import { backupEnvelope, currentBackup } from '../../model/backup';
 import type { BackupEnvelope, CurrentBackup } from '../../model/backup';
 import { backupJson, makeEnvelope, withoutSecrets } from './exportJson';
@@ -85,15 +92,27 @@ export type CheckedBackup =
 
 const NOT_A_BACKUP = 'This file isn’t a backup from Rental Unit Tracker.';
 
-/** Checks parsed JSON: envelope, version, migration, then every record against the model. */
-export function checkBackup(value: unknown): CheckedBackup {
+/** The person using this browser, so an old file's ratings become theirs when migrated. */
+export interface CurrentPerson {
+  id: string;
+  name: string;
+}
+
+/**
+ * Checks parsed JSON: envelope, version, migration, then every record against the model.
+ * A file from before people existed (version 1) has its ratings and flags given to `me`,
+ * the person using this browser (or a new "Me" if there's none).
+ */
+export function checkBackup(value: unknown, me: CurrentPerson | null = null): CheckedBackup {
   const envelope = backupEnvelope.safeParse(value);
   if (!envelope.success) return { ok: false, message: NOT_A_BACKUP };
-  const file = envelope.data;
+  const file = { ...envelope.data };
 
   let data: BackupData;
   try {
-    data = migrateBackupData(file.data, file.schemaVersion, SCHEMA_VERSION);
+    const ctx = migrationContext(me ? { meId: me.id, meName: me.name } : {});
+    data = migrateBackupData(file.data, file.schemaVersion, SCHEMA_VERSION, migrations, ctx);
+    if (file.schemaVersion < 2) file.exportedBy = ctx.meId;
   } catch (e) {
     if (e instanceof NewerVersionError) return { ok: false, message: e.message };
     return {
@@ -150,21 +169,24 @@ export function checkBackup(value: unknown): CheckedBackup {
 }
 
 /** Reads a backup file's text. */
-export function checkBackupText(text: string): CheckedBackup {
+export function checkBackupText(text: string, me: CurrentPerson | null = null): CheckedBackup {
   let value: unknown;
   try {
     value = JSON.parse(text);
   } catch {
     return { ok: false, message: `${NOT_A_BACKUP} It isn’t a readable .json file.` };
   }
-  return checkBackup(value);
+  return checkBackup(value, me);
 }
 
-export async function checkBackupFile(file: Blob): Promise<CheckedBackup> {
+export async function checkBackupFile(
+  file: Blob,
+  me: CurrentPerson | null = null,
+): Promise<CheckedBackup> {
   if (file.size > 200 * 1024 * 1024) {
     return { ok: false, message: `${NOT_A_BACKUP} It’s far larger than a backup can be.` };
   }
-  return checkBackupText(await file.text());
+  return checkBackupText(await file.text(), me);
 }
 
 function errorText(e: unknown) {
@@ -200,14 +222,39 @@ export async function restoreBackup(db: RentalDB, backup: CurrentBackup): Promis
         : null;
 
       const keep = await db.settings.get('app');
+      // Who is "me" afterwards (domain/people.ts resolveMe): you, if the file has you; else
+      // whoever made the file; else a new person with your current name.
+      const metaRow = await db.meta.get(META_KEYS.meId);
+      const currentMeId = typeof metaRow?.value === 'string' ? metaRow.value : null;
+      const currentMe = currentMeId ? await db.people.get(currentMeId) : undefined;
+      const fileMeId = resolveMe(backup.data.people, currentMeId, backup.exportedBy ?? null);
+      const extraPeople: Person[] = [];
+      if (!fileMeId) {
+        const taken = backup.data.people.filter((p) => !p.deletedAt);
+        extraPeople.push(
+          person.parse({
+            ...newPerson({
+              name:
+                currentMe && !nameTaken(taken, currentMe.name) ? currentMe.name : uniqueMe(taken),
+              color: currentMe?.color ?? nextPersonColor(taken),
+            }),
+            ...(currentMeId && !backup.data.people.some((p) => p.id === currentMeId)
+              ? { id: currentMeId }
+              : {}),
+          }),
+        );
+      }
+
       for (const table of DATA_TABLES) await db.table(table).clear();
       for (const table of DATA_TABLES) {
         let rows = backup.data[table] as unknown[];
         if (table === 'settings' && keep) {
           rows = (rows as Settings[]).map((s) => ({ ...s, apiKeys: keepKeys(s, keep) }));
         }
+        if (table === 'people') rows = [...rows, ...extraPeople];
         if (rows.length) await db.table(table).bulkAdd(rows);
       }
+      await setMeta(db, META_KEYS.meId, fileMeId ?? extraPeople[0]!.id);
       await db.changeLog.clear();
       // The data now matches the file, so that file is its latest backup.
       await setMeta(db, META_KEYS.lastBackupAt, backup.exportedAt);
@@ -217,6 +264,13 @@ export async function restoreBackup(db: RentalDB, backup: CurrentBackup): Promis
     ['snapshots', 'meta'],
   );
   return { snapshotSeq, summary: summarize(backup.data) };
+}
+
+function uniqueMe(people: readonly Person[]): string {
+  for (let n = 1; ; n++) {
+    const name = n === 1 ? 'Me' : `Me ${n}`;
+    if (!nameTaken(people, name)) return name;
+  }
 }
 
 function keepKeys(file: Settings, current: Settings): Settings['apiKeys'] {
@@ -252,7 +306,12 @@ export async function listSnapshots(db: RentalDB): Promise<SnapshotInfo[]> {
 
 /** A snapshot as a backup file (in the data format it was taken in), without API keys. */
 export function snapshotEnvelope(snapshot: Snapshot): BackupEnvelope {
-  return makeEnvelope(withoutSecrets(snapshot.data), snapshot.fromVersion, snapshot.at);
+  return makeEnvelope(
+    withoutSecrets(snapshot.data),
+    snapshot.fromVersion,
+    snapshot.at,
+    snapshot.meId ?? null,
+  );
 }
 
 export async function snapshotFile(db: RentalDB, seq: number) {

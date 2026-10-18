@@ -1,8 +1,12 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { addPerson, setOpinion } from '../../src/commands/people';
 import { addListing, addNote, createBuilding, createUnit } from '../../src/commands/records';
 import { db } from '../../src/db/db';
+import { ensureMe, readMeId } from '../../src/db/me';
+import { META_KEYS, setMeta } from '../../src/db/meta';
+import { opinionId } from '../../src/model';
 import { makeAddress } from '../../src/model/factories';
 import { routes } from '../../src/routes';
 import { resetUi } from '../../src/state/ui';
@@ -54,8 +58,6 @@ async function seed() {
     exposure: ['S', 'W'],
     rent: 1650,
     status: 'shortlisted',
-    flag: 'pick',
-    rating: 4,
     colorLabel: 'blue',
   });
   const u908 = await createUnit(db, { buildingId: riverlight.id, unitNumber: '908', rent: null });
@@ -71,9 +73,15 @@ async function seed() {
     unitNumber: '310',
     rent: 1295,
     status: 'declined',
-    flag: 'reject',
-    rejectReasonIds: ['too-far'],
   });
+  // Ratings and flags are per person (M6): yours, and a roommate's.
+  const meId = await ensureMe(db);
+  await setOpinion(db, u1504.id, meId, { rating: 4, flag: 'pick' });
+  await setOpinion(db, u310.id, meId, { flag: 'reject', rejectReasonIds: ['too-far'] });
+  const alex = await addPerson(db, 'Alex');
+  await setOpinion(db, u1504.id, alex.id, { rating: 3, ratingNote: 'Short bike ride to work' });
+  await setOpinion(db, u908.id, alex.id, { flag: 'pick' });
+  await addNote(db, { unitId: u1504.id, text: 'Ask about the bike room', authorId: alex.id });
   await addListing(db, {
     unitId: u1504.id,
     site: 'zillow',
@@ -155,6 +163,85 @@ describe('main screen with units', () => {
     expect(within(screen.getByRole('link', { name: /Unit 908/ })).getAllByText('New')).toHaveLength(
       1,
     );
+  });
+
+  it('shows other people’s ratings and flags small on the cards', async () => {
+    renderAt();
+    const card = await screen.findByRole('link', { name: /Unit 1504/ });
+    expect(
+      within(card).getByRole('img', { name: 'Others: Alex: 3 of 5 stars' }),
+    ).toBeInTheDocument();
+    const other = screen.getByRole('link', { name: /Unit 908/ });
+    expect(
+      within(other).getByRole('img', { name: 'Others: Alex: not rated, pick' }),
+    ).toBeInTheDocument();
+    expect(within(other).getByRole('img', { name: 'Not rated' })).toBeInTheDocument(); // yours
+  });
+
+  it('shows everyone’s ratings side by side, and saves changes per person', async () => {
+    const user = userEvent.setup();
+    renderAt(`/unit/${ids.u1504}`);
+    const details = await screen.findByRole('region', { name: 'Details' });
+    const ratings = await within(details).findByRole('region', { name: 'Ratings' });
+    const rows = within(ratings).getAllByRole('listitem');
+    expect(
+      rows.map((r) => r.querySelector('[class*="personName"] > span:last-child')?.textContent),
+    ).toEqual(['You', 'Alex']);
+    const yours = within(ratings).getByRole('group', { name: 'Your rating' });
+    expect(within(yours).getByRole('button', { name: '4 stars' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(within(ratings).getByRole('combobox', { name: 'Your flag' })).toHaveValue('pick');
+    expect(ratings).toHaveTextContent('Short bike ride to work');
+
+    const alexs = within(ratings).getByRole('group', { name: 'Alex’s rating' });
+    await user.click(within(alexs).getByRole('button', { name: '5 stars' }));
+    await user.selectOptions(
+      within(ratings).getByRole('combobox', { name: 'Alex’s flag' }),
+      'pick',
+    );
+    const alex = (await db.people.toArray()).find((p) => p.name === 'Alex')!;
+    await waitFor(async () =>
+      expect(await db.opinions.get(opinionId(ids.u1504, alex.id))).toMatchObject({
+        rating: 5,
+        flag: 'pick',
+      }),
+    );
+    // Yours didn't change.
+    const meId = (await readMeId(db))!;
+    expect(await db.opinions.get(opinionId(ids.u1504, meId))).toMatchObject({ rating: 4 });
+
+    // Clicking your current rating again clears it.
+    await user.click(within(yours).getByRole('button', { name: '4 stars' }));
+    await waitFor(async () =>
+      expect((await db.opinions.get(opinionId(ids.u1504, meId)))?.rating).toBe(0),
+    );
+    // Notes say who wrote them when it wasn't you.
+    expect(details).toHaveTextContent(/note · Alex\s*Ask about the bike room/);
+  });
+
+  it('asks for your name once, when no backup reminder is showing', async () => {
+    const user = userEvent.setup();
+    renderAt();
+    await screen.findByRole('region', { name: 'Backup reminder' });
+    expect(screen.queryByRole('region', { name: 'Your name' })).toBeNull();
+    await setMeta(db, META_KEYS.lastBackupAt, new Date().toISOString());
+    const banner = await screen.findByRole('region', { name: 'Your name' });
+    await user.type(within(banner).getByRole('textbox', { name: /What’s your name/ }), 'Jordan');
+    await user.click(within(banner).getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Your name' })).toBeNull());
+    const me = await db.people.get((await readMeId(db))!);
+    expect(me?.name).toBe('Jordan');
+  });
+
+  it('lets you skip giving your name', async () => {
+    const user = userEvent.setup();
+    await setMeta(db, META_KEYS.lastBackupAt, new Date().toISOString());
+    renderAt();
+    const banner = await screen.findByRole('region', { name: 'Your name' });
+    await user.click(within(banner).getByRole('button', { name: 'Not now' }));
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Your name' })).toBeNull());
   });
 
   it('searches buildings, units and notes', async () => {

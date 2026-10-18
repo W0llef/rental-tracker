@@ -8,7 +8,7 @@ import {
   unitSortValue,
 } from '../../src/domain/sort';
 import type { SortValue, UnitSortInput } from '../../src/domain/sort';
-import type { Unit } from '../../src/model';
+import type { Rating, Unit } from '../../src/model';
 import { makeAddress, newBuilding, newUnit } from '../../src/model/factories';
 
 const riverlight = newBuilding({
@@ -21,11 +21,16 @@ const larkin = newBuilding({
 });
 
 function row(
-  input: Partial<Unit>,
+  { rating = 0, ...input }: Partial<Unit> & { rating?: Rating },
   building = riverlight,
   listingAgeDays: number | null = null,
 ): UnitSortInput {
-  return { unit: newUnit({ buildingId: building.id, ...input }), building, listingAgeDays };
+  return {
+    unit: newUnit({ buildingId: building.id, ...input }),
+    building,
+    listingAgeDays,
+    mine: { rating },
+  };
 }
 
 const titles = (rows: UnitSortInput[]) => rows.map((r) => r.unit.unitNumber);

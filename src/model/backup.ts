@@ -15,6 +15,11 @@ export const backupEnvelope = z.object({
   schemaVersion: z.number().int().min(1),
   exportedAt: isoDateTime,
   appVersion: z.string(),
+  /**
+   * The person whose copy made the file (from version 2). Restoring your own backup on a
+   * new computer makes you that person again (PLAN.md §5.8).
+   */
+  exportedBy: z.string().nullable().optional(),
   data: z.record(z.string(), z.array(z.unknown())),
 });
 export type BackupEnvelope = z.infer<typeof backupEnvelope>;

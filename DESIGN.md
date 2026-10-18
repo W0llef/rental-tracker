@@ -95,6 +95,23 @@ Status is never shown by color alone: pills always carry the word, and the legen
 
 Names are set in Settings ("Blue = roommate likes") and shown in tooltips, filters and the legend.
 
+**Shared and private labels (M6, Q16).** A unit can carry two labels at once, each any of the five colors: one **shared** label (names are the household's) and one **private** label per person (each person names their own colors; other people's private labels aren't shown). Nothing converts between the two. Setting, naming and showing them arrives with triage (M7); proposed there: keys 6–9 for your private label and ⇧6–9 for the shared one, and the private label drawn beside the shared square on the thumbnail. Until then cards, pins and "color by label" show the shared label.
+
+### 2.3a People (M6)
+
+Each person has a badge: their initial in white on their color. Colors are assigned in order (first unused) and can be changed in Settings → People. All six take white text at AA in both themes.
+
+| Color | Token | Fill |
+| --- | --- | --- |
+| Teal | `--pp-teal` | `#0B6E70` |
+| Plum | `--pp-plum` | `#7A3E8F` |
+| Rust | `--pp-rust` | `#A14A1A` |
+| Navy | `--pp-navy` | `#2A4F8F` |
+| Olive | `--pp-olive` | `#5A6B12` |
+| Rose | `--pp-rose` | `#A3325B` |
+
+Badges are 16 px on cards, 24 px in the detail panel and Settings. You see your own ratings as **You**; everyone else by name.
+
 ### 2.4 Pins
 
 *Reworked in the M3 review; this section describes what's built.* A pin has one **style** and any number of **fields** (Pins panel, §4.7). Every style keeps the same cues: a **colored edge** (status, label or price; one stripe per unit), a **tail** pointing at the building, and **navy for the selected unit**.
@@ -201,8 +218,9 @@ Phone gestures: swipe the unit's photo strip; tap a star to rate; long-press a c
    ■ = color label square on the thumbnail   ▌= status color edge
 ```
 
+- Stars and flag are **yours** (M6). Everyone else's sit in **one chip** at the foot, the same size however many people there are (owner review): up to 3 overlapping badges (+N for more), the range of their stars ("★2–5", or "★3" when one), then ✓ and ✕ with a count when more than one picked or rejected. Only people who rated or flagged count. The tooltip and screen readers give each person ("Others: Alex: 3 of 5 stars, pick; …"); the unit's Ratings section has the full list. A crowded foot wraps, putting the listing age on its own line, rather than overlapping.
 - Selected: `--frost` background and a 4 px navy bar on the left. Hover: `--frost`.
-- Rejected: dimmed (text in `--slate`, thumbnail at 50% opacity, so text stays AA) and "Rejected: <reason>" replaces the flag/status line.
+- Rejected (by you): dimmed (text in `--slate`, thumbnail at 50% opacity, so text stays AA) and "Rejected: <reason>" replaces the flag/status line.
 - Floor plan only: "Plan C" plus a "floor plan" tag; specs say "units vary"; prices say "from".
 - New: the status pill reads "New" with its amber edge; no separate badge on the card (it repeated the pill). The amber New dot stays an option on map pins (§2.4), which show no status text.
 - Needs location: a "Needs location" chip with "Place on map".
@@ -222,6 +240,11 @@ Phone gestures: swipe the unit's photo strip; tap a star to rate; long-press a c
 │ [Pick P|Reject X|None U]  ★★★★☆           │  markers row
 │ ■ ■ ■ ▣ ■                   ▌Shortlisted ▾ │
 ├────────────────────────────────────────────┤
+│ Ratings                                    │  everyone, you first (M6)
+│ (J) You     ★★★★☆   [Pick ▾]               │  your row on --frost
+│ (A) Alex    ★★★☆☆   [No flag ▾]            │  stars and flag editable per person
+│     Short bike ride to my work.            │  notes and reject reasons in slate
+├────────────────────────────────────────────┤
 │ Monthly cost              Edit cost profile│  line · source · amount; "assumed" in amber
 │ Rent            listing           $1,650   │
 │ …                                          │
@@ -240,6 +263,8 @@ Phone gestures: swipe the unit's photo strip; tap a star to rate; long-press a c
 │ [Edit E] [Research R] [Compare C] [History]│  sticky footer
 └────────────────────────────────────────────┘
 ```
+
+**Ratings (M6).** One row per person: badge and name, five star buttons (click the current one again to clear) and a flag menu. Until household sharing exists you set other people's ratings for them here; with only you, a line points to Settings → People. Reject reasons and rating/flag notes show under the row; editing them arrives with triage (M7). Notes in the Notes section name their author when it isn't you ("Oct 18, note · Alex").
 
 Imported values carry a small source link (site name, or "AI" until you confirm them). A "Paste text" action sits next to Edit for pasting more listing text later.
 
@@ -301,7 +326,8 @@ In **Shortlist mode** each section header shows a completeness count ("Unit 7 of
 
 ```
 ┌ Settings ──────────────────────────────────────────────────────────────┐
-│ Cost profile        │ Cost profile                                     │
+│ People              │ Cost profile                                     │
+│ Cost profile        │                                                  │
 │ Baseline criteria   │ What you expect to pay when a unit doesn't       │
 │ Labels and reasons  │ include something.                                │
 │ Display             │                                                   │
@@ -318,6 +344,7 @@ In **Shortlist mode** each section header shows a completeness count ("Unit 7 of
 ```
 
 Sections:
+- **People** (M6): **You** (your name, color) and **Other people** (rename, color, Remove… with Undo; Add person). The main screen asks once for your name in a frost banner ("What's your name?", Save / Not now) once you have units.
 - **Cost profile** as above; changes update every total immediately.
 - **Baseline criteria**: max rent or max total, min beds/baths, unit types, move-in window, must-haves. Units that fail are dimmed.
 - **Labels and reasons**: rename the five labels; add, rename, archive reject reasons.

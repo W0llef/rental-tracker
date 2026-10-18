@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getSettings, updateSettings } from '../../commands/records';
 import { db } from '../../db/db';
+import { getMe } from '../../db/me';
 import { SCHEMA_VERSION } from '../../model';
 import { backupFileName, readBackupData } from '../../services/backup/exportJson';
 import { lastBackupText, REMIND_OPTIONS, backupReminder } from '../../services/backup/reminders';
@@ -90,7 +91,7 @@ export function BackupSection() {
   const pickFile = async (file: File | undefined) => {
     if (!file) return;
     setRestore({ step: 'checking', name: file.name });
-    const checked = await checkBackupFile(file);
+    const checked = await checkBackupFile(file, await getMe(db));
     setRestore(
       checked.ok
         ? { step: 'review', source: { kind: 'file', name: file.name }, checked }
@@ -102,7 +103,7 @@ export function BackupSection() {
   const reviewSnapshot = async (info: SnapshotInfo) => {
     const file = await snapshotFile(db, info.seq);
     if (!file) return;
-    const checked = checkBackupText(file.json);
+    const checked = checkBackupText(file.json, await getMe(db));
     const name = snapshotTitle(info);
     setRestore(
       checked.ok

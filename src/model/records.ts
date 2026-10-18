@@ -66,6 +66,7 @@ export const noteEntry = base.extend({
   buildingId: maybe(id),
   text: z.string(),
   kind: z.enum(['note', 'tour', 'call', 'system']), // system = "Status → Toured"
+  authorId: maybe(id), // the person who wrote it (M6); null for notes the app wrote itself
 });
 export type NoteEntry = z.infer<typeof noteEntry>;
 
