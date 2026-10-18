@@ -77,7 +77,7 @@ export const UNIT_SORTS: Record<
   bedrooms: { label: 'Bedrooms', dir: 'desc', asc: 'fewest first', desc: 'most first' },
   bathrooms: { label: 'Bathrooms', dir: 'desc', asc: 'fewest first', desc: 'most first' },
   floor: { label: 'Floor', dir: 'desc', asc: 'lowest first', desc: 'highest first' },
-  rating: { label: 'Rating', dir: 'desc', asc: 'lowest first', desc: 'highest first' },
+  rating: { label: 'Your rating', dir: 'desc', asc: 'lowest first', desc: 'highest first' },
   listingAge: { label: 'Listing age', dir: 'asc', asc: 'newest first', desc: 'oldest first' },
   createdAt: { label: 'Date added', dir: 'desc', asc: 'oldest first', desc: 'newest first' },
   status: { label: 'Status', dir: 'asc', asc: 'pipeline order', desc: 'reverse order' },

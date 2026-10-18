@@ -975,7 +975,9 @@ Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 15
 
 ### 11.2 Open
 
-None. New questions will be added here as they come up.
+| # | Question | Proposal (to confirm when it's scheduled) |
+| --- | --- | --- |
+| Q18 | **Custom colors** (owner, M6 review, Oct 18; "doesn't have to happen now"): choose your own colors for the status colors on pins, the New badge, other people's badges, and eventually a whole custom color scheme (sidebar, cards, pins) | **Step 1, a Colors editor** in Settings → Display: status colors (pin edges, status pills, legend), the New badge, the five label colors and people's badge colors (free colors instead of six presets), each with *Reset to default*, checked against light and dark backgrounds with a warning when text on it would be hard to read. Suggested with the Settings and display polish in **M14**, or earlier if wanted. Kept per browser like the pin choices (each person picks their own) unless you'd rather share them. **Step 2, full custom themes**, after Phase 1 with other display work. |
 
 
 **Assumptions I'll proceed with unless you object**
@@ -995,6 +997,7 @@ None. New questions will be added here as they come up.
 
 | Date | Change |
 | --- | --- |
+| 2026-10-18 | M6, owner review: the pin field and sort option are called **Your rating** (they show and sort by yours). Custom colors recorded as **Q18** (open, not scheduled). |
 | 2026-10-18 | M6, owner review: cards show other people in **one chip** of fixed size instead of one mark each (it overflowed with three people); a crowded card foot wraps instead of overlapping. *Load sample data* no longer duplicates buildings. Finding duplicates already in your list (and merging them) stays in M13. |
 | 2026-10-18 | M6: **people and per-person ratings**, the first data-format change (**v2**). §5.8 confirmed with the owner (Q16: shared and private color labels; Q17: undo history cleared at the update; Q15: people can be added by hand). Model §3.3/§3.4a, Dexie v2 §3.6, migration framework additions §3.7 step 9, "As built" in §5.8. The name banner shows only once there are units. Settings → People. A slice of M7 came early: the detail panel's Ratings section sets stars and flags (per person); notes, reasons and labels stay in M7. |
 | 2026-10-18 | M5, owner review: **Q15 decided**: per-person ratings in a new **M6 People** (§5.8), household sync through a shared cloud-drive folder right after Phase 1 (§9); Q1 superseded. Later milestones renumbered: old M6–M13 are now **M7–M14** (older log entries keep the numbers they had). |

@@ -50,7 +50,7 @@ describe('PinsPanel', () => {
     const user = userEvent.setup();
     const log: PinPrefs[] = [];
     render(<PinsHarness log={log} />);
-    await user.click(screen.getByRole('checkbox', { name: 'Rating' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Your rating' }));
     await user.click(screen.getByRole('checkbox', { name: 'Unit type icon' }));
     expect(log.at(-1)?.fields).toEqual(['type', 'rent', 'rating']);
     expect(screen.getByRole('checkbox', { name: /Total cost/ })).toBeDisabled();

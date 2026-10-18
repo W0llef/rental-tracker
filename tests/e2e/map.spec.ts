@@ -257,7 +257,7 @@ test.describe('map (preview/dev build)', () => {
       .getByRole('group', { name: 'Pin style' })
       .getByRole('button', { name: 'Photo' })
       .click();
-    for (const n of ['Unit type icon', 'Beds and size', 'Unit number', 'Rating'])
+    for (const n of ['Unit type icon', 'Beds and size', 'Unit number', 'Your rating'])
       await panel.getByRole('checkbox', { name: n }).check();
     await panel.getByRole('button', { name: 'Close pins' }).click();
     await map(page).getByRole('button', { name: 'Fit all units' }).click();

@@ -29,7 +29,7 @@ const FIELD_LABELS: Record<PinView, Record<PinField, string>> = {
     psf: 'Cost per ft²',
     beds: 'Beds and size',
     unit: 'Unit number',
-    rating: 'Rating',
+    rating: 'Your rating',
     travel: 'Travel time',
   },
   buildings: {
@@ -39,7 +39,7 @@ const FIELD_LABELS: Record<PinView, Record<PinField, string>> = {
     psf: 'Cost per ft²',
     beds: 'Beds and size',
     unit: 'Building name',
-    rating: 'Rating',
+    rating: 'Your rating',
     travel: 'Travel time',
   },
 };
