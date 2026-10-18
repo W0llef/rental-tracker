@@ -1,21 +1,14 @@
-import { createBuilding } from '../../src/commands/records';
+import fixture from '../fixtures/backup-v1.json';
 import { RentalDB } from '../../src/db/db';
-import type { Migration } from '../../src/db/migrations';
 import { checkPendingUpgrade, hasRecords, readStoredData } from '../../src/db/upgradeCheck';
 import { STORES_V1 } from '../../src/db/versions';
 import type { VersionSpec } from '../../src/db/versions';
 import { SCHEMA_VERSION } from '../../src/model';
-import { makeAddress } from '../../src/model/factories';
 import { checkBackup } from '../../src/services/backup/restore';
 import { makeEnvelope } from '../../src/services/backup/exportJson';
+import { makeV1Db } from './helpers';
 
 const v1: VersionSpec[] = [{ version: 1, stores: STORES_V1 }];
-const testV2: Migration = {
-  toVersion: 2,
-  description: 'test: mark buildings',
-  tables: { buildings: (b) => ({ ...b, v2: true }) },
-};
-const v2: VersionSpec[] = [...v1, { version: 2, stores: {}, migration: testV2 }];
 
 let n = 0;
 const name = () => `upgrade-check-${Date.now()}-${++n}`;
@@ -38,25 +31,27 @@ describe('pre-update backup check', () => {
 
   it('spots an older database and reads its records without upgrading it', async () => {
     const dbName = name();
-    const old = new RentalDB(dbName, v1);
-    await createBuilding(old, { address: makeAddress('200 Portland Ave S', 'Minneapolis') });
-    old.close();
+    await makeV1Db(dbName, fixture.data);
 
     expect(await checkPendingUpgrade(dbName, 2)).toEqual({ fromVersion: 1, toVersion: 2 });
     const data = await readStoredData(dbName);
     expect(hasRecords(data)).toBe(true);
-    expect(data.buildings).toHaveLength(1);
-    expect(data.buildings![0]).not.toHaveProperty('v2');
+    expect(data.units).toHaveLength(2);
+    expect(data.units![0]).toHaveProperty('rating', 4); // still the old shape
+    expect(data).not.toHaveProperty('people');
 
-    // The backup it makes is a v1 file the current app can read.
-    expect(checkBackup(makeEnvelope(data, 1)).ok).toBe(true);
+    // The backup it makes is a v1 file (as the previous app wrote them) the app can read.
+    const envelope = makeEnvelope(data, 1);
+    expect(envelope).not.toHaveProperty('exportedBy');
+    expect(checkBackup(envelope).ok).toBe(true);
 
     // Still at version 1: the check changed nothing.
     expect(await checkPendingUpgrade(dbName, 2)).toEqual({ fromVersion: 1, toVersion: 2 });
 
     // Continuing opens it with the new version, which migrates and keeps a snapshot.
-    const updated = new RentalDB(dbName, v2);
-    expect((await updated.buildings.toArray())[0]).toHaveProperty('v2', true);
+    const updated = new RentalDB(dbName);
+    expect((await updated.units.toArray())[0]).not.toHaveProperty('rating');
+    expect(await updated.people.count()).toBe(1);
     expect(await updated.snapshots.count()).toBe(1);
     updated.close();
     expect(await checkPendingUpgrade(dbName, 2)).toBeNull();

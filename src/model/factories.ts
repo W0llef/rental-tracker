@@ -1,9 +1,11 @@
 import type { Address, ID, ISODateTime } from './common';
 import type { AmenityKey, Building } from './building';
 import { AMENITY_KEYS } from './building';
+import type { Opinion, OpinionFields, Person } from './people';
+import { opinionId } from './people';
 import type { Listing, NoteEntry } from './records';
-import type { Unit, UtilityKey } from './unit';
-import { UTILITY_KEYS } from './unit';
+import type { LabelColor, Unit, UtilityKey } from './unit';
+import { LABEL_COLORS, UTILITY_KEYS } from './unit';
 
 /**
  * Factories for new records: every researched field starts unknown (null), so a record
@@ -115,16 +117,9 @@ export function newUnit(input: UnitInput, at: ISODateTime = nowIso()): Unit {
     storage: { included: null, cost: null },
     costOverrides: {},
     status: 'new',
-    rating: 0,
-    ratingNote: null,
-    flag: 'none',
-    flagNote: null,
-    rejectReasonIds: [],
     colorLabel: null,
     collectionIds: [],
-    lastReviewedAt: null,
     addedVia: 'form',
-    externalRatings: [],
     placement3d: null,
     links: [],
     fieldSources: [],
@@ -151,5 +146,70 @@ export type NoteInput = Partial<Omit<NoteEntry, 'id' | 'createdAt' | 'updatedAt'
   Pick<NoteEntry, 'text'>;
 
 export function newNote(input: NoteInput, at: ISODateTime = nowIso()): NoteEntry {
-  return { ...baseFields(at), unitId: null, buildingId: null, kind: 'note', ...input };
+  return {
+    ...baseFields(at),
+    unitId: null,
+    buildingId: null,
+    kind: 'note',
+    authorId: null,
+    ...input,
+  };
+}
+
+const defaultPrivateLabelNames = (): Record<LabelColor, string> =>
+  Object.fromEntries(
+    LABEL_COLORS.map((c) => [c, c.charAt(0).toUpperCase() + c.slice(1)]),
+  ) as Record<LabelColor, string>;
+
+export type PersonInput = Partial<Omit<Person, 'createdAt' | 'updatedAt' | 'deletedAt'>> &
+  Pick<Person, 'name'>;
+
+export function newPerson(input: PersonInput, at: ISODateTime = nowIso()): Person {
+  return {
+    ...baseFields(at),
+    color: 'teal',
+    labelNames: defaultPrivateLabelNames(),
+    ...input,
+  };
+}
+
+/** An opinion with nothing set yet: not rated, no flag, no notes, no label. */
+export function emptyOpinionFields(): OpinionFields {
+  return {
+    rating: 0,
+    ratingNote: null,
+    flag: 'none',
+    flagNote: null,
+    rejectReasonIds: [],
+    colorLabel: null,
+    lastReviewedAt: null,
+  };
+}
+
+export function newOpinion(
+  unitId: ID,
+  personId: ID,
+  fields: Partial<OpinionFields> = {},
+  at: ISODateTime = nowIso(),
+): Opinion {
+  return {
+    ...baseFields(at),
+    id: opinionId(unitId, personId),
+    unitId,
+    personId,
+    ...emptyOpinionFields(),
+    ...fields,
+  };
+}
+
+/** Whether an opinion says anything (an empty one needn't be stored or shown). */
+export function hasOpinion(o: OpinionFields): boolean {
+  return (
+    o.rating > 0 ||
+    o.flag !== 'none' ||
+    !!o.ratingNote ||
+    !!o.flagNote ||
+    o.rejectReasonIds.length > 0 ||
+    o.colorLabel !== null
+  );
 }

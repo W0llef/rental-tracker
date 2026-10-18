@@ -6,7 +6,6 @@ import {
   fieldSource,
   id,
   isoDate,
-  isoDateTime,
   link,
   maybe,
   measure,
@@ -143,20 +142,11 @@ export const unit = base.extend({
   }),
   storage: z.object({ included: tri, cost: maybe(usd) }),
   costOverrides: z.partialRecord(costItemKey, usd), // per-unit override of profile estimates
-  // Status & review
+  // Status & review (each person's rating, flag and notes are opinions: people.ts, §5.8)
   status: unitStatus,
-  rating,
-  ratingNote: maybe(z.string()),
-  flag,
-  flagNote: maybe(z.string()),
-  rejectReasonIds: z.array(id),
-  colorLabel: maybe(labelColor),
+  colorLabel: maybe(labelColor), // the shared label; each person also has a private one
   collectionIds: z.array(id), // multi-entry index
-  lastReviewedAt: maybe(isoDateTime), // "date added" = createdAt
   addedVia: z.enum(ADDED_VIA),
-  externalRatings: z.array(
-    z.object({ by: z.string(), rating: z.number(), note: maybe(z.string()) }),
-  ), // Phase 3 merges (Q1)
   // Map (Phase 4)
   placement3d: maybe(z.object({ facadeBearingDeg: z.number(), floor: z.number().int() })),
   // Media (listing links live in listings; photos in the photos table)

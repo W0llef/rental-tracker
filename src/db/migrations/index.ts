@@ -10,7 +10,30 @@
  * (tests/fixtures/backup-vN.json) and a test that it reaches the current version.
  */
 
+import { v2 } from './v2';
+
 export type RecordTransform = (record: Record<string, unknown>) => Record<string, unknown>;
+
+/**
+ * What a migration may need to know about the copy it runs in. Version 2 creates the
+ * person who is "me": in the browser's own database that's a new person; when an old
+ * backup file is restored, it's the person already using this browser, if there is one.
+ */
+export interface MigrationContext {
+  meId: string;
+  meName: string;
+  now: string;
+  newId: () => string;
+}
+
+export function migrationContext(partial: Partial<MigrationContext> = {}): MigrationContext {
+  return {
+    meId: partial.meId ?? crypto.randomUUID(),
+    meName: partial.meName ?? 'Me',
+    now: partial.now ?? new Date().toISOString(),
+    newId: partial.newId ?? (() => crypto.randomUUID()),
+  };
+}
 
 export interface Migration {
   /** The version this migration produces. */
@@ -23,13 +46,22 @@ export interface Migration {
   addTables?: string[];
   /** Tables removed by this version. */
   dropTables?: string[];
+  /**
+   * A transform over several tables at once (e.g. records that move from one table to
+   * another), run after the per-table transforms. `tables` lists what it reads and returns.
+   */
+  transform?: { tables: string[]; run: (data: BackupData, ctx: MigrationContext) => BackupData };
+  /**
+   * The undo history can't survive this version: its before/after copies are in the old
+   * shape. The browser's database clears it after the safety copy (restores always do).
+   */
+  clearsHistory?: boolean;
+  /** The transform creates the person `ctx.meId`; the browser records them as "me". */
+  createsMe?: boolean;
 }
 
-/**
- * Version 1 is the starting point, so there are no migrations yet. The next format change
- * adds `v2.ts` and lists it here: `export const migrations: Migration[] = [v2];`
- */
-export const migrations: Migration[] = [];
+/** Every migration, oldest first. Version 1 is the starting point. */
+export const migrations: Migration[] = [v2];
 
 export type BackupData = Record<string, unknown[]>;
 
@@ -42,6 +74,7 @@ export function migrateBackupData(
   fromVersion: number,
   toVersion: number,
   chain: Migration[] = migrations,
+  ctx: MigrationContext = migrationContext(),
 ): BackupData {
   if (fromVersion > toVersion) {
     throw new NewerVersionError(fromVersion, toVersion);
@@ -50,12 +83,16 @@ export function migrateBackupData(
   for (let v = fromVersion + 1; v <= toVersion; v++) {
     const step = chain.find((m) => m.toVersion === v);
     if (!step) throw new Error(`No migration to data format version ${v}.`);
-    current = applyMigration(current, step);
+    current = applyMigration(current, step, ctx);
   }
   return current;
 }
 
-export function applyMigration(data: BackupData, step: Migration): BackupData {
+export function applyMigration(
+  data: BackupData,
+  step: Migration,
+  ctx: MigrationContext = migrationContext(),
+): BackupData {
   const next: BackupData = {};
   for (const [table, rows] of Object.entries(data)) {
     if (step.dropTables?.includes(table)) continue;
@@ -65,7 +102,7 @@ export function applyMigration(data: BackupData, step: Migration): BackupData {
       : rows;
   }
   for (const table of step.addTables ?? []) next[table] ??= [];
-  return next;
+  return step.transform ? step.transform.run(next, ctx) : next;
 }
 
 export class NewerVersionError extends Error {

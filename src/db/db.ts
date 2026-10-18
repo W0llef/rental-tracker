@@ -8,6 +8,8 @@ import type {
   ImportBatch,
   Listing,
   NoteEntry,
+  Opinion,
+  Person,
   Photo,
   Settings,
   Unit,
@@ -26,6 +28,8 @@ export interface MetaRow {
 export class RentalDB extends Dexie {
   buildings!: Table<Building, string>;
   units!: Table<Unit, string>;
+  people!: Table<Person, string>;
+  opinions!: Table<Opinion, string>;
   listings!: Table<Listing, string>;
   destinations!: Table<Destination, string>;
   collections!: Table<Collection, string>;

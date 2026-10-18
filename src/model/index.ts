@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import { building } from './building';
+import { opinion, person } from './people';
 import { collection, destination, importBatch, listing, noteEntry, photo } from './records';
 import { settings } from './settings';
 import { unit } from './unit';
@@ -11,11 +12,12 @@ import { unit } from './unit';
  * backup and photo sidecar. Changing the shape of stored data means a new version, a
  * migration in db/migrations/, a fixture and a test (PLAN.md §3.7).
  */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export * from './common';
 export * from './building';
 export * from './unit';
+export * from './people';
 export * from './records';
 export * from './filters';
 export * from './settings';
@@ -27,6 +29,8 @@ export * from './settings';
 export const recordSchemas = {
   buildings: building,
   units: unit,
+  people: person,
+  opinions: opinion,
   listings: listing,
   destinations: destination,
   collections: collection,
