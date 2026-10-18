@@ -120,8 +120,13 @@ test('adds someone in Settings → People and rates for them', async ({ page }) 
   await page.getByRole('link', { name: /Unit/ }).first().click();
   const ratings = page.getByRole('region', { name: 'Ratings' });
   await expect(ratings.getByRole('listitem')).toHaveCount(3);
+  // Rejecting asks why (M7), for Sam
   await ratings.getByRole('combobox', { name: 'Sam’s flag' }).selectOption('reject');
+  const why = page.getByRole('dialog', { name: /^Reject .* for Sam$/ });
+  await why.getByRole('checkbox', { name: 'Too far' }).check();
+  await why.getByRole('button', { name: /Reject/ }).click();
   await expect(ratings.getByRole('combobox', { name: 'Sam’s flag' })).toHaveValue('reject');
+  await expect(ratings).toContainText('Rejected: Too far');
 });
 
 test('has no horizontal scrolling on the People page and a unit’s ratings', async ({ page }) => {

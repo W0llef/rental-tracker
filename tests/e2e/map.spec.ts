@@ -545,9 +545,14 @@ test.describe('map (preview/dev build)', () => {
       await expect(map(page).getByRole('region', { name: 'Pin color: rent' })).toBeVisible();
     await panel
       .getByRole('group', { name: 'Pin color' })
-      .getByRole('button', { name: 'Label' })
+      .getByRole('button', { name: 'Shared label' })
       .click();
-    await expect(panel.getByRole('list', { name: 'Pin color: label' })).toBeVisible();
+    await expect(panel.getByRole('list', { name: 'Pin color: shared label' })).toBeVisible();
+    await panel
+      .getByRole('group', { name: 'Pin color' })
+      .getByRole('button', { name: 'Your label' })
+      .click();
+    await expect(panel.getByRole('list', { name: 'Pin color: your label' })).toBeVisible();
   });
 
   test('search and the Buildings view drive the map like the list', async ({ page }, info) => {

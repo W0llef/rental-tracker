@@ -96,11 +96,13 @@ export function AppShell() {
       }).due);
 
   // Phone tabs: selecting something opens the Unit tab; closing it returns to the list.
-  const [tab, setTab] = useState<Tab>(selectedKey ? 'unit' : 'list');
-  const [seenKey, setSeenKey] = useState(selectedKey);
-  if (seenKey !== selectedKey) {
-    setSeenKey(selectedKey);
-    if (selectedKey) setTab('unit');
+  // History (M7) opens in the same place as a unit's details.
+  const panelKey = historyOpen ? 'history' : selectedKey;
+  const [tab, setTab] = useState<Tab>(panelKey ? 'unit' : 'list');
+  const [seenKey, setSeenKey] = useState(panelKey);
+  if (seenKey !== panelKey) {
+    setSeenKey(panelKey);
+    if (panelKey) setTab('unit');
     else if (tab === 'unit') setTab('list');
   }
   // "Place on map" shows the map (phones).
