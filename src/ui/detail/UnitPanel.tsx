@@ -284,7 +284,7 @@ function ListingsSection({ row, today }: { row: UnitRow; today: ISODate }) {
   );
 }
 
-/** The read-only unit detail panel (DESIGN.md §4.2). Editing arrives in M6–M7. */
+/** The read-only unit detail panel (DESIGN.md §4.2). Editing arrives in M7–M8. */
 export function UnitPanel({
   row,
   settings,

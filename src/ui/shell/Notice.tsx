@@ -6,7 +6,7 @@ import styles from './AppShell.module.css';
 /**
  * A short confirmation after an action ("Unit 1504 at Riverlight added."), with a link to
  * what it's about, or an Undo button for a delete. It goes away by itself after a while (a
- * notice with Undo stays longer). Toasts with Undo after every action arrive in M6.
+ * notice with Undo stays longer). Toasts with Undo after every action arrive in M7.
  */
 export function Notice() {
   const notice = useUi((s) => s.notice);

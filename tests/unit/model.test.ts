@@ -78,7 +78,7 @@ describe('data model', () => {
     expect(parsed.utilities.waterSewer).toEqual({ mode: 'extra', amount: 55 });
   });
 
-  it('exports JSON Schema for every record type (used by AI prompts in M10)', () => {
+  it('exports JSON Schema for every record type (used by AI prompts in M11)', () => {
     for (const schema of Object.values(recordSchemas)) {
       expect(() => z.toJSONSchema(schema, { unrepresentable: 'any' })).not.toThrow();
     }

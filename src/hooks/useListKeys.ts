@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * List navigation keys (DESIGN.md §5), the subset that M2 needs; the rest arrive in M6.
+ * List navigation keys (DESIGN.md §5), the subset that M2 needs; the rest arrive in M7.
  *   /          focus search
  *   ↓ / J      next item       ↑ / K   previous item
  *   Esc        leave search, or close the panel

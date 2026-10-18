@@ -16,9 +16,34 @@ Open the live link in Chrome or Edge on a laptop. Your units, notes and settings
 browser for that exact web address. That means:
 
 - Use **one address** for real data. The preview link has its own separate, throwaway database.
-- Switching browsers or computers starts with an empty app. Move data with **Export backup** and
-  **Restore** (arrives in milestone M5).
+- Switching browsers or computers starts with an empty app. Move data with a backup file (below).
 - Clearing "site data" for the page erases your units. Keep backups.
+
+### Backing up and restoring
+
+Open **Settings** (the gear in the top bar), then **Backup and restore**.
+
+- **Back up data** downloads one file, e.g. `rental-tracker-backup-2026-10-17.json`, with all your
+  buildings, units, listings, notes and settings, including deleted ones (so undo keeps working).
+  It leaves out the undo history, caches and API keys. Keep it somewhere safe, like a cloud drive.
+  Preview builds name their files `rental-tracker-preview-backup-…` so the two can't be mixed up.
+- A **reminder** appears under the top bar when there's never been a backup, or the last one is
+  older than 7 days (change it under _Remind me to back up_). **Later** hides it for a day.
+- **Restore from file…** checks the file first and shows what it holds next to what's in the
+  browser now. **Replace with this backup** swaps everything in one step and clears the undo
+  history. Nothing changes if the file can't be read or the restore fails part-way. Files from
+  older versions of the app are updated as they're restored; files from a newer version are
+  refused with a message.
+- **Safety copies**: before every restore the app keeps a copy of what was there (the last 3),
+  and before any update that changes how data is stored it keeps another (the last 3). Each can
+  be downloaded or restored. They live in the browser, so they aren't a substitute for backups.
+- **Storage** shows the space used and whether the browser has promised to keep the data
+  ("persistent storage"). The app asks for it after your first change; Chrome decides quietly,
+  Firefox asks you.
+- **To move to another computer or browser**: back up, open the live link there, then
+  Settings → Restore from file.
+- If an update ever changes how data is stored, the app stops before updating and offers
+  **Download backup** first. That file is what lets you go back to the previous version.
 
 ### Adding units
 
@@ -59,10 +84,10 @@ note offers it too). Click the spot on the map, or pan the map's center onto it 
 **Deleting.** At the end of a unit's or building's panel, **Delete unit…** or **Delete
 building…** asks once, then deletes (a building takes its units with it). The confirmation that
 follows has **Undo**. Editing details by hand (a building's name, amenities and so on) arrives
-with the full forms in M7.
+with the full forms in M8.
 
 Each add, paste, placement or delete is one step in the undo history (Undo is on the Data check page
-until the keyboard shortcuts arrive in M6).
+until the keyboard shortcuts arrive in M7).
 
 ### Browsing your units
 
@@ -79,7 +104,7 @@ until the keyboard shortcuts arrive in M6).
 ### The map
 
 - Each building with units in the list gets a pin; the map follows your search and the
-  **Units / Buildings** switch. Pins show rent until total cost arrives (M8).
+  **Units / Buildings** switch. Pins show rent until total cost arrives (M9).
 - **Pins** (button on the map) sets how pins look for the view the list is showing (Units and
   Buildings keep separate settings):
   a sign plate, a dot or a photo; which details to print (rent, beds and size, unit number,
@@ -166,7 +191,7 @@ The `gh-pages` branch is created by the first deploy, so do this after the first
 - Every approved milestone is tagged `v0.<N>.0` (M1 is `v0.1.0`, and so on).
 - To see or restore an older version, ask in a chat: "roll the live app back to v0.3.0".
 - Milestones that change how data is stored say so, and the app asks you to download a backup
-  first. See `PLAN.md` §13.
+  first (it stops and offers one before updating). See `PLAN.md` §13.
 
 ## Files
 

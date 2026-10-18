@@ -5,7 +5,7 @@ import styles from './map.module.css';
 
 /**
  * A unit's larger photo, drawn above everything on the map while you point at its thumbnail
- * (owner review 4): just the photo and the unit's name. Until photos arrive (M11) it shows
+ * (owner review 4): just the photo and the unit's name. Until photos arrive (M12) it shows
  * the unit-type icon.
  */
 export function PhotoPreview({

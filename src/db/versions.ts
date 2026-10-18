@@ -43,16 +43,27 @@ export const versions: VersionSpec[] = [
   // Next: { version: 2, stores: { …only changed stores… }, migration: v2 },
 ];
 
-/** How many pre-migration snapshots to keep. */
+/** How many snapshots of each kind to keep. */
 export const SNAPSHOTS_KEPT = 3;
 
+/**
+ * A safety copy of every data table, taken before something replaces or reshapes the data:
+ * an app update that migrates the data, or a restore (M5). Not a data table itself: not
+ * undoable and not in backups. Settings → Backup and restore lists them for download.
+ */
 export interface Snapshot {
   seq?: number;
   at: string;
+  /** The data format version of `data`. */
   fromVersion: number;
+  /** The version the data was about to become (same as fromVersion for a restore). */
   toVersion: number;
+  /** Why it was taken. Missing on snapshots from before M5, which were all migrations. */
+  reason?: SnapshotReason;
   data: Record<string, unknown[]>;
 }
+
+export type SnapshotReason = 'migration' | 'restore';
 
 /** Declares every version on a Dexie instance, with snapshot + migration upgrades. */
 export function declareVersions(db: Dexie, list: VersionSpec[] = versions): void {
@@ -68,17 +79,34 @@ export function declareVersions(db: Dexie, list: VersionSpec[] = versions): void
   }
 }
 
-/** Copies every data table into `snapshots` before a migration touches it. */
-export async function takeSnapshot(tx: Transaction, fromVersion: number, toVersion: number) {
+/**
+ * Copies every data table into `snapshots` before a migration or a restore touches it, and
+ * keeps the newest SNAPSHOTS_KEPT of that kind (so restores never push out the copy taken
+ * before an update).
+ */
+export async function takeSnapshot(
+  tx: Transaction,
+  fromVersion: number,
+  toVersion: number,
+  reason: SnapshotReason = 'migration',
+): Promise<number> {
   const data: Record<string, unknown[]> = {};
   for (const table of DATA_TABLES) {
     data[table] = await tx.table(table).toArray();
   }
   const snapshots = tx.table<Snapshot, number>('snapshots');
-  await snapshots.add({ at: new Date().toISOString(), fromVersion, toVersion, data });
-  const keys = await snapshots.toCollection().primaryKeys();
-  const old = keys.slice(0, Math.max(0, keys.length - SNAPSHOTS_KEPT));
+  const seq = await snapshots.add({
+    at: new Date().toISOString(),
+    fromVersion,
+    toVersion,
+    reason,
+    data,
+  });
+  const all = await snapshots.orderBy('seq').toArray();
+  const same = all.filter((s) => (s.reason ?? 'migration') === reason);
+  const old = same.slice(0, Math.max(0, same.length - SNAPSHOTS_KEPT)).map((s) => s.seq!);
   if (old.length) await snapshots.bulkDelete(old);
+  return seq;
 }
 
 async function runMigration(tx: Transaction, migration: Migration) {

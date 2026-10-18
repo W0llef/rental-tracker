@@ -59,7 +59,7 @@ export const UNIT_SORT_KEYS = [
 ] as const;
 export type UnitSortKey = (typeof UNIT_SORT_KEYS)[number];
 
-/** Label and the direction a sort starts in when picked. Total cost and $/ft² join in M8. */
+/** Label and the direction a sort starts in when picked. Total cost and $/ft² join in M9. */
 export const UNIT_SORTS: Record<
   UnitSortKey,
   { label: string; dir: SortDir; asc: string; desc: string }

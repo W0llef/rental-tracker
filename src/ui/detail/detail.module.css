@@ -66,7 +66,7 @@
   font-weight: 600;
 }
 
-/* Markers (read-only until M6) */
+/* Markers (read-only until M7) */
 .markers {
   padding: var(--s3) var(--s4);
   border-bottom: 1px solid var(--ice);

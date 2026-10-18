@@ -1,5 +1,12 @@
 import { useMemo, useRef, useState } from 'react';
-import { useLocation, useMatch, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  Link,
+  useLocation,
+  useMatch,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
 import { localDate } from '../../domain/format';
 import { useListKeys } from '../../hooks/useListKeys';
 import { deriveListView } from '../../state/derive';
@@ -10,7 +17,9 @@ import { BuildingPanel } from '../detail/BuildingPanel';
 import { MapPanel } from '../map/MapPanel';
 import { UnitPanel } from '../detail/UnitPanel';
 import { ListPanel } from '../list/ListPanel';
+import { BackupBanner } from './BackupBanner';
 import { Notice } from './Notice';
+import { useStorageSafety } from './useStorageSafety';
 import { PreviewBanner } from './PreviewBanner';
 import { SearchField } from './SearchField';
 import styles from './AppShell.module.css';
@@ -53,6 +62,8 @@ export function AppShell() {
     [data, query, unitSort, buildingSort],
   );
   const today = localDate();
+  const hasData = !!data && (data.units.length > 0 || data.buildings.length > 0);
+  useStorageSafety(hasData);
 
   // Phone tabs: selecting something opens the Unit tab; closing it returns to the list.
   const [tab, setTab] = useState<Tab>(selectedKey ? 'unit' : 'list');
@@ -174,7 +185,27 @@ export function AppShell() {
             N
           </kbd>
         </button>
+        <Link
+          to="/settings/backup"
+          className={styles.iconBtn}
+          title="Settings"
+          aria-label="Settings"
+        >
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path
+              d="M8.6 2h2.8l.4 2.2 1.5.9 2.1-.8 1.4 2.4-1.7 1.5v1.6l1.7 1.5-1.4 2.4-2.1-.8-1.5.9-.4 2.2H8.6l-.4-2.2-1.5-.9-2.1.8-1.4-2.4 1.7-1.5V8.2L3.2 6.7l1.4-2.4 2.1.8 1.5-.9z"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+            <circle cx="10" cy="10" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        </Link>
       </header>
+      {data && (
+        <BackupBanner hasData={hasData} remindEveryDays={data.settings.backup.remindEveryDays} />
+      )}
 
       <main className={styles.main}>
         <section className={styles.list} aria-label="List" data-panel="list">

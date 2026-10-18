@@ -4,7 +4,7 @@ import type { Building, NoteEntry, Unit } from '../model';
  * Text search (FilterSpec.text). Every word typed must appear somewhere in the unit's
  * searchable text: its number or plan, its building's name, address and neighborhood,
  * its own notes and the building's. Case, accents and punctuation are ignored.
- * The full filter panel arrives in M9 and adds its clauses here.
+ * The full filter panel arrives in M10 and adds its clauses here.
  */
 
 /** Lowercase, accents removed, punctuation turned into spaces, single-spaced. */

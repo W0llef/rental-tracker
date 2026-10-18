@@ -92,7 +92,7 @@ export type Settings = z.infer<typeof settings>;
 
 /**
  * Starting estimates for the cost profile. They're placeholders the owner edits in
- * Settings → Cost profile (M8); nothing here is a promise about real bills.
+ * Settings → Cost profile (M9); nothing here is a promise about real bills.
  */
 const defaultCostItems: Record<CostItemKey, CostProfileItem> = {
   heat: { monthly: 50, scaleBy: 'sqft', basis: 750 },

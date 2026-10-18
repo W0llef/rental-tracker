@@ -27,8 +27,8 @@ export type PinField = (typeof PIN_FIELDS)[number];
 
 /** Fields that need a later milestone; shown disabled with this tag until then. */
 export const PENDING_FIELDS: Partial<Record<PinField, string>> = {
-  total: 'M8',
-  psf: 'M8',
+  total: 'M9',
+  psf: 'M9',
   travel: 'Phase 2',
 };
 

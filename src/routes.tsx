@@ -18,6 +18,12 @@ export const routes: RouteObject[] = [
     // Loaded on demand: the Data check page isn't part of everyday use.
     lazy: () => import('./ui/debug/DebugPage').then((m) => ({ Component: m.DebugPage })),
   },
+  { path: '/settings', element: <Navigate to="/settings/backup" replace /> },
+  {
+    path: '/settings/:section',
+    // Loaded on demand, like the Data check page.
+    lazy: () => import('./ui/settings/SettingsPage').then((m) => ({ Component: m.SettingsPage })),
+  },
   { path: '*', element: <Navigate to="/" replace /> },
 ];
 
