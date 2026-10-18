@@ -866,7 +866,7 @@ Each one ends with: tests green, the app running, and a short "how to try it" no
 | **M10** | L | **Batch add grid** with table paste; **AI research prompts** (unit, building, selection); **import review** with tolerant parsing, matching, field-by-field accept, sources, one-step undo | Have an AI research a building; review and apply its reply |
 | **M11** | L | Photo archive: folder picker, OPFS/IDB fallback, thumbnails, drag/drop/paste, lightbox, sidecar `unit.json`, renames, trash, archive size, keep-originals option, backup with photos (.zip); photo pins come alive | Drop listing photos; find them in your folder; switch pins to Photo |
 | **M12** | M | Duplicate review page and merge | Merge a unit listed on two sites |
-| **M13** | M | Phone layout polish, PWA install + offline viewing, 500/200 performance pass, accessibility pass, acceptance test, final README | Install on your phone; run the acceptance test |
+| **M13** | M | Phone layout polish, PWA install + offline viewing, 500/200 performance pass, accessibility pass, **Clear all data** (Q14), acceptance test, final README | Install on your phone; run the acceptance test |
 
 Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 14 milestones add up to about 20 "M-sized" units of work. M4 is where real use can start; M5 is where it becomes safe.
 
@@ -913,13 +913,14 @@ Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 14
 
 | Q11 | Fast data entry (§5.7) in Phase 1? | **Yes.** Paste listing text, batch add, AI research prompts and import review are in Phase 1 (M4, M10). |
 | Q13 | Deleting a unit or building (M4 review, Oct 17): no milestone had a Delete button | **In M4.** **Delete unit…** and **Delete building…** at the end of their panels ask once inline, soft-delete (a building takes its units with it), close the panel and show a confirmation with **Undo** (undoes that delete only while it's still the latest action). Editing a building's details by hand stays in M7 (full forms). |
+| Q14 | **Clear all data** (DESIGN §4.5, Settings → Storage) wasn't in any milestone (M5 review, Oct 17) | **In M13** with the other Settings polish (type DELETE, offers a backup first). Preview builds keep *Remove all data* on the Data check page meanwhile. |
 | Q12 | SPEC §5 "clicking it fans out the units" (M3 review 4, Oct 16) | The owner chose **one card per building** listing its units instead of fanning out separate plates: it can't scatter units or cross lines, and keeps dots visible. Clicking a grouped pin still shows every unit at the building, each clickable. |
 
 ### 11.2 Open
 
 | # | Question | Proposal |
 | --- | --- | --- |
-| Q14 | DESIGN §4.5 lists **Clear all data** under Settings → Storage (type DELETE, offers a backup first), but no milestone builds it (M5 review, Oct 17) | Not needed to be safe, and the browser's own "clear site data" does it. Proposal: add it in M13 with the other Settings polish, or leave it out. Preview builds already have *Remove all data* on the Data check page. |
+| Q15 | Several people (e.g. future roommates) using the app together: their own ratings to compare, their own filters, and adding/editing units, ideally live like Google Docs (owner, Oct 17, M5 review). Today's plan: one rating per unit (Q1); each person runs their own copy; sharing by file with a merge import in Phase 3, keeping others' ratings read-only as "Alex: ★4". | Options and sizes in the M5 chat: (A) keep the Phase 3 file plan; (B) add a **person** to each copy now (name in Settings, ratings and notes attributed to a person) so ratings from others merge cleanly and can be compared side by side; (C) **household sync through a shared cloud folder** (Dropbox/Google Drive/iCloud desktop folder, no server or keys, Chrome/Edge laptops); (D) real-time collaboration, which needs a hosted service and accounts and so breaks owner rule 1. Owner to decide which, and whether before or after Phase 1. |
 
 **Assumptions I'll proceed with unless you object**
 
@@ -938,7 +939,7 @@ Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 14
 
 | Date | Change |
 | --- | --- |
-| 2026-10-17 | M5: backup (JSON) and restore in Settings (`#/settings/backup`, `#/settings/storage`, gear in the top bar), backup reminder banner, safety copies (snapshots with a reason, 3 kept per kind, downloadable and restorable), persistent storage request, and the pre-update backup screen (§3.7 step 7). Last backup time and the reminder's "Later" live in `meta` per browser, not in Settings (§5.5 "As built"). Backups with photos stay in M11. No data-format change. Q14 opened (Clear all data). |
+| 2026-10-17 | M5: backup (JSON) and restore in Settings (`#/settings/backup`, `#/settings/storage`, gear in the top bar), backup reminder banner, safety copies (snapshots with a reason, 3 kept per kind, downloadable and restorable), persistent storage request, and the pre-update backup screen (§3.7 step 7). Last backup time and the reminder's "Later" live in `meta` per browser, not in Settings (§5.5 "As built"). Backups with photos stay in M11. No data-format change. Owner review: Clear all data goes in M13 (Q14); Q15 opened (several people using the app together). |
 | 2026-10-15 | First draft for approval |
 | 2026-10-15 | Draft 2: direction C chosen; Q1–Q10 decided; lease length; base maps and pin options; fast data entry and AI import (§5.7); milestones revised to M0–M13; GitHub repo from M0; Q11 opened |
 | 2026-10-15 | M0: deploys use the `gh-pages` branch (live at the root, preview in `preview/`) instead of the GitHub Actions Pages artifact, because the Actions method can only serve one build at a time; Pages source must be set once to "Deploy from a branch" (README). TypeScript pinned to 6.0 (see §1). Only dependencies needed for the empty shell are installed; Zustand, Radix, Dexie and the rest arrive with the milestone that first uses them |
