@@ -5,6 +5,7 @@ import { addPerson, setOpinion } from '../../src/commands/people';
 import { addListing, addNote, createBuilding, createUnit } from '../../src/commands/records';
 import { db } from '../../src/db/db';
 import { ensureMe, readMeId } from '../../src/db/me';
+import { META_KEYS, setMeta } from '../../src/db/meta';
 import { opinionId } from '../../src/model';
 import { makeAddress } from '../../src/model/factories';
 import { routes } from '../../src/routes';
@@ -216,9 +217,12 @@ describe('main screen with units', () => {
     expect(details).toHaveTextContent(/note · Alex\s*Ask about the bike room/);
   });
 
-  it('asks for your name once', async () => {
+  it('asks for your name once, when no backup reminder is showing', async () => {
     const user = userEvent.setup();
     renderAt();
+    await screen.findByRole('region', { name: 'Backup reminder' });
+    expect(screen.queryByRole('region', { name: 'Your name' })).toBeNull();
+    await setMeta(db, META_KEYS.lastBackupAt, new Date().toISOString());
     const banner = await screen.findByRole('region', { name: 'Your name' });
     await user.type(within(banner).getByRole('textbox', { name: /What’s your name/ }), 'Jordan');
     await user.click(within(banner).getByRole('button', { name: 'Save' }));
@@ -229,6 +233,7 @@ describe('main screen with units', () => {
 
   it('lets you skip giving your name', async () => {
     const user = userEvent.setup();
+    await setMeta(db, META_KEYS.lastBackupAt, new Date().toISOString());
     renderAt();
     const banner = await screen.findByRole('region', { name: 'Your name' });
     await user.click(within(banner).getByRole('button', { name: 'Not now' }));

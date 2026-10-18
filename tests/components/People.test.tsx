@@ -23,7 +23,10 @@ const renderAt = (path: string) => {
 };
 
 const livePeople = async () =>
-  (await db.people.toArray()).filter((p) => !p.deletedAt).map((p) => p.name);
+  (await db.people.toArray())
+    .filter((p) => !p.deletedAt)
+    .map((p) => p.name)
+    .sort();
 
 describe('Settings → People', () => {
   it('renames you and changes your color', async () => {
@@ -49,7 +52,7 @@ describe('Settings → People', () => {
     await user.type(within(others).getByRole('textbox', { name: 'New person’s name' }), 'Alex');
     await user.click(within(others).getByRole('button', { name: 'Add person' }));
     await within(others).findByRole('textbox', { name: 'Alex’s name' });
-    expect(await livePeople()).toEqual(['Me', 'Alex']);
+    expect(await livePeople()).toEqual(['Alex', 'Me']);
 
     // A second Alex is refused, with a message.
     await user.type(within(others).getByRole('textbox', { name: 'New person’s name' }), 'alex');

@@ -21,6 +21,8 @@ import styles from './DebugPage.module.css';
 const TABLES: { table: DataTable; label: string }[] = [
   { table: 'buildings', label: 'Buildings' },
   { table: 'units', label: 'Units' },
+  { table: 'people', label: 'People' },
+  { table: 'opinions', label: 'Ratings and flags' },
   { table: 'listings', label: 'Listings' },
   { table: 'notes', label: 'Notes' },
   { table: 'collections', label: 'Collections' },

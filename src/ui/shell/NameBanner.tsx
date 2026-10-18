@@ -9,12 +9,12 @@ import { useUi } from '../../state/ui';
 import styles from './Banners.module.css';
 
 /**
- * Asks once for your name (PLAN.md §5.8): on first run and after the update that brought
- * people (v0.6). Shown until you save a name or choose "Not now"; Settings → People can
- * change it any time. Your name sits next to your ratings ("You ★4 · Alex ★3" shows
- * "You" here, your name for others once household sharing arrives).
+ * Asks once for your name (PLAN.md §5.8): once there's something to rate (after the update
+ * that brought people, v0.6, or after your first unit). Shown until you save a name or
+ * choose "Not now"; Settings → People can change it any time. You see your own ratings as
+ * "You"; others will see your name once household sharing arrives.
  */
-export function NameBanner({ me }: { me: Person }) {
+export function NameBanner({ me, hasData }: { me: Person; hasData: boolean }) {
   const askedAt = useLiveQuery(
     async () => (await getMeta<string>(db, META_KEYS.nameAskedAt)) ?? '',
     [],
@@ -22,7 +22,7 @@ export function NameBanner({ me }: { me: Person }) {
   const showNotice = useUi((s) => s.showNotice);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  if (askedAt === undefined || askedAt !== '' || me.name !== 'Me' || !me.id) return null;
+  if (!hasData || askedAt !== '' || me.name !== 'Me' || !me.id) return null;
 
   const done = () => setMeta(db, META_KEYS.nameAskedAt, new Date().toISOString());
 
@@ -42,8 +42,10 @@ export function NameBanner({ me }: { me: Person }) {
     <section className={styles.welcome} aria-label="Your name">
       <form className={styles.nameForm} onSubmit={(e) => void save(e)}>
         <label className={styles.text} htmlFor="your-name">
-          <strong>What’s your name?</strong> It goes with your ratings and notes, so they stay apart
-          from anyone you’re looking with.
+          <strong>What’s your name?</strong>{' '}
+          <span className={styles.why}>
+            It goes with your ratings and notes, so they stay apart from anyone you’re looking with.
+          </span>
         </label>
         <input
           id="your-name"

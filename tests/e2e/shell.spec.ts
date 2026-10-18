@@ -13,6 +13,8 @@ test.describe('app shell', () => {
 
   test('uses the self-hosted Overpass font', async ({ page }) => {
     await page.goto('/');
+    // The app renders once the database is open; only then is there text to load a font for.
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     const family = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
     expect(family).toContain('Overpass');

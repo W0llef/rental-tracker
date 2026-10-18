@@ -44,6 +44,22 @@ Open **Settings** (the gear in the top bar), then **Backup and restore**.
   Settings → Restore from file.
 - If an update ever changes how data is stored, the app stops before updating and offers
   **Download backup** first. That file is what lets you go back to the previous version.
+  Version 0.6 is the first such update (people and per-person ratings): your ratings and flags
+  become yours, and the undo history starts fresh (the safety copy keeps everything).
+- A backup remembers whose copy made it, so restoring your own backup on a new computer makes
+  you "you" again.
+
+### People and ratings
+
+- Each person keeps their own **rating, flag (pick or reject), reasons and notes** on a unit.
+  Facts, status, listings and the shared color label belong to everyone.
+- The app asks once for your name. Change it, or add the people you're looking with, in
+  **Settings → People**.
+- Cards and pins show **your** rating and flag; other people's appear small at the end of a card
+  ("A ★3 ✓"). A unit's **Ratings** section lists everyone side by side: click stars to rate
+  (click the same star again to clear) and pick a flag, for yourself or, until household sharing
+  arrives, for someone else.
+- Preview builds' sample data comes with a roommate, Alex, who has rated most units.
 
 ### Adding units
 
@@ -95,7 +111,7 @@ until the keyboard shortcuts arrive in M7).
   to one card per building.
 - **Search** (top bar, or press `/`) matches unit numbers, floor plans, building names, addresses,
   neighborhoods and notes.
-- **Sort** by rent, available date, size, bedrooms, rating, listing age and more; the arrow flips
+- **Sort** by rent, available date, size, bedrooms, your rating, listing age and more; the arrow flips
   the direction. Units with an unknown value always sort last. The app remembers your sort.
 - Click a card to open its details; **Back**, `Esc` or the × closes them. On a phone the details
   open in the **Unit** tab.

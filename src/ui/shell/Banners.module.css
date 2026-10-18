@@ -136,3 +136,18 @@
   outline: 2px solid var(--lake);
   outline-offset: 1px;
 }
+
+/* Phones: the question on one line, the reason left out */
+@media (max-width: 600px) {
+  .welcome .why {
+    display: none;
+  }
+
+  .welcome .text {
+    flex: 1 1 100%;
+  }
+
+  .welcome .input {
+    flex: 1 1 120px;
+  }
+}
