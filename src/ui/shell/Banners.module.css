@@ -137,8 +137,12 @@
   outline-offset: 1px;
 }
 
-/* Phones: the question on one line, the reason left out */
-@media (max-width: 600px) {
+/* Phones: the question on one line, the field and buttons on the next */
+@media (max-width: 759px) {
+  .welcome {
+    padding: var(--s2) var(--s3);
+  }
+
   .welcome .why {
     display: none;
   }
@@ -148,6 +152,16 @@
   }
 
   .welcome .input {
-    flex: 1 1 120px;
+    flex: 1 1 100px;
+    min-height: 44px;
+  }
+
+  .welcome .actions {
+    flex: none;
+  }
+
+  .welcome .button,
+  .welcome .primary {
+    flex: none;
   }
 }
