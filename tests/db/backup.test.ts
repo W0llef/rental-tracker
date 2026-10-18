@@ -13,8 +13,10 @@ import {
 } from '../../src/commands/records';
 import { undo } from '../../src/commands/undo';
 import type { RentalDB } from '../../src/db/db';
+import { ensureMe } from '../../src/db/me';
 import { getMeta, META_KEYS } from '../../src/db/meta';
-import { STORES_V1, takeSnapshot } from '../../src/db/versions';
+import { setOpinion } from '../../src/commands/people';
+import { STORES_V1, STORES_V2, takeSnapshot } from '../../src/db/versions';
 import { loadSampleData } from '../../src/dev/sampleData';
 import { parseListingText } from '../../src/domain/listingText';
 import { SCHEMA_VERSION } from '../../src/model';
@@ -69,6 +71,8 @@ describe('backup export', () => {
         'imports',
         'listings',
         'notes',
+        'opinions',
+        'people',
         'photos',
         'settings',
         'units',
@@ -379,7 +383,9 @@ describe('nothing lost: export → wipe → restore gives back the same data', (
       }
       case 'edit': {
         const u = pickU(s.u);
-        return u && updateUnit(db, u.id, { rent: s.rent, rating: s.rating });
+        if (!u || u.deletedAt) return;
+        await updateUnit(db, u.id, { rent: s.rent });
+        return setOpinion(db, u.id, await ensureMe(db), { rating: s.rating });
       }
       case 'deleteUnit': {
         const u = pickU(s.u);
@@ -429,6 +435,7 @@ describe('nothing lost: export → wipe → restore gives back the same data', (
     await fc.assert(
       fc.asyncProperty(fc.array(step, { minLength: 1, maxLength: 25 }), async (steps) => {
         const db = makeDb();
+        await ensureMe(db); // the app sets this copy's person up before anything else
         for (const s of steps) await run(db, s);
         const original = await dumpData(db);
 
@@ -448,22 +455,25 @@ describe('nothing lost: export → wipe → restore gives back the same data', (
   }, 120_000);
 });
 
-describe('version 1 stores', () => {
+describe('stores', () => {
   it('back up every table Dexie declares for data', () => {
     // A guard: a new data table must be added to recordSchemas (and so to backups).
-    const declared = Object.keys(STORES_V1).filter(
-      (t) =>
-        ![
-          'thumbs',
-          'originals',
-          'changeLog',
-          'snapshots',
-          'handles',
-          'geocodeCache',
-          'travelCache',
-          'meta',
-        ].includes(t),
-    );
+    const all = Object.entries({ ...STORES_V1, ...STORES_V2 }).filter(([, spec]) => spec !== null);
+    const declared = all
+      .map(([t]) => t)
+      .filter(
+        (t) =>
+          ![
+            'thumbs',
+            'originals',
+            'changeLog',
+            'snapshots',
+            'handles',
+            'geocodeCache',
+            'travelCache',
+            'meta',
+          ].includes(t),
+      );
     const checked = checkBackup(fixture);
     expect(checked.ok && Object.keys(checked.backup.data).sort()).toEqual(declared.sort());
   });

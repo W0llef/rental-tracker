@@ -1,6 +1,7 @@
 import { appInfo } from '../../config';
 import type { Channel } from '../../config';
 import type { RentalDB } from '../../db/db';
+import { readMeId } from '../../db/me';
 import { META_KEYS, setMeta } from '../../db/meta';
 import { localDate } from '../../domain/format';
 import { DATA_TABLES, SCHEMA_VERSION } from '../../model';
@@ -49,18 +50,21 @@ export function makeEnvelope(
   data: BackupData,
   schemaVersion = SCHEMA_VERSION,
   exportedAt = nowIso(),
+  exportedBy: string | null = null,
 ): BackupEnvelope {
   return {
     format: BACKUP_FORMAT,
     schemaVersion,
     exportedAt,
     appVersion: appInfo.version,
+    // Version 1 files never had it; leave it out so they stay exactly as v1 wrote them.
+    ...(schemaVersion >= 2 ? { exportedBy } : {}),
     data,
   };
 }
 
 export async function buildBackup(db: RentalDB, at = nowIso()): Promise<BackupEnvelope> {
-  return makeEnvelope(await readBackupData(db), SCHEMA_VERSION, at);
+  return makeEnvelope(await readBackupData(db), SCHEMA_VERSION, at, await readMeId(db));
 }
 
 /** Readable JSON (indented), so the file can be opened and checked without the app. */

@@ -1,4 +1,5 @@
 import { undo } from '../../src/commands/undo';
+import { ensureMe, readMeId } from '../../src/db/me';
 import { loadSampleData, makeSampleData, removeAllData } from '../../src/dev/sampleData';
 import { building, listing, noteEntry, unit } from '../../src/model';
 import { makeDb } from './helpers';
@@ -45,5 +46,24 @@ describe('sample data', () => {
     expect(await db.units.count()).toBe(0);
     await undo(db);
     expect(await db.units.count()).toBe(data.units.length);
+  });
+
+  it('comes with a sample roommate who rated most units, once however often it loads', async () => {
+    const db = makeDb();
+    const meId = await ensureMe(db);
+    const data = await loadSampleData(db, '2026-10-15');
+    const people = await db.people.toArray();
+    expect(people.map((p) => p.name).sort()).toEqual(['Alex', 'Me']);
+    const alex = people.find((p) => p.name === 'Alex')!;
+    const theirs = await db.opinions.where('personId').equals(alex.id).count();
+    expect(theirs).toBeGreaterThan(data.units.length / 2);
+    expect(await db.opinions.where('personId').equals(meId).count()).toBeGreaterThan(5);
+    expect((await db.notes.toArray()).some((n) => n.authorId === alex.id)).toBe(true);
+
+    await removeAllData(db);
+    await loadSampleData(db, '2026-10-15');
+    await loadSampleData(db, '2026-10-15');
+    expect((await db.people.toArray()).filter((p) => p.name === 'Alex')).toHaveLength(1);
+    expect(await readMeId(db)).toBe(meId);
   });
 });
