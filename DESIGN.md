@@ -218,7 +218,7 @@ Phone gestures: swipe the unit's photo strip; tap a star to rate; long-press a c
    ■ = color label square on the thumbnail   ▌= status color edge
 ```
 
-- Stars and flag are **yours** (M6). Other people's ratings and flags sit small at the end of the foot line: badge, "★3", ✓ for pick or ✕ for reject (only people who said something). Screen readers hear "Alex: 3 of 5 stars, pick".
+- Stars and flag are **yours** (M6). Everyone else's sit in **one chip** at the foot, the same size however many people there are (owner review): up to 3 overlapping badges (+N for more), the range of their stars ("★2–5", or "★3" when one), then ✓ and ✕ with a count when more than one picked or rejected. Only people who rated or flagged count. The tooltip and screen readers give each person ("Others: Alex: 3 of 5 stars, pick; …"); the unit's Ratings section has the full list. A crowded foot wraps, putting the listing age on its own line, rather than overlapping.
 - Selected: `--frost` background and a 4 px navy bar on the left. Hover: `--frost`.
 - Rejected (by you): dimmed (text in `--slate`, thumbnail at 50% opacity, so text stays AA) and "Rejected: <reason>" replaces the flag/status line.
 - Floor plan only: "Plan C" plus a "floor plan" tag; specs say "units vary"; prices say "from".

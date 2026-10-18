@@ -168,9 +168,13 @@ describe('main screen with units', () => {
   it('shows other people’s ratings and flags small on the cards', async () => {
     renderAt();
     const card = await screen.findByRole('link', { name: /Unit 1504/ });
-    expect(within(card).getByRole('img', { name: 'Alex: 3 of 5 stars' })).toBeInTheDocument();
+    expect(
+      within(card).getByRole('img', { name: 'Others: Alex: 3 of 5 stars' }),
+    ).toBeInTheDocument();
     const other = screen.getByRole('link', { name: /Unit 908/ });
-    expect(within(other).getByRole('img', { name: 'Alex: not rated, pick' })).toBeInTheDocument();
+    expect(
+      within(other).getByRole('img', { name: 'Others: Alex: not rated, pick' }),
+    ).toBeInTheDocument();
     expect(within(other).getByRole('img', { name: 'Not rated' })).toBeInTheDocument(); // yours
   });
 

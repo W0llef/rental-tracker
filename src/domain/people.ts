@@ -91,3 +91,42 @@ export function ratingsSummary(rows: readonly PersonOpinion[]): string {
     })
     .join('; ');
 }
+
+/** At most this many badges on a card; the rest are counted ("+2"). */
+export const CARD_BADGES = 3;
+
+export interface OthersSummary {
+  /** Other people who rated or flagged the unit, in order. */
+  rows: PersonOpinion[];
+  /** Their lowest and highest rating (rated ones only); null if nobody rated. */
+  min: number | null;
+  max: number | null;
+  picks: number;
+  rejects: number;
+}
+
+/**
+ * Everyone else's view of a unit in one compact chip (cards, M6 owner review): who said
+ * something, the range of their stars, and how many picked or rejected it. Stays the same
+ * size however many people there are.
+ */
+export function othersSummary(opinions: readonly PersonOpinion[]): OthersSummary | null {
+  const rows = opinions.filter(
+    (o) => !o.isMe && (o.opinion.rating > 0 || o.opinion.flag !== 'none'),
+  );
+  if (!rows.length) return null;
+  const rated = rows.map((r) => r.opinion.rating).filter((n) => n > 0);
+  return {
+    rows,
+    min: rated.length ? Math.min(...rated) : null,
+    max: rated.length ? Math.max(...rated) : null,
+    picks: rows.filter((r) => r.opinion.flag === 'pick').length,
+    rejects: rows.filter((r) => r.opinion.flag === 'reject').length,
+  };
+}
+
+/** "★3", "★2–4", or null when nobody rated. */
+export function starRange(s: Pick<OthersSummary, 'min' | 'max'>): string | null {
+  if (s.min === null || s.max === null) return null;
+  return s.min === s.max ? `★${s.min}` : `★${s.min}–${s.max}`;
+}

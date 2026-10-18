@@ -434,35 +434,59 @@ export function makeSampleData(
 }
 
 /**
- * Adds the sample data as one undoable action. The sample roommate is added only if
- * nobody by that name exists yet, so loading twice doesn't make two of them.
+ * Leaves out sample buildings you already have (same address, not deleted), with their
+ * units and everything attached to them, so loading twice never makes duplicates.
  */
-export async function loadSampleData(db: RentalDB, today = localDate()) {
+export function withoutLoaded(data: SampleData, haveAddresses: ReadonlySet<string>): SampleData {
+  const buildings = data.buildings.filter((b) => !haveAddresses.has(b.address.normalized));
+  const keep = new Set(buildings.map((b) => b.id));
+  const units = data.units.filter((u) => keep.has(u.buildingId));
+  const unitIds = new Set(units.map((u) => u.id));
+  return {
+    buildings,
+    units,
+    listings: data.listings.filter((l) => unitIds.has(l.unitId)),
+    notes: data.notes.filter((n) => (n.unitId ? unitIds.has(n.unitId) : true)),
+    people: data.people,
+    opinions: data.opinions.filter((o) => unitIds.has(o.unitId)),
+  };
+}
+
+/**
+ * Adds the sample data as one undoable action: only the sample buildings that aren't in
+ * your list yet (none if it's already loaded). The sample roommate is added only if nobody
+ * by that name exists yet.
+ */
+export async function loadSampleData(db: RentalDB, today = localDate()): Promise<SampleData> {
   const meId = await ensureMe(db);
-  const data = makeSampleData(today, undefined, meId);
-  await action(db, 'Load sample data', async () => {
+  const { value } = await action(db, 'Load sample data', async () => {
+    const have = new Set(
+      (await db.buildings.toArray()).filter((b) => !b.deletedAt).map((b) => b.address.normalized),
+    );
+    const data = withoutLoaded(makeSampleData(today, undefined, meId), have);
+    if (!data.units.length && !data.buildings.length) return data;
     const existing = (await db.people.toArray()).find(
       (p) => !p.deletedAt && p.name.toLowerCase() === SAMPLE_ROOMMATE.toLowerCase(),
     );
-    const roommateId = existing?.id ?? data.people[0]!.id;
+    const sampleId = data.people[0]!.id;
+    const roommateId = existing?.id ?? sampleId;
     if (!existing) await db.people.bulkAdd(data.people);
     await db.buildings.bulkAdd(data.buildings);
     await db.units.bulkAdd(data.units);
     await db.listings.bulkAdd(data.listings);
     await db.notes.bulkAdd(
-      data.notes.map((n) =>
-        n.authorId === data.people[0]!.id ? { ...n, authorId: roommateId } : n,
-      ),
+      data.notes.map((n) => (n.authorId === sampleId ? { ...n, authorId: roommateId } : n)),
     );
     await db.opinions.bulkAdd(
       data.opinions.map((o) =>
-        o.personId === data.people[0]!.id
+        o.personId === sampleId
           ? { ...o, personId: roommateId, id: opinionId(o.unitId, roommateId) }
           : o,
       ),
     );
+    return data;
   });
-  return data;
+  return value;
 }
 
 /** Permanently removes every record in the data tables, as one undoable action. */

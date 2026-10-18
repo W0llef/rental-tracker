@@ -7,8 +7,8 @@ import {
   rentLabel,
   unitTitle,
 } from '../../domain/format';
-import { ratingsSummary } from '../../domain/people';
-import type { PersonOpinion } from '../../domain/people';
+import { CARD_BADGES, othersSummary, ratingsSummary, starRange } from '../../domain/people';
+import type { OthersSummary } from '../../domain/people';
 import type { Settings } from '../../model';
 import type { UnitRow } from '../../state/derive';
 import {
@@ -22,21 +22,35 @@ import {
 } from '../common/Markers';
 import styles from './list.module.css';
 
-/** Someone else's rating and flag, compact: badge, "★4", ✓ pick or ✕ reject (§5.8). */
-function OtherOpinion({ row }: { row: PersonOpinion }) {
-  const { rating, flag } = row.opinion;
+/**
+ * Everyone else's ratings and flags in one chip of fixed size (M6 owner review): up to
+ * three badges (+N for more), the range of their stars, and counts of picks (✓) and
+ * rejects (✕). The full list is in the tooltip, for screen readers, and in the unit's
+ * Ratings section.
+ */
+function OthersChip({ summary }: { summary: OthersSummary }) {
+  const { rows, picks, rejects } = summary;
+  const shown = rows.slice(0, CARD_BADGES);
+  const more = rows.length - shown.length;
+  const stars = starRange(summary);
+  const label = `Others: ${ratingsSummary(rows)}`;
   return (
-    <span className={styles.other} role="img" aria-label={ratingsSummary([row])}>
-      <PersonBadge person={row.person} named />
-      {rating > 0 && <span aria-hidden="true">★{rating}</span>}
-      {flag === 'pick' && (
+    <span className={styles.others} role="img" aria-label={label} title={ratingsSummary(rows)}>
+      <span className={styles.badges} aria-hidden="true">
+        {shown.map((r) => (
+          <PersonBadge key={r.person.id} person={r.person} named />
+        ))}
+        {more > 0 && <span className={styles.more}>+{more}</span>}
+      </span>
+      {stars && <span aria-hidden="true">{stars}</span>}
+      {picks > 0 && (
         <span aria-hidden="true" className={styles.otherPick}>
-          ✓
+          ✓{picks > 1 ? picks : ''}
         </span>
       )}
-      {flag === 'reject' && (
+      {rejects > 0 && (
         <span aria-hidden="true" className={styles.otherReject}>
-          ✕
+          ✕{rejects > 1 ? rejects : ''}
         </span>
       )}
     </span>
@@ -45,7 +59,7 @@ function OtherOpinion({ row }: { row: PersonOpinion }) {
 
 /**
  * One unit in the list (DESIGN.md §4.1). Rent is the headline until total cost (M9).
- * Stars and flag are yours; other people's show small at the foot (§5.8).
+ * Stars and flag are yours; other people's sit in one small chip at the foot (§5.8).
  */
 export function UnitCard({
   row,
@@ -65,9 +79,7 @@ export function UnitCard({
   const rent = rentLabel(u);
   const mine = row.mine;
   const rejected = mine.flag === 'reject';
-  const others = row.opinions.filter(
-    (o) => !o.isMe && (o.opinion.rating > 0 || o.opinion.flag !== 'none'),
-  );
+  const others = othersSummary(row.opinions);
 
   return (
     <Link
@@ -138,13 +150,7 @@ export function UnitCard({
               <StatusPill status={u.status} />
             </>
           )}
-          {others.length > 0 && (
-            <span className={styles.others}>
-              {others.map((o) => (
-                <OtherOpinion key={o.person.id} row={o} />
-              ))}
-            </span>
-          )}
+          {others && <OthersChip summary={others} />}
           {row.listingAgeDays !== null && (
             <span className={styles.age}>{listingAgeLabel(row.listingAgeDays)}</span>
           )}

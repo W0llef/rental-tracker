@@ -179,7 +179,9 @@ export function DebugPage() {
                     run(async () => {
                       const { loadSampleData } = await import('../../dev/sampleData');
                       const data = await loadSampleData(db);
-                      return `Loaded ${data.units.length} units in ${data.buildings.length} buildings`;
+                      return data.units.length
+                        ? `Loaded ${data.units.length} units in ${data.buildings.length} buildings`
+                        : 'Sample data is already loaded: nothing added.';
                     })
                   }
                 >

@@ -86,7 +86,9 @@ test('shows a sample roommate’s ratings next to yours, and saves theirs', asyn
   await expect(page.getByRole('region', { name: 'Backup reminder' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Your name' })).toHaveCount(0);
 
-  const rated = page.getByRole('link').filter({ has: page.getByRole('img', { name: /^Alex: / }) });
+  const rated = page
+    .getByRole('link')
+    .filter({ has: page.getByRole('img', { name: /^Others: Alex: / }) });
   await rated.first().click();
   const ratings = page.getByRole('region', { name: 'Ratings' });
   await expect(ratings.getByRole('listitem')).toHaveCount(2);
@@ -149,7 +151,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(page.getByRole('region', { name: 'Your name' })).toBeVisible();
     const rated = page
       .getByRole('link')
-      .filter({ has: page.getByRole('img', { name: /^Alex: / }) });
+      .filter({ has: page.getByRole('img', { name: /^Others: Alex: / }) });
     await rated.first().click();
     await expect(page.getByRole('region', { name: 'Ratings' })).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
