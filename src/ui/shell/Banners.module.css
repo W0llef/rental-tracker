@@ -103,3 +103,36 @@
     justify-content: center;
   }
 }
+
+/* Your name (M6): a question, not a warning, so frost rather than amber */
+.welcome {
+  flex: none;
+  padding: var(--s2) var(--s4);
+  background: var(--frost);
+  border-bottom: 1px solid var(--ice);
+}
+
+.nameForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+}
+
+.input {
+  flex: 0 1 200px;
+  min-width: 0;
+  min-height: 32px;
+  padding: 2px var(--s2) 0;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--lake);
+  outline-offset: 1px;
+}

@@ -36,6 +36,15 @@
   --lb-blue: #3b7ddd;
   --lb-purple: #8e5cd9;
 
+  /* People (M6): badge fills, white initials at AA in both themes */
+  --pp-teal: #0b6e70;
+  --pp-plum: #7a3e8f;
+  --pp-rust: #a14a1a;
+  --pp-navy: #2a4f8f;
+  --pp-olive: #5a6b12;
+  --pp-rose: #a3325b;
+  --on-pp: #ffffff;
+
   /* Wayfinding map colors (§2.5) */
   --map-land: #eef2f3;
   --map-blk: #e3e9ec;

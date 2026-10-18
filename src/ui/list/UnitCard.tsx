@@ -7,12 +7,46 @@ import {
   rentLabel,
   unitTitle,
 } from '../../domain/format';
+import { ratingsSummary } from '../../domain/people';
+import type { PersonOpinion } from '../../domain/people';
 import type { Settings } from '../../model';
 import type { UnitRow } from '../../state/derive';
-import { FlagMark, LabelSwatch, Stars, StatusPill, Tag, TypeIcon } from '../common/Markers';
+import {
+  FlagMark,
+  LabelSwatch,
+  PersonBadge,
+  Stars,
+  StatusPill,
+  Tag,
+  TypeIcon,
+} from '../common/Markers';
 import styles from './list.module.css';
 
-/** One unit in the list (DESIGN.md §4.1). Rent is the headline until total cost (M9). */
+/** Someone else's rating and flag, compact: badge, "★4", ✓ pick or ✕ reject (§5.8). */
+function OtherOpinion({ row }: { row: PersonOpinion }) {
+  const { rating, flag } = row.opinion;
+  return (
+    <span className={styles.other} role="img" aria-label={ratingsSummary([row])}>
+      <PersonBadge person={row.person} named />
+      {rating > 0 && <span aria-hidden="true">★{rating}</span>}
+      {flag === 'pick' && (
+        <span aria-hidden="true" className={styles.otherPick}>
+          ✓
+        </span>
+      )}
+      {flag === 'reject' && (
+        <span aria-hidden="true" className={styles.otherReject}>
+          ✕
+        </span>
+      )}
+    </span>
+  );
+}
+
+/**
+ * One unit in the list (DESIGN.md §4.1). Rent is the headline until total cost (M9).
+ * Stars and flag are yours; other people's show small at the foot (§5.8).
+ */
 export function UnitCard({
   row,
   selected,
@@ -29,7 +63,11 @@ export function UnitCard({
   const title = unitTitle(u, b);
   const bName = b ? buildingName(b) : null;
   const rent = rentLabel(u);
-  const rejected = u.flag === 'reject';
+  const mine = row.mine;
+  const rejected = mine.flag === 'reject';
+  const others = row.opinions.filter(
+    (o) => !o.isMe && (o.opinion.rating > 0 || o.opinion.flag !== 'none'),
+  );
 
   return (
     <Link
@@ -53,7 +91,7 @@ export function UnitCard({
           <span className={styles.unitTitle}>{title}</span>
           {bName && bName !== title && <span className={styles.bldg}>{bName}</span>}
           <span className={styles.starsSlot}>
-            <Stars rating={u.rating} />
+            <Stars rating={mine.rating} />
           </span>
         </span>
         <span className={styles.specs}>
@@ -93,12 +131,19 @@ export function UnitCard({
           {u.isFloorPlanOnly && <Tag>floor plan</Tag>}
           {b && b.location === null && <Tag>Needs location</Tag>}
           {rejected ? (
-            <FlagMark flag="reject" reasons={rejectReasonText(u.rejectReasonIds, settings)} />
+            <FlagMark flag="reject" reasons={rejectReasonText(mine.rejectReasonIds, settings)} />
           ) : (
             <>
-              <FlagMark flag={u.flag} />
+              <FlagMark flag={mine.flag} />
               <StatusPill status={u.status} />
             </>
+          )}
+          {others.length > 0 && (
+            <span className={styles.others}>
+              {others.map((o) => (
+                <OtherOpinion key={o.person.id} row={o} />
+              ))}
+            </span>
           )}
           {row.listingAgeDays !== null && (
             <span className={styles.age}>{listingAgeLabel(row.listingAgeDays)}</span>

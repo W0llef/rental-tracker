@@ -1,7 +1,21 @@
 import { buildingSearchText, matchesWords, queryWords, unitSearchText } from '../domain/filter';
 import { listingAgeDays } from '../domain/listings';
 import { sortBuildings, sortUnits } from '../domain/sort';
-import type { Building, ID, ISODate, Listing, NoteEntry, Settings, SortSpec, Unit } from '../model';
+import type { PersonOpinion } from '../domain/people';
+import { emptyOpinionFields, newPerson } from '../model/factories';
+import type {
+  Building,
+  ID,
+  ISODate,
+  Listing,
+  NoteEntry,
+  Opinion,
+  OpinionFields,
+  Person,
+  Settings,
+  SortSpec,
+  Unit,
+} from '../model';
 
 /**
  * Pure derivation from stored records to what the list and panels show (PLAN.md §4.2).
@@ -14,13 +28,24 @@ export interface RawData {
   listings: Listing[];
   notes: NoteEntry[];
   settings: Settings;
+  people: Person[];
+  opinions: Opinion[];
+  /** This copy's person (meta), or null before it's set up. */
+  meId: ID | null;
 }
+
+/** A note, with who wrote it when that wasn't you (null for yours and the app's). */
+export type NoteRow = NoteEntry & { authorName: string | null };
 
 export interface UnitRow {
   unit: Unit;
   building: Building | undefined;
   listings: Listing[];
-  notes: NoteEntry[];
+  notes: NoteRow[];
+  /** Your rating, flag and notes on this unit (empty if you haven't said anything). */
+  mine: OpinionFields;
+  /** Everyone's opinion, you first, then the others in the order they were added. */
+  opinions: PersonOpinion[];
   listingAgeDays: number | null;
   searchText: string;
 }
@@ -32,7 +57,7 @@ export interface BuildingRow {
   /** Units shown under the current search. */
   matching: UnitRow[];
   /** Notes about the building itself, newest first. */
-  notes: NoteEntry[];
+  notes: NoteRow[];
   unitCount: number;
   minRent: number | null;
   maxRent: number | null;
@@ -41,6 +66,12 @@ export interface BuildingRow {
 
 export interface Dataset {
   settings: Settings;
+  /** You (this copy's person). */
+  me: Person;
+  /** Everyone, you first. */
+  people: Person[];
+  /** Everyone, including people who were removed (their notes still name them). */
+  personById: Map<ID, Person>;
   units: UnitRow[];
   buildings: BuildingRow[];
   unitById: Map<ID, UnitRow>;
@@ -62,12 +93,41 @@ function groupBy<T>(rows: readonly T[], key: (r: T) => string | null): Map<strin
   return map;
 }
 
+function pickOpinion(o: Opinion): OpinionFields {
+  return {
+    rating: o.rating,
+    ratingNote: o.ratingNote,
+    flag: o.flag,
+    flagNote: o.flagNote,
+    rejectReasonIds: o.rejectReasonIds,
+    colorLabel: o.colorLabel,
+    lastReviewedAt: o.lastReviewedAt,
+  };
+}
+
 /** Joins units with their building, listings and notes; drops soft-deleted records. */
 export function deriveDataset(raw: RawData, today: ISODate): Dataset {
   const buildings = live(raw.buildings);
   const buildingMap = new Map(buildings.map((b) => [b.id, b]));
   const listingsByUnit = groupBy(live(raw.listings), (l) => l.unitId);
-  const notes = live(raw.notes).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)); // newest first
+
+  const meId = raw.meId ?? '';
+  const others = live(raw.people)
+    .filter((p) => p.id !== meId)
+    .sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
+  const me =
+    raw.people.find((p) => p.id === meId && !p.deletedAt) ??
+    ({ ...newPerson({ name: 'Me' }, '1970-01-01T00:00:00.000Z'), id: meId } satisfies Person);
+  const people = [me, ...others];
+  const opinionsByUnit = groupBy(live(raw.opinions), (o) => o.unitId);
+  const everyone = new Map(raw.people.map((p) => [p.id, p]));
+  const notes: NoteRow[] = live(raw.notes)
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)) // newest first
+    .map((n) => ({
+      ...n,
+      authorName:
+        n.authorId && n.authorId !== meId ? (everyone.get(n.authorId)?.name ?? 'Someone') : null,
+    }));
   const notesByUnit = groupBy(notes, (n) => n.unitId);
   const notesByBuilding = groupBy(notes, (n) => n.buildingId);
 
@@ -78,11 +138,23 @@ export function deriveDataset(raw: RawData, today: ISODate): Dataset {
   const units: UnitRow[] = live(raw.units).map((unit) => {
     const listings = listingsByUnit.get(unit.id) ?? [];
     const unitNotes = notesByUnit.get(unit.id) ?? [];
+    const stored = new Map((opinionsByUnit.get(unit.id) ?? []).map((o) => [o.personId, o]));
+    const opinions: PersonOpinion[] = people.map((person) => {
+      const record = stored.get(person.id) ?? null;
+      return {
+        person,
+        isMe: person.id === me.id,
+        record,
+        opinion: record ? pickOpinion(record) : emptyOpinionFields(),
+      };
+    });
     return {
       unit,
       building: buildingMap.get(unit.buildingId),
       listings,
       notes: unitNotes,
+      mine: opinions[0]!.opinion,
+      opinions,
       listingAgeDays: listingAgeDays(listings, today),
       searchText: `${unitSearchText(unit, unitNotes)} ${buildingText.get(unit.buildingId) ?? ''}`,
     };
@@ -106,6 +178,9 @@ export function deriveDataset(raw: RawData, today: ISODate): Dataset {
 
   return {
     settings: raw.settings,
+    me,
+    people,
+    personById: everyone,
     units,
     buildings: buildingRows,
     unitById: new Map(units.map((u) => [u.unit.id, u])),

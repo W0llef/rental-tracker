@@ -18,6 +18,7 @@ import { MapPanel } from '../map/MapPanel';
 import { UnitPanel } from '../detail/UnitPanel';
 import { ListPanel } from '../list/ListPanel';
 import { BackupBanner } from './BackupBanner';
+import { NameBanner } from './NameBanner';
 import { Notice } from './Notice';
 import { useStorageSafety } from './useStorageSafety';
 import { PreviewBanner } from './PreviewBanner';
@@ -203,6 +204,7 @@ export function AppShell() {
           </svg>
         </Link>
       </header>
+      {data && <NameBanner me={data.me} />}
       {data && (
         <BackupBanner hasData={hasData} remindEveryDays={data.settings.backup.remindEveryDays} />
       )}

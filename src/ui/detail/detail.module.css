@@ -495,3 +495,96 @@
   flex-wrap: wrap;
   gap: var(--s2);
 }
+
+/* Notes by other people (M6) */
+.author {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Ratings: everyone side by side (M6, PLAN.md §5.8) */
+.people {
+  display: grid;
+  gap: var(--s2);
+  margin: 0 0 var(--s2);
+  padding: 0;
+  list-style: none;
+}
+
+.personRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: var(--s3);
+  row-gap: 2px;
+  padding: 6px var(--s2);
+  border-radius: var(--r-md);
+  background: var(--snow);
+}
+
+.personRow[data-me] {
+  background: var(--frost);
+}
+
+.personName {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.personName > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flagSelect {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--ice);
+  border-radius: var(--r-sm);
+  padding: 3px 6px 2px;
+  min-height: 28px;
+}
+
+.flagSelect[data-flag='pick'] {
+  color: var(--pick-ink);
+}
+
+.flagSelect[data-flag='reject'] {
+  color: var(--reject-ink);
+}
+
+.personNotes,
+.personError {
+  grid-column: 1 / -1;
+  padding-left: 32px;
+}
+
+.personNotes p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--slate);
+}
+
+.personError {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--reject-ink);
+}
+
+@media (max-width: 420px) {
+  .personRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .personRow .flagSelect {
+    grid-column: 2;
+  }
+}

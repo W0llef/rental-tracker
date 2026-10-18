@@ -26,7 +26,7 @@ import {
   toggleField,
 } from '../../src/domain/pinPrefs';
 import type { PinPrefs } from '../../src/domain/pinPrefs';
-import type { Unit } from '../../src/model';
+import type { Flag, Rating, Unit } from '../../src/model';
 import { makeAddress, newBuilding, newUnit } from '../../src/model/factories';
 
 const riverlight = newBuilding({
@@ -34,9 +34,15 @@ const riverlight = newBuilding({
   address: makeAddress('200 Portland Ave S', 'Minneapolis'),
 });
 
-const row = (input: Partial<Unit>): PinUnit => ({
+/** A unit with your rating and flag (pins show your view, M6). */
+const row = ({
+  rating = 0,
+  flag = 'none',
+  ...input
+}: Partial<Unit> & { rating?: Rating; flag?: Flag }): PinUnit => ({
   unit: newUnit({ buildingId: riverlight.id, ...input }),
   building: riverlight,
+  mine: { rating, flag },
 });
 
 const labelNames = {
@@ -270,13 +276,13 @@ describe('pin color', () => {
       row({ rent: 3000 }),
       row({ rent: 500, flag: 'reject' }),
       row({ rent: null }),
-    ].map((r) => r.unit);
+    ];
     const scale = priceScale(us);
     expect(scale).toEqual({ min: 1000, max: 3000 });
-    expect(edgeColor(us[0] as Unit, 'price', scale)).toBe(PRICE_STEPS[0]);
-    expect(edgeColor(us[1] as Unit, 'price', scale)).toBe(PRICE_STEPS[4]);
-    expect(edgeColor(us[3] as Unit, 'price', scale)).toBe('var(--ice)');
-    expect(priceScale([row({ rent: null }).unit])).toBeNull();
+    expect(edgeColor(us[0]!.unit, 'price', scale)).toBe(PRICE_STEPS[0]);
+    expect(edgeColor(us[1]!.unit, 'price', scale)).toBe(PRICE_STEPS[4]);
+    expect(edgeColor(us[3]!.unit, 'price', scale)).toBe('var(--ice)');
+    expect(priceScale([row({ rent: null })])).toBeNull();
   });
 
   it('keeps every price step within 0–4 and ordered by value', () => {
@@ -304,7 +310,7 @@ describe('legend', () => {
   const us = [
     row({ status: 'toured', colorLabel: 'green', rent: 1500 }),
     row({ status: 'new', rent: 2100 }),
-  ].map((r) => r.unit);
+  ];
 
   it('lists only the statuses on the map, in pipeline order', () => {
     const l = legendFor(us, 'status', labelNames);

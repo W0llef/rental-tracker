@@ -111,7 +111,13 @@ const NOTE_KIND: Record<NoteEntry['kind'], string> = {
   system: 'Change',
 };
 
-export function Notes({ notes, today }: { notes: readonly NoteEntry[]; today: ISODate }) {
+export function Notes({
+  notes,
+  today,
+}: {
+  notes: readonly (NoteEntry & { authorName?: string | null })[];
+  today: ISODate;
+}) {
   if (!notes.length) return <p className={styles.muted}>No notes yet.</p>;
   return (
     <ol className={styles.notes}>
@@ -119,6 +125,7 @@ export function Notes({ notes, today }: { notes: readonly NoteEntry[]; today: IS
         <li key={n.id}>
           <div className={styles.when}>
             {shortDate(n.createdAt.slice(0, 10), today)}, {NOTE_KIND[n.kind].toLowerCase()}
+            {n.authorName && <span className={styles.author}> · {n.authorName}</span>}
           </div>
           {n.text}
         </li>

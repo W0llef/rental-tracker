@@ -1,4 +1,4 @@
-import type { Building, LabelColor, Unit, UnitStatus, UnitType } from '../model';
+import type { Building, LabelColor, OpinionFields, Unit, UnitStatus, UnitType } from '../model';
 import { LABEL_COLORS, UNIT_STATUSES } from '../model';
 import {
   STATUS_COLOR_VAR,
@@ -28,9 +28,13 @@ export const PRICE_COLOR_LABEL = 'Rent';
 export interface PinUnit {
   unit: Unit;
   building: Building | undefined;
+  /** Your rating and flag: pins show your view (PLAN.md §5.8). */
+  mine: Pick<OpinionFields, 'flag' | 'rating'>;
 }
 
-export const isRejected = (u: Pick<Unit, 'flag'>): boolean => u.flag === 'reject';
+/** You rejected it (other people's flags don't change how it looks). */
+export const isRejected = (u: { mine: Pick<OpinionFields, 'flag'> }): boolean =>
+  u.mine.flag === 'reject';
 export const isNew = (u: Pick<Unit, 'status'>): boolean => u.status === 'new';
 
 const rentValue = (r: PinUnit) => r.unit.rent;
@@ -39,10 +43,7 @@ const tiebreak = (r: PinUnit) => r.unit.id;
 /** Units of one building in fan-out order: cheapest first, rejected last. */
 export function fanOrder<T extends PinUnit>(units: readonly T[]): T[] {
   const sorted = sortBy(units, rentValue, 'asc', tiebreak);
-  return [
-    ...sorted.filter((u) => !isRejected(u.unit)),
-    ...sorted.filter((u) => isRejected(u.unit)),
-  ];
+  return [...sorted.filter((u) => !isRejected(u)), ...sorted.filter((u) => isRejected(u))];
 }
 
 /** Lowest known rent among the units, for ranking pins; Infinity when none is known. */
@@ -64,18 +65,18 @@ export function pinnedUnits<T extends PinUnit>(
   selectedUnitId: string | null = null,
 ): T[] {
   if (mode !== 'hide') return [...units];
-  return units.filter((u) => !isRejected(u.unit) || u.unit.id === selectedUnitId);
+  return units.filter((u) => !isRejected(u) || u.unit.id === selectedUnitId);
 }
 
 export function summarizedUnits<T extends PinUnit>(units: readonly T[], mode: RejectedMode): T[] {
   if (mode === 'show') return [...units];
-  const live = units.filter((u) => !isRejected(u.unit));
+  const live = units.filter((u) => !isRejected(u));
   return live.length ? live : [...units];
 }
 
 /** Every unit counted is rejected: the pin gets the rejected look. */
 export const allRejected = (units: readonly PinUnit[]): boolean =>
-  units.length > 0 && units.every((u) => isRejected(u.unit));
+  units.length > 0 && units.every((u) => isRejected(u));
 
 // ── Text segments ──────────────────────────────────────────────────────────
 
@@ -160,12 +161,12 @@ export function pinContent(
         break;
       }
       case 'rating': {
-        const rated = units.map((u) => u.unit.rating as number).filter((r) => r > 0);
+        const rated = units.map((u) => u.mine.rating as number).filter((r) => r > 0);
         const text = !rated.length
           ? '☆'
           : many
             ? `★${range(rated, String, (n) => n)}`
-            : starText(first.unit.rating);
+            : starText(first.mine.rating);
         segments.push({ field, text });
         break;
       }
@@ -195,7 +196,7 @@ export function unitPinLabel(row: PinUnit): string {
     unitTitle(u, row.building),
     u.rent === null ? 'rent unknown' : `${u.rentIsFrom ? 'from ' : ''}${money(u.rent)} rent`,
     STATUS_LABELS[u.status],
-    isRejected(u) ? 'rejected' : null,
+    isRejected(row) ? 'rejected' : null,
   ];
   // A unit with no number is titled with the building's name; don't say it twice.
   return [...new Set(parts.filter((p): p is string => p !== null))].join(', ');
@@ -244,9 +245,11 @@ export interface PriceScale {
  * The range the price colors span: known rents of the units on the map, leaving out
  * rejected ones (unless every unit is rejected). Null when no rent is known.
  */
-export function priceScale(units: readonly Pick<Unit, 'rent' | 'flag'>[]): PriceScale | null {
+export function priceScale(
+  units: readonly { unit: Pick<Unit, 'rent'>; mine: Pick<OpinionFields, 'flag'> }[],
+): PriceScale | null {
   const live = units.filter((u) => !isRejected(u));
-  const rents = known((live.length ? live : units).map((u) => u.rent));
+  const rents = known((live.length ? live : units).map((u) => u.unit.rent));
   if (!rents.length) return null;
   return { min: Math.min(...rents), max: Math.max(...rents) };
 }
@@ -304,10 +307,11 @@ export type Legend =
  * come from Settings.
  */
 export function legendFor(
-  units: readonly Unit[],
+  rows: readonly PinUnit[],
   colorBy: ColorBy,
   labelNames: Record<LabelColor, string>,
 ): Legend {
+  const units = rows.map((r) => r.unit);
   if (colorBy === 'status') {
     const present = new Set(units.map((u) => u.status));
     return {
@@ -330,7 +334,7 @@ export function legendFor(
     return { kind: 'label', title: 'Pin color: label', rows };
   }
   const title = `Pin color: ${PRICE_COLOR_LABEL.toLowerCase()}`;
-  const scale = priceScale(units);
+  const scale = priceScale(rows);
   if (!scale) return { kind: 'price-empty', title, text: 'No rents known yet' };
   return {
     kind: 'price',

@@ -39,6 +39,8 @@ export function sortBy<T>(
 
 export interface UnitSortInput {
   unit: Unit;
+  /** Your rating: sorting by rating sorts by yours (PLAN.md §5.8). */
+  mine: { rating: number };
   building: Building | undefined;
   /** Days since the unit was first seen listed; null when it has no listings. */
   listingAgeDays: number | null;
@@ -105,7 +107,7 @@ export function unitSortValue(row: UnitSortInput, key: UnitSortKey): SortValue {
     case 'floor':
       return u.floor;
     case 'rating':
-      return u.rating === 0 ? null : u.rating; // 0 = not rated yet
+      return row.mine.rating === 0 ? null : row.mine.rating; // 0 = not rated yet
     case 'listingAge':
       return row.listingAgeDays;
     case 'createdAt':

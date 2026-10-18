@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { STATUS_COLOR_VAR, STATUS_LABELS } from '../../domain/format';
-import type { Flag, LabelColor, Rating, UnitStatus, UnitType } from '../../model';
+import { initial, PERSON_COLOR_VAR } from '../../domain/people';
+import type { Flag, LabelColor, Person, Rating, UnitStatus, UnitType } from '../../model';
 import styles from './common.module.css';
 
 /** Read-only marker displays shared by cards and panels (DESIGN.md §2.2–2.3, §4.1). */
@@ -101,5 +102,67 @@ export function TypeIcon({ type }: { type: UnitType | 'building' | null }) {
         <path d="M6 20V4h12v16M4 20h16M9 7h2M13 7h2M9 10.5h2M13 10.5h2M9 14h2M13 14h2M11 20v-3h2v3" />
       )}
     </svg>
+  );
+}
+
+/**
+ * A person's badge: their initial on their color (DESIGN.md §2.6). Decorative when the
+ * name is written next to it; otherwise it carries the name for screen readers.
+ */
+export function PersonBadge({
+  person,
+  size = 'small',
+  named = false,
+}: {
+  person: Pick<Person, 'name' | 'color'>;
+  size?: 'small' | 'medium';
+  /** The name is written next to the badge, so the badge itself stays silent. */
+  named?: boolean;
+}) {
+  return (
+    <span
+      className={size === 'medium' ? styles.badgeMedium : styles.badge}
+      style={{ background: PERSON_COLOR_VAR[person.color] }}
+      title={person.name}
+      {...(named ? { 'aria-hidden': true } : { role: 'img', 'aria-label': person.name })}
+    >
+      {initial(person.name)}
+    </span>
+  );
+}
+
+/**
+ * Stars you can click: one button per star; clicking the current rating clears it.
+ * `label` names whose rating it is ("Your rating", "Alex’s rating").
+ */
+export function StarInput({
+  rating,
+  label,
+  onChange,
+  disabled = false,
+}: {
+  rating: Rating;
+  label: string;
+  onChange: (rating: Rating) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <span className={styles.starInput} role="group" aria-label={label}>
+      {([1, 2, 3, 4, 5] as const).map((n) => (
+        <button
+          key={n}
+          type="button"
+          className={styles.starButton}
+          data-on={n <= rating || undefined}
+          aria-label={`${n} ${n === 1 ? 'star' : 'stars'}`}
+          aria-pressed={n === rating}
+          title={n === rating ? 'Click again to clear' : `${n} of 5`}
+          disabled={disabled}
+          onClick={() => onChange(n === rating ? 0 : n)}
+        >
+          <span aria-hidden="true">★</span>
+        </button>
+      ))}
+    </span>
   );
 }

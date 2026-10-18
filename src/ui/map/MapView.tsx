@@ -237,7 +237,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
   const clickedFans = useMemo(() => openFans.filter((id) => byId.get(id)?.group), [openFans, byId]);
 
   // ── Colors ──
-  const summaryUnits = useMemo(() => placed.flatMap((b) => b.summary.map((u) => u.unit)), [placed]);
+  const summaryUnits = useMemo(() => placed.flatMap((b) => b.summary), [placed]);
   const scale: PriceScale | null = useMemo(() => priceScale(summaryUnits), [summaryUnits]);
   const legend = useMemo(
     () => (placed.length ? legendFor(summaryUnits, prefs.colorBy, data.settings.labelNames) : null),
@@ -335,7 +335,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
   const cardRows = useCallback(
     (b: Placed): CardRow[] =>
       fanOrder(b.pinned).map((r) => {
-        const rejected = isRejected(r.unit);
+        const rejected = isRejected(r);
         return {
           key: unitKey(r),
           content: pinContent([r], prefs, false),
@@ -644,7 +644,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     const spec = collapsedSpec(b);
     const single = !b.group && view === 'units' ? (b.pinned[0] as UnitRow) : undefined;
     const key = single ? unitKey(single) : `building:${b.id}`;
-    const rejected = single ? isRejected(single.unit) : allRejected(b.pinned);
+    const rejected = single ? isRejected(single) : allRejected(b.pinned);
     return (
       <Pin
         pinKey={opts.peek ? undefined : key}

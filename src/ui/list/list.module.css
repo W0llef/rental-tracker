@@ -336,3 +336,29 @@
 .addLink:hover {
   filter: brightness(1.15);
 }
+
+/* Other people's ratings on a card (M6) */
+.others {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.other {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.otherPick {
+  color: var(--pick-ink);
+}
+
+.otherReject {
+  color: var(--reject-ink);
+}

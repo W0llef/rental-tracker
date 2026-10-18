@@ -101,3 +101,59 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* People (DESIGN.md §2.6) */
+
+.badge,
+.badgeMedium {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: var(--on-pp);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding-top: 1px;
+}
+
+.badgeMedium {
+  width: 24px;
+  height: 24px;
+  font-size: 13px;
+}
+
+.starInput {
+  display: inline-flex;
+  align-items: center;
+}
+
+.starButton {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 2px 1px;
+  min-width: 24px;
+  min-height: 24px;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  color: color-mix(in srgb, var(--slate) 45%, transparent);
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+
+.starButton[data-on] {
+  color: var(--ink);
+}
+
+.starButton:hover:not(:disabled) {
+  color: var(--plow);
+}
+
+.starButton:focus-visible {
+  outline: 2px solid var(--lake);
+  outline-offset: 1px;
+}
