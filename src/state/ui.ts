@@ -47,21 +47,43 @@ export interface Placing {
   name: string;
 }
 
-/** A short confirmation after an action ("Unit 1504 added"), with a link to what it's about. */
+/** The button on a toast: Undo after an action, Redo after an undo. */
+export interface NoticeButton {
+  label: string;
+  run: () => void;
+}
+
+/**
+ * A toast after an action ("Flagged Unit 1504 as pick · Undo", PLAN.md §5.6), or a short
+ * confirmation with a link to what it's about.
+ */
 export interface Notice {
   id: number;
   text: string;
   to: string | null;
-  /** Undoes the action the notice is about (e.g. a delete). */
-  undo: (() => void) | null;
+  button: NoticeButton | null;
+  /** The action the toast is about, if any. */
+  actionId: string | null;
+  /** When it was shown (ms), so a caller's own words can join the toast of its action. */
+  at: number;
+  /** A caller's own words: the action's description doesn't replace them. */
+  custom: boolean;
 }
+
+/** A caller's notice this soon after an action's toast joins it (keeping its Undo). */
+const JOIN_MS = 1500;
 
 export interface UiState extends Remembered, MapUi {
   query: string;
   placing: Placing | null;
   notice: Notice | null;
   setPlacing: (placing: Placing | null) => void;
+  /** A confirmation; right after an action it joins that action's toast (and its Undo). */
   showNotice: (text: string, to?: string | null, undo?: (() => void) | null) => void;
+  /** The toast for an action (toasts.ts); `describe` fills in its words when ready. */
+  showActionToast: (toast: { actionId: string; text: string; button: NoticeButton | null }) => void;
+  /** Replaces a toast's provisional words with its description, if it's still showing. */
+  describeToast: (actionId: string, text: string) => void;
   clearNotice: () => void;
   setView: (view: ListMode) => void;
   toggleView: () => void;
@@ -159,8 +181,29 @@ export const useUi = create<UiState>()((set, get) => {
     placing: null,
     notice: null,
     setPlacing: (placing) => set({ placing }),
-    showNotice: (text, to = null, undo = null) =>
-      set({ notice: { id: Date.now(), text, to, undo } }),
+    showNotice: (text, to = null, undo = null) => {
+      const current = get().notice;
+      const join = !!current?.actionId && !current.custom && Date.now() - current.at < JOIN_MS;
+      set({
+        notice: {
+          id: Date.now(),
+          text,
+          to,
+          button: undo ? { label: 'Undo', run: undo } : join ? current.button : null,
+          actionId: join ? current.actionId : null,
+          at: Date.now(),
+          custom: true,
+        },
+      });
+    },
+    showActionToast: ({ actionId, text, button }) =>
+      set({
+        notice: { id: Date.now(), text, to: null, button, actionId, at: Date.now(), custom: false },
+      }),
+    describeToast: (actionId, text) => {
+      const current = get().notice;
+      if (current?.actionId === actionId && !current.custom) set({ notice: { ...current, text } });
+    },
     clearNotice: () => set({ notice: null }),
     setView: (view) => update({ view }),
     toggleView: () => update({ view: get().view === 'units' ? 'buildings' : 'units' }),

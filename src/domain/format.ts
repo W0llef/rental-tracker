@@ -215,3 +215,16 @@ export function facingText(dirs: readonly Direction[]): string {
   if (names.length <= 1) return `Faces ${names[0] ?? 'an unknown direction'}`;
   return `Faces ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
+
+/** "2:14 pm" today, "Oct 17, 2:14 pm" earlier this year, "Oct 17, 2025, 2:14 pm" before. */
+export function whenLabel(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso);
+  let h = d.getHours();
+  const ampm = h < 12 ? 'am' : 'pm';
+  h = h % 12 || 12;
+  const time = `${h}:${String(d.getMinutes()).padStart(2, '0')} ${ampm}`;
+  const day = localDate(d);
+  const today = localDate(now);
+  if (day === today) return `today ${time}`;
+  return `${shortDate(day, today)}, ${time}`;
+}

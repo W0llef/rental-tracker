@@ -18,6 +18,8 @@ async function renderApp() {
   const [{ db }, { ensureMe }] = await Promise.all([import('./db/db'), import('./db/me')]);
   await ensureMe(db).catch((e: unknown) => console.error('Couldn’t set up your person.', e));
   watchForFirstChange();
+  const { watchActionsForToasts } = await import('./state/toasts');
+  watchActionsForToasts(db);
   root.render(
     <StrictMode>
       <RouterProvider router={router} />
