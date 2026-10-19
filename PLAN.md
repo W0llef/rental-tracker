@@ -1003,17 +1003,15 @@ Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 15
 | Q25 | Where the Data check page lives (M7 review, Oct 18) | **Settings → Data** (what's stored, database and version, preview-only sample data tools); the link under the list is gone and `#/debug` redirects. History stays its own panel beside the list and map (clock in the top bar), because undoing is easier with the unit and map in view; Settings → Data links to it. |
 | Q26 | Hover fading and map selection (M7 review, Oct 18) | Pointing at **anything** (list card, pin, card row) fades every other pin and card; ⌘/Ctrl-click works on the map too; every selected unit is highlighted on the map. Single-unit editing waits for the M8 form (owner). |
 | Q27 | Resizing, hiding and moving panels (owner, after M7 approval, Oct 18) | **In M14** (layout polish; no data change, so it can move earlier): drag the borders between list, details and map to resize; a button and the `[` key fold the list to a thin strip (a unit picked on the map then shows just details + map); the details panel can sit **left of the map, right of it, or under it** as a choice of preset layouts rather than free drag-and-drop docking (simpler, and each preset can be checked at every width); widths and layout remembered per browser. |
+| Q28 | Missing-essentials prompts before Shortlist mode exists (M8 chat, Oct 18) | **On every unit's panel** when an essential is missing, "Ready to compare" otherwise (owner, M8 review, Oct 19). M10 may keep them to Shortlist mode. |
+| Q29 | Remember "checked, still unknown" after the form closes? (M8 chat) | **Yes** (owner, M8 review, Oct 19), in whichever milestone fits; not in a rush. A data-format change: a per-unit list of fields checked and unknown, with the date, so completeness counts them and ⌘↓ skips them. Proposed to share one v3 change with Q30. |
 | Q12 | SPEC §5 "clicking it fans out the units" (M3 review 4, Oct 16) | The owner chose **one card per building** listing its units instead of fanning out separate plates: it can't scatter units or cross lines, and keeps dots visible. Clicking a grouped pin still shows every unit at the building, each clickable. |
 
 ### 11.2 Open
 
-Built with the proposed answer; confirm or change at the M8 review.
-
-| # | Question | Proposed (as built in M8) |
+| # | Question | Proposed |
 | --- | --- | --- |
-| Q28 | §5.7 puts the missing-essentials prompts in **Shortlist mode**, which arrives in M10. Where should they show until then? | **On every unit's panel**, only when an essential is missing (a short "Essentials 7 of 11" line with *Add …* prompts; "Ready to compare" otherwise). M10 can keep them to Shortlist mode, or to picked units. |
-| Q29 | Should "I checked and it's still unknown" be **remembered** after the form closes? DESIGN §4.3 says unknown and not-asked-yet are the same in the data, so `?` only lasts for the editing session and the field comes back as "to research" next time. | **Not remembered** (no data-format change). Remembering it would be a small data-format change (a per-unit list of fields checked and unknown, with the date), letting completeness count them and ⌘↓ skip them. Could join any later milestone that changes the data format (M12 or M14). |
-
+| Q30 | Standalone houses and townhomes (owner, M8 review, Oct 19): every unit belongs to a building (spec §3), so a house is a one-unit building and its address clutters the unit form's Building menu; some townhomes are standalone, others part of a complex with amenities. | A per-building **"Part of a larger building or complex"** choice, defaulting from the unit type (house: no; townhome: no unless the building has other units or a complex name; apartment, condo, room: yes). Under the hood a standalone home keeps its one-unit building (address, pin, pet policy), so the data model's shape stays. A standalone home's form shows the home's own facts (address, year built, pets…) in the unit form instead of a Building menu, its panel has no separate building, the Building menu lists only shared buildings, and essentials prompts stay in the unit form. Stored as `building.standalone: true \| false \| null` (null follows the default), so it's a data-format change (v3); Q29 would ride in the same change. Waiting for the owner's go-ahead and where to build it. |
 
 **Assumptions I'll proceed with unless you object**
 
@@ -1032,6 +1030,7 @@ Built with the proposed answer; confirm or change at the M8 review.
 
 | Date | Change |
 | --- | --- |
+| 2026-10-19 | M8, owner review: **Q28 decided** (prompts on every unit), **Q29 decided** (remember checked unknowns, milestone to choose); **Q30 opened** (standalone houses and townhomes). |
 | 2026-10-18 | M8: **full unit and building forms**, research mode, essentials and completeness, copy from unit / new unit from plan, listings and price-history editing, Edit together for buildings (Q23), Settings → Essential fields, `E` to edit (§5.7 "As built (M8)", §6). Q28 (missing-essentials prompts on every unit until Shortlist mode) and Q29 ("checked, still unknown" not remembered) proposed for the owner. New route `#/new-unit`. No data-format change. |
 | 2026-10-18 | After M7 approval: **Q27** resizable and foldable panels, and the details panel left of, right of or under the map (preset layouts), planned for M14. |
 | 2026-10-18 | M7, owner review: ⌘/Ctrl-click on map pins, card rows and a card's building name (all its units) adds to the selection; selected units are highlighted on the map; pointing at any card, pin or row fades the other pins and cards; ⌘/Ctrl-click on building cards no longer opens a tab (building multi-select and Edit together for buildings move to **M8**, Q23); History search and filters planned for **M14** (Q24); the Data check page became **Settings → Data** (Q25). |
