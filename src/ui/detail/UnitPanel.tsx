@@ -380,9 +380,6 @@ export function UnitPanel({
             {u.floorPlanName ? `New unit from ${u.floorPlanName}` : 'New unit like this'}
           </Link>
         )}
-        <Link to={`/history?unit=${u.id}`} className={styles.action}>
-          History
-        </Link>
       </footer>
     </article>
   );
