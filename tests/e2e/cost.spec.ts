@@ -28,6 +28,15 @@ const totalLine = (page: Page) =>
   cost(page)
     .getByRole('listitem')
     .filter({ hasText: /^Total/ });
+/** Opens the i-th card and waits until its details show (the panel names the same unit). */
+async function openCard(page: Page, i: number) {
+  const card = cards(page).nth(i);
+  const title = await card.locator('[class*="unitTitle"]').textContent();
+  await card.click();
+  await expect(panel(page).getByRole('heading', { level: 2 })).toHaveText(title ?? '');
+  await expect(totalLine(page)).toBeAttached();
+}
+
 const money = (text: string | null) => Number((text ?? '').replace(/[^\d]/g, ''));
 
 test.describe('cost profile and lease length', () => {
@@ -63,7 +72,8 @@ test.describe('cost profile and lease length', () => {
     await expect(totalLine(page)).toContainText(`$${before.toLocaleString('en-US')}`);
   });
 
-  test('a lease length spreads one-time fees over that many months', async ({ page }) => {
+  test('a lease length spreads one-time fees over that many months', async ({ page }, info) => {
+    test.skip(info.project.name.includes('phone'), 'looks through the list beside the details');
     await page.goto('/#/settings/cost');
     await page.getByRole('checkbox', { name: /Spread one-time fees/ }).click();
     await expect(page.getByRole('checkbox', { name: /Spread one-time fees/ })).toBeChecked();
@@ -72,7 +82,7 @@ test.describe('cost profile and lease length', () => {
     const count = await cards(page).count();
     let found = false;
     for (let i = 0; i < count && !found; i++) {
-      await cards(page).nth(i).click();
+      await openCard(page, i);
       found =
         (await cost(page)
           .getByRole('listitem')
@@ -208,7 +218,7 @@ test.describe('lease lengths', () => {
     // Sample units with 12- and 15-month rents have half the deposit on 15 months.
     const count = await cards(page).count();
     for (let i = 0; i < count; i++) {
-      await cards(page).nth(i).click();
+      await openCard(page, i);
       if (await cost(page).getByRole('combobox', { name: 'Lease length' }).count()) break;
     }
     const moveIn = cost(page)
