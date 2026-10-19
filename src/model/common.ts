@@ -75,3 +75,11 @@ export const fieldSource = z.object({
   importId: maybe(id), // the import batch that set it
 });
 export type FieldSource = z.infer<typeof fieldSource>;
+
+/**
+ * Fields someone checked and found still unknown (v3, M8, Q29), so research doesn't keep
+ * asking. The paths are form fields ('unit.balcony', 'building.pets.dogs'); `at` is when.
+ * Missing on records written before v3 (an undo can bring one back), hence the default.
+ */
+export const checkedUnknown = z.array(z.object({ field: z.string(), at: isoDate })).default([]);
+export type CheckedUnknown = z.infer<typeof checkedUnknown>;

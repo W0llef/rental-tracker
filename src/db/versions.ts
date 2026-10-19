@@ -4,6 +4,7 @@ import { DATA_TABLES } from '../model';
 import { migrationContext } from './migrations';
 import type { Migration, MigrationContext } from './migrations';
 import { v2 } from './migrations/v2';
+import { v3 } from './migrations/v3';
 
 /**
  * Every Dexie version the app has ever had (PLAN.md §3.6–3.7). Never edit a released entry;
@@ -51,7 +52,9 @@ export interface VersionSpec {
 export const versions: VersionSpec[] = [
   { version: 1, stores: STORES_V1 },
   { version: 2, stores: STORES_V2, migration: v2 },
-  // Next: { version: 3, stores: { …only changed stores… }, migration: v3 },
+  // Version 3 (M8): new unindexed fields only, so no store changes.
+  { version: 3, stores: {}, migration: v3 },
+  // Next: { version: 4, stores: { …only changed stores… }, migration: v4 },
 ];
 
 /** The meta key holding which person this browser's copy belongs to (db/me.ts). */
@@ -83,12 +86,19 @@ export type SnapshotReason = 'migration' | 'restore';
 
 /** Declares every version on a Dexie instance, with snapshot + migration upgrades. */
 export function declareVersions(db: Dexie, list: VersionSpec[] = versions): void {
+  const latest = Math.max(...list.map((v) => v.version));
+  // An update across several versions (v1 → v3) runs each step in the same transaction;
+  // one safety copy, taken before the first step, covers them all.
+  const copied = new WeakSet<object>();
   for (const spec of list) {
     const version = db.version(spec.version).stores(spec.stores);
     const migration = spec.migration;
     if (migration) {
       version.upgrade(async (tx) => {
-        await takeSnapshot(tx, spec.version - 1, spec.version);
+        if (!copied.has(tx.idbtrans)) {
+          copied.add(tx.idbtrans);
+          await takeSnapshot(tx, spec.version - 1, latest);
+        }
         const ctx = await upgradeContext(tx);
         await runMigration(tx, migration, ctx);
         if (migration.clearsHistory) await tx.table('changeLog').clear();

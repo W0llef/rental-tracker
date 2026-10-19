@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   base,
+  checkedUnknown,
   count,
   direction,
   fieldSource,
@@ -152,5 +153,6 @@ export const unit = base.extend({
   // Media (listing links live in listings; photos in the photos table)
   links: z.array(link),
   fieldSources: z.array(fieldSource),
+  checkedUnknown, // v3 (M8, Q29)
 });
 export type Unit = z.infer<typeof unit>;

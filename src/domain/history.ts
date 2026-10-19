@@ -259,6 +259,7 @@ const BUILDING_FIELDS: Record<string, string> = {
   notes: 'Building notes',
   availabilityUrl: 'Availability page',
   floorHeightFt: 'Floor height',
+  standalone: 'Standalone home',
 };
 
 const BUILDING_MONEY = new Set(['pets.deposit', 'pets.oneTimeFee', 'pets.monthlyRent']);
@@ -268,6 +269,7 @@ const BUILDING_MONEY = new Set(['pets.deposit', 'pets.oneTimeFee', 'pets.monthly
  * ("Heat included → billed extra, $40/mo"), a move-in special, an address, a neighborhood.
  */
 const WHOLE = new Set([
+  'checkedUnknown',
   'utilities',
   'moveInSpecial',
   'costOverrides',
@@ -336,6 +338,7 @@ const AMENITY_NAMES: Record<string, string> = {
 /** A building field's value in words ("$35", "mid-rise", "Downtown East"). */
 function buildingValue(path: Path, v: unknown): string {
   const key = path.join('.');
+  if (key === 'standalone') return v === null || v === undefined ? 'automatic' : v ? 'yes' : 'no';
   if (v === null || v === undefined) return 'unknown';
   if (BUILDING_MONEY.has(key) && typeof v === 'number') return money(v);
   if (key === 'yearBuilt' || key === 'yearRenovated') return String(v);
@@ -452,6 +455,17 @@ function unitItems(c: RecordChange, lookup: HistoryLookup, ctx: Context): Item[]
   for (const path of describedPaths(before, after)) {
     if (IGNORED.has(path[0]!)) continue;
     const key = path.join('.');
+    if (key === 'checkedUnknown') {
+      // Fields checked and found unknown (Q29) say so only in the details.
+      items.push({
+        ...base,
+        group: 'unit:checkedUnknown',
+        text: (s) => `Checked unknowns on ${s}`,
+        detail: `Changed which fields are checked and unknown on ${name}`,
+        quiet: true,
+      });
+      continue;
+    }
     if (key === 'fieldSources') {
       // Sources follow the values they're for: a form save that drops them says so only
       // in the details.
@@ -566,6 +580,16 @@ function buildingItems(c: RecordChange, ctx: Context): Item[] {
         group: 'building-place',
         text: (s) => (after?.location ? `Placed ${s} on the map` : `Removed ${s} from the map`),
         detail: after?.location ? `Placed ${name} on the map` : `Removed ${name} from the map`,
+      });
+      continue;
+    }
+    if (path[0] === 'checkedUnknown') {
+      items.push({
+        ...base,
+        group: 'building:checkedUnknown',
+        text: (s) => `Checked unknowns on ${s}`,
+        detail: `Changed which fields are checked and unknown on ${name}`,
+        quiet: true,
       });
       continue;
     }
