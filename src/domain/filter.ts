@@ -73,16 +73,19 @@ export interface CostLimits {
   maxTotal: number | null;
   maxPerSqft: number | null;
   includeUnknown: boolean;
+  /** Only units that list the lease length you'd sign there; unknown terms are left out too. */
+  offeredLeaseOnly: boolean;
 }
 
 export const NO_COST_LIMITS: CostLimits = {
   maxTotal: null,
   maxPerSqft: null,
   includeUnknown: true,
+  offeredLeaseOnly: false,
 };
 
 export const costLimitsActive = (l: CostLimits): boolean =>
-  l.maxTotal !== null || l.maxPerSqft !== null;
+  l.maxTotal !== null || l.maxPerSqft !== null || l.offeredLeaseOnly;
 
 function withinMax(value: number | null, max: number | null, includeUnknown: boolean): boolean {
   if (max === null) return true;
@@ -90,7 +93,11 @@ function withinMax(value: number | null, max: number | null, includeUnknown: boo
   return value <= max;
 }
 
-export function costLimitsMatch(cost: Pick<UnitCost, 'total' | 'perSqft'>, l: CostLimits): boolean {
+export function costLimitsMatch(
+  cost: Pick<UnitCost, 'total' | 'perSqft' | 'termStatus'>,
+  l: CostLimits,
+): boolean {
+  if (l.offeredLeaseOnly && cost.termStatus !== 'offered') return false;
   return (
     withinMax(cost.total, l.maxTotal, l.includeUnknown) &&
     withinMax(cost.perSqft, l.maxPerSqft, l.includeUnknown)

@@ -218,7 +218,11 @@ export function ListPanel({
           </p>
           <CostLimitsButton open={limitsOpen} onToggle={() => setLimitsOpen(!limitsOpen)} />
         </div>
-        <CostLimitsPanel open={limitsOpen} setOpen={setLimitsOpen} />
+        <CostLimitsPanel
+          open={limitsOpen}
+          setOpen={setLimitsOpen}
+          leaseMonths={data?.settings.costProfile.defaultLeaseMonths ?? 12}
+        />
       </div>
 
       {data && pickedRows.length > 0 && view === 'units' && (

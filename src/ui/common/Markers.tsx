@@ -97,6 +97,47 @@ export function Tag({ children }: { children: ReactNode }) {
   return <span className={styles.tag}>{children}</span>;
 }
 
+/** A calendar with a slash: "doesn't list your lease length" (M9 review). */
+function NoLeaseIcon() {
+  return (
+    <svg viewBox="0 0 12 12" className={styles.leaseIcon} aria-hidden="true">
+      <rect x="1.5" y="2.5" width="9" height="8" rx="1.2" fill="none" stroke="currentColor" />
+      <path d="M1.5 5h9M4 1.5v2M8 1.5v2" stroke="currentColor" />
+      <path d="M2 11 10.5 2" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+/**
+ * The unit doesn't list the lease length you'd sign, so its costs use the nearest one it
+ * does (M9 review). On cards: the icon and "No 15-month lease"; on the map's cards, where
+ * room is short: the icon alone. Pointing at it explains, and so does its name.
+ */
+export function LeaseMark({
+  label,
+  explain,
+  compact = false,
+}: {
+  /** "No 15-month lease". */
+  label: string;
+  /** The full sentence (tooltip and, for the icon alone, its name). */
+  explain: string;
+  compact?: boolean;
+}) {
+  if (compact)
+    return (
+      <span className={styles.leaseMarkIcon} role="img" aria-label={explain} title={explain}>
+        <NoLeaseIcon />
+      </span>
+    );
+  return (
+    <span className={styles.leaseMark} title={explain}>
+      <NoLeaseIcon />
+      {label}
+    </span>
+  );
+}
+
 /** A value, or italic "Unknown" when it hasn't been researched (spec §3). */
 export function Value({ children }: { children: ReactNode }) {
   if (children === null || children === undefined || children === '')

@@ -63,6 +63,19 @@ import { Pin } from './Pin';
 import { PhotoPreview } from './PhotoPreview';
 import { PinsPanel } from './PinsPanel';
 import styles from './map.module.css';
+import { notOfferedText } from '../../domain/cost';
+import type { PinCost } from '../../domain/pins';
+
+/** Why a unit's row gets the "no lease of your length" mark (M9 review), or null. */
+function leaseNote(c: PinCost): string | null {
+  if (c.termStatus !== 'not-offered' || !c.wantedMonths || !c.leaseMonths || !c.offeredTerms)
+    return null;
+  return notOfferedText({
+    wantedMonths: c.wantedMonths,
+    leaseMonths: c.leaseMonths,
+    offeredTerms: c.offeredTerms,
+  });
+}
 
 /**
  * The map (PLAN.md §4.3): HTML pins for the buildings the list shows. A building with
@@ -355,6 +368,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
           hot: false,
           label: unitPinLabel(r),
           title: unitTitle(r.unit, r.building),
+          leaseNote: leaseNote(r.cost),
         };
       }),
     [prefs, scale, newMark, selectedKey, isPicked],
@@ -368,7 +382,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
         buildingName(b.building),
         ...rows.map(
           (r) =>
-            `${r.content.typeIcon ?? ''}:${r.content.segments.map((x) => x.text).join('¦')}:${r.newMark ?? ''}`,
+            `${r.content.typeIcon ?? ''}:${r.content.segments.map((x) => x.text).join('¦')}:${r.newMark ?? ''}:${r.leaseNote ? 'L' : ''}`,
         ),
       ].join('|'),
     [prefs.style],

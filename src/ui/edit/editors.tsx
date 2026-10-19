@@ -1,10 +1,19 @@
 import { useId, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { DIRECTION_NAMES, enumLabel, leaseTermsLabel, money } from '../../domain/format';
+import { aLease, DIRECTION_NAMES, enumLabel, leaseTermsLabel, money } from '../../domain/format';
 import { numText, parseMoney, parseUrl, parseWhole } from '../../domain/input';
 import { parseMonths } from '../../domain/triage';
 import { DIRECTIONS, WINDOW_SIZES } from '../../model';
-import type { Direction, Link, RecurringFee, Unit, UtilityTerm, WindowSpec } from '../../model';
+import type {
+  Direction,
+  Link,
+  RecurringFee,
+  TermCharge,
+  TermChargeKey,
+  Unit,
+  UtilityTerm,
+  WindowSpec,
+} from '../../model';
 import { newId } from '../../model/factories';
 import { FieldRow, Segmented } from './fields';
 import type { Option } from './fields';
@@ -856,6 +865,142 @@ export function LinksEditor({
         >
           + Add link
         </button>
+        <RowErrors prefix={`${path}.`} />
+      </div>
+    </FieldRow>
+  );
+}
+
+// ── Other charges by lease length (M9 review) ──────────────────────────────
+
+interface ChargeOption {
+  charge: TermChargeKey;
+  label: string;
+  /** The unit's main amount, which a newly split charge starts from. */
+  main: number | null;
+}
+
+/**
+ * When the listing gives rents for two or more lease lengths, the other charges can differ
+ * too: the deposit, application and admin fees, each monthly fee and the move-in special's
+ * value. Every charge is the same for all lengths until you say it differs; then it gets one
+ * box per length, starting from its main amount. A blank box means unknown for the deposit
+ * and one-time fees, and the main amount for a monthly fee or special.
+ */
+export function TermChargesEditor({
+  path,
+  unit,
+  onChange,
+}: {
+  path: string;
+  unit: Pick<
+    Unit,
+    | 'rentByTerm'
+    | 'termCharges'
+    | 'deposit'
+    | 'applicationFee'
+    | 'adminFee'
+    | 'recurringFees'
+    | 'moveInSpecial'
+  >;
+  onChange: (v: TermCharge[]) => void;
+}) {
+  const labelId = useId();
+  const months = [...new Set((unit.rentByTerm ?? []).map((t) => t.months))].sort((a, b) => a - b);
+  const value = unit.termCharges;
+  if (months.length < 2 && value.length === 0) return null;
+
+  const options: ChargeOption[] = [
+    { charge: 'deposit', label: 'Deposit', main: unit.deposit },
+    { charge: 'applicationFee', label: 'Application fee', main: unit.applicationFee },
+    { charge: 'adminFee', label: 'Admin fee', main: unit.adminFee },
+    ...(unit.recurringFees ?? []).map((f) => ({
+      charge: `fee:${f.id}` as TermChargeKey,
+      label: f.label || 'Monthly fee',
+      main: f.amount,
+    })),
+    ...(unit.moveInSpecial
+      ? [
+          {
+            charge: 'moveInSpecial' as const,
+            label: 'Move-in special',
+            main: unit.moveInSpecial.valueUsd,
+          },
+        ]
+      : []),
+  ];
+  const split = new Set(value.map((c) => c.charge));
+  const amountOf = (charge: TermChargeKey, m: number) =>
+    value.find((c) => c.charge === charge && c.months === m)?.amount ?? null;
+  const setAmount = (charge: TermChargeKey, m: number, amount: number | null) =>
+    onChange([
+      ...value.filter((c) => !(c.charge === charge && c.months === m)),
+      { charge, months: m, amount },
+    ]);
+  const splitCharge = (o: ChargeOption) =>
+    onChange([...value, ...months.map((m) => ({ charge: o.charge, months: m, amount: o.main }))]);
+  const join = (o: ChargeOption) => onChange(value.filter((c) => c.charge !== o.charge));
+  const shown = options.filter((o) => split.has(o.charge));
+  const offer = options.filter((o) => !split.has(o.charge));
+
+  return (
+    <FieldRow
+      path={path}
+      label="Other charges by lease length"
+      empty={false}
+      labelId={labelId}
+      noUnknown
+      wide
+      hint="Everything else is the same for every lease length unless you say it differs."
+    >
+      <div className={styles.listEditor} role="group" aria-labelledby={labelId}>
+        {shown.map((o) => (
+          <div key={o.charge} className={styles.termCharge} data-charge={o.charge}>
+            <span className={styles.termChargeName}>{o.label}</span>
+            {months.map((m) => (
+              <span key={m} className={styles.termCell}>
+                <span className={styles.per}>{m} mo</span>
+                <MoneyCell
+                  path={`${path}.${o.charge}.${m}`}
+                  label={`${o.label} on ${aLease(m)}`}
+                  value={amountOf(o.charge, m)}
+                  onChange={(v) => setAmount(o.charge, m, v)}
+                />
+              </span>
+            ))}
+            <button type="button" className={styles.textButton} onClick={() => join(o)}>
+              Same for all lengths
+            </button>
+          </div>
+        ))}
+        {offer.length > 0 && months.length >= 2 && (
+          <div className={styles.listActions}>
+            <span className={styles.per}>Differs by lease length:</span>
+            {offer.map((o) => (
+              <button
+                key={o.charge}
+                type="button"
+                className={styles.addBtn}
+                aria-label={`${o.label} differs by lease length`}
+                onClick={() => {
+                  splitCharge(o);
+                  requestAnimationFrame(() =>
+                    document
+                      .querySelector<HTMLInputElement>(`[data-charge="${o.charge}"] input`)
+                      ?.focus(),
+                  );
+                }}
+              >
+                + {o.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {months.length < 2 && (
+          <p className={styles.per}>
+            Add rents for two or more lease lengths above to price the other charges by length.
+          </p>
+        )}
         <RowErrors prefix={`${path}.`} />
       </div>
     </FieldRow>

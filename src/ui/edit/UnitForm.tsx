@@ -44,6 +44,7 @@ import {
   LeaseTermsField,
   LinksEditor,
   RentByTermEditor,
+  TermChargesEditor,
   SpecialField,
   UtilityField,
   WindowsEditor,
@@ -753,6 +754,7 @@ function UnitForm({
           value={draft.rentByTerm}
           onChange={set('rentByTerm')}
         />
+        <TermChargesEditor path="unit.termCharges" unit={draft} onChange={set('termCharges')} />
         <SpecialField
           path="unit.moveInSpecial"
           value={draft.moveInSpecial}

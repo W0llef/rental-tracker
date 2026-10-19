@@ -1,6 +1,6 @@
-import type { Building, CostItemKey, CostProfile, Unit, UtilityKey } from '../model';
+import type { Building, CostItemKey, CostProfile, TermChargeKey, Unit, UtilityKey } from '../model';
 import { UTILITY_KEYS } from '../model';
-import { money, num, UTILITY_LABELS } from './format';
+import { aLease, money, num, UTILITY_LABELS } from './format';
 
 /**
  * Total monthly cost (PLAN.md §5.3, Q5). Pure: from a unit, its building and your cost
@@ -52,15 +52,31 @@ export interface MoveInCost {
   unknown: string[];
 }
 
+/**
+ * Whether the unit lists the lease length you'd sign (M9 review): it does; it lists others
+ * but not yours (its costs then use the nearest one it lists); or its terms are unknown.
+ */
+export type TermStatus = 'offered' | 'not-offered' | 'unknown';
+
 export interface UnitCost {
-  /** The lease length the costs assume: the unit's, else your default. */
+  /** The lease length you'd sign here: the unit's own choice, else your default. */
+  wantedMonths: number;
+  /**
+   * The lease length the costs use: `wantedMonths` when the unit lists it (or its terms are
+   * unknown), else the nearest one it lists (a tie goes to the shorter).
+   */
   leaseMonths: number;
+  termStatus: TermStatus;
+  /** Lease lengths the unit lists (its terms and its priced terms), shortest first. */
+  offeredTerms: number[];
   /** True when the unit has its own lease length (plannedLeaseMonths). */
   leaseIsUnits: boolean;
   /** Rent used: the rent for `leaseMonths` when the listing gives one, else the rent. */
   rent: number | null;
   /** The rent came from the listing's rent for this lease length. */
   rentForTerm: boolean;
+  /** Charges whose amount came from their price for this lease length (`termCharges`). */
+  termPriced: string[];
   lines: CostLine[];
   /** Null when rent is unknown (Q5: unknown rent → unknown total). */
   total: number | null;
@@ -71,7 +87,7 @@ export interface UnitCost {
   /** Rent less the move-in special spread over the lease, when the special has a value. */
   effectiveRent: number | null;
   moveIn: MoveInCost;
-  /** Lease lengths to offer: the unit's terms, its priced terms and the current one. */
+  /** Lease lengths to choose from: the unit's terms, its priced terms and the wanted one. */
   leaseOptions: number[];
   /** Show the lease length selector (§5.3): spreading is on, or rents differ by term. */
   leaseMatters: boolean;
@@ -301,13 +317,81 @@ function moveInCost(
   };
 }
 
+/** Lease lengths a unit lists: its lease terms and the lengths it prices, shortest first. */
+export function offeredTerms(unit: Pick<Unit, 'leaseTermsMonths' | 'rentByTerm'>): number[] {
+  const set = new Set([
+    ...(unit.leaseTermsMonths ?? []),
+    ...(unit.rentByTerm ?? []).map((t) => t.months),
+  ]);
+  return [...set].sort((a, b) => a - b);
+}
+
+/** The listed length closest to `months`; a tie goes to the shorter lease. */
+export function nearestTerm(offered: readonly number[], months: number): number {
+  let best = offered[0] ?? months;
+  for (const m of offered) if (Math.abs(m - months) < Math.abs(best - months)) best = m;
+  return best;
+}
+
+/** The amount a charge has for a lease length, if it differs by length (`termCharges`). */
+export function termAmount(
+  unit: Pick<Unit, 'termCharges'>,
+  charge: TermChargeKey,
+  months: number,
+): { found: boolean; amount: number | null } {
+  const entry = unit.termCharges.find((c) => c.charge === charge && c.months === months);
+  return entry ? { found: true, amount: entry.amount } : { found: false, amount: null };
+}
+
+/**
+ * The unit as priced for one lease length: the deposit, application and admin fees, monthly
+ * fees and the special's value for that length where they differ by length. A monthly fee
+ * or special with no amount for that length keeps its main amount; an unknown deposit or
+ * fee for that length is unknown.
+ */
+export function pricedForTerm(unit: Unit, months: number): { unit: Unit; termPriced: string[] } {
+  const termPriced: string[] = [];
+  const pick = (charge: TermChargeKey, main: number | null): number | null => {
+    const t = termAmount(unit, charge, months);
+    if (!t.found) return main;
+    termPriced.push(charge);
+    return t.amount;
+  };
+  const fees = (unit.recurringFees ?? []).map((f) => {
+    const amount = pick(`fee:${f.id}`, f.amount);
+    return { ...f, amount: amount ?? f.amount };
+  });
+  const special = unit.moveInSpecial;
+  const value = special ? pick('moveInSpecial', special.valueUsd) : null;
+  return {
+    unit: {
+      ...unit,
+      deposit: pick('deposit', unit.deposit),
+      applicationFee: pick('applicationFee', unit.applicationFee),
+      adminFee: pick('adminFee', unit.adminFee),
+      recurringFees: unit.recurringFees === null ? null : fees,
+      moveInSpecial: special ? { ...special, valueUsd: value ?? special.valueUsd } : null,
+    },
+    termPriced,
+  };
+}
+
 /** Everything the app shows about what a unit costs. */
 export function unitCost(
-  unit: Unit,
+  stored: Unit,
   building: Building | undefined,
   profile: CostProfile,
 ): UnitCost {
-  const leaseMonths = leaseMonthsFor(unit, profile);
+  const wantedMonths = leaseMonthsFor(stored, profile);
+  const offered = offeredTerms(stored);
+  const termStatus: TermStatus = !offered.length
+    ? 'unknown'
+    : offered.includes(wantedMonths)
+      ? 'offered'
+      : 'not-offered';
+  const leaseMonths =
+    termStatus === 'not-offered' ? nearestTerm(offered, wantedMonths) : wantedMonths;
+  const { unit, termPriced } = pricedForTerm(stored, leaseMonths);
   const termRent = unit.rentByTerm?.find((t) => t.months === leaseMonths)?.rent ?? null;
   const rent = termRent ?? unit.rent;
   const lines: CostLine[] = [];
@@ -320,7 +404,7 @@ export function unitCost(
       source: 'listing',
       note:
         termRent !== null
-          ? `for a ${leaseMonths}-month lease`
+          ? `for ${aLease(leaseMonths)}`
           : unit.rentIsFrom
             ? 'listed "from" price'
             : 'listed',
@@ -336,7 +420,11 @@ export function unitCost(
       label: fee.label || 'Monthly fee',
       amount: fee.amount,
       source: 'listing',
-      note: isPetFee(fee.label) && pets > 1 ? 'listed (as given, not per pet)' : 'listed',
+      note: termPriced.includes(`fee:${fee.id}`)
+        ? `for ${aLease(leaseMonths)}`
+        : isPetFee(fee.label) && pets > 1
+          ? 'listed (as given, not per pet)'
+          : 'listed',
       assumed: false,
       overrideKey: null,
     });
@@ -387,16 +475,16 @@ export function unitCost(
 
   const total = rent === null ? null : lines.reduce((s, l) => s + l.amount, 0);
   const sqft = unit.squareFeet;
-  const terms = new Set<number>([
-    ...(unit.leaseTermsMonths ?? []),
-    ...(unit.rentByTerm ?? []).map((t) => t.months),
-    leaseMonths,
-  ]);
+  const terms = new Set<number>([...offered, wantedMonths]);
   return {
+    wantedMonths,
     leaseMonths,
+    termStatus,
+    offeredTerms: offered,
     leaseIsUnits: unit.plannedLeaseMonths !== null,
     rent,
     rentForTerm: termRent !== null,
+    termPriced,
     lines,
     total,
     assumed: lines.filter((l) => l.assumed).length,
@@ -408,8 +496,28 @@ export function unitCost(
     moveIn: moveInCost(unit, building, profile, rent),
     leaseOptions: [...terms].sort((a, b) => a - b),
     leaseMatters:
-      profile.amortizeOneTimeFees || profile.amortizeSpecials || (unit.rentByTerm ?? []).length > 0,
+      profile.amortizeOneTimeFees ||
+      profile.amortizeSpecials ||
+      (unit.rentByTerm ?? []).length > 0 ||
+      unit.termCharges.length > 0 ||
+      termStatus === 'not-offered',
   };
+}
+
+/** "No 15-month lease": the short mark for a unit that doesn't list your lease length. */
+export const notOfferedLabel = (c: Pick<UnitCost, 'wantedMonths'>): string =>
+  `No ${c.wantedMonths}-month lease`;
+
+/** "Doesn't list a 15-month lease (it lists 12 and 18 months), so its costs use 12." */
+export function notOfferedText(
+  c: Pick<UnitCost, 'wantedMonths' | 'leaseMonths' | 'offeredTerms'>,
+): string {
+  const list = c.offeredTerms;
+  const listed =
+    list.length === 1
+      ? String(list[0])
+      : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`;
+  return `Doesn’t list ${aLease(c.wantedMonths)} (it lists ${listed} months), so its costs use the ${c.leaseMonths}-month lease.`;
 }
 
 /** "$2.68/ft²". */

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  aLease,
   BUILDING_TYPE_LABELS,
   buildingName,
   enumLabel,
@@ -48,7 +49,7 @@ function LeaseSection({ u, today }: { u: Unit; today: ISODate }) {
   const extras: [string, string, string][] = [];
   for (const f of u.recurringFees ?? []) extras.push([f.label, `${money(f.amount)}/mo`, f.id]);
   for (const t of u.rentByTerm ?? [])
-    extras.push([`Rent on a ${t.months}-month lease`, money(t.rent), `term-${t.months}`]);
+    extras.push([`Rent on ${aLease(t.months)}`, money(t.rent), `term-${t.months}`]);
   return (
     <Section title="Lease and fees">
       <Facts

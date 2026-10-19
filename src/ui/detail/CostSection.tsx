@@ -2,11 +2,12 @@ import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { setCostOverride, setLeaseLength } from '../../commands/cost';
 import { db } from '../../db/db';
-import { perSqftLabel, profileEstimate } from '../../domain/cost';
+import { notOfferedLabel, notOfferedText, perSqftLabel, profileEstimate } from '../../domain/cost';
 import type { CostLine, UnitCost } from '../../domain/cost';
-import { money, monthsLabel } from '../../domain/format';
+import { aLease, money, monthsLabel } from '../../domain/format';
 import { parseMoney, parseWhole } from '../../domain/input';
 import type { CostProfile, Unit } from '../../model';
+import { LeaseMark } from '../common/Markers';
 import { Section } from './parts';
 import styles from './detail.module.css';
 
@@ -106,7 +107,7 @@ function LeaseLength({
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const terms = new Map((unit.rentByTerm ?? []).map((t) => [t.months, t.rent]));
-  const offered = new Set(unit.leaseTermsMonths ?? []);
+  const offered = new Set(cost.offeredTerms);
   const value = unit.plannedLeaseMonths === null ? 'default' : String(unit.plannedLeaseMonths);
   const optionText = (m: number) => {
     const rent = terms.get(m);
@@ -184,11 +185,13 @@ function LeaseLength({
         </p>
       )}
       <p className={styles.overrideHint}>
-        {cost.rentForTerm
-          ? `Rent for a ${cost.leaseMonths}-month lease. `
-          : terms.size
-            ? `No listed rent for ${monthsLabel(cost.leaseMonths)}, so the rent is used. `
-            : ''}
+        {cost.termStatus === 'not-offered'
+          ? ''
+          : cost.rentForTerm
+            ? `Rent for ${aLease(cost.leaseMonths)}. `
+            : terms.size
+              ? `No listed rent for ${monthsLabel(cost.leaseMonths)}, so the rent is used. `
+              : ''}
         {profile.amortizeOneTimeFees || profile.amortizeSpecials
           ? `One-time amounts are spread over ${monthsLabel(cost.leaseMonths)}.`
           : ''}
@@ -214,6 +217,17 @@ export function CostSection({
       id="unit-cost"
       action={<Link to="/settings/cost">Edit cost profile</Link>}
     >
+      {cost.termStatus === 'not-offered' && (
+        <p className={styles.leaseNote}>
+          <LeaseMark label={notOfferedLabel(cost)} explain={notOfferedText(cost)} />{' '}
+          {notOfferedText(cost).replace(/^Doesn’t/, 'This unit doesn’t')}
+        </p>
+      )}
+      {cost.termStatus === 'unknown' && (
+        <p className={styles.leaseNoteQuiet}>
+          Lease terms unknown, so the costs assume {aLease(cost.leaseMonths)} at the listed prices.
+        </p>
+      )}
       {cost.leaseMatters && <LeaseLength unit={unit} cost={cost} profile={profile} />}
       <ul className={styles.costLines} aria-label="Monthly cost lines">
         {cost.rent === null && (

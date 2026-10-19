@@ -9,7 +9,7 @@ import {
   rentLabel,
   unitTitle,
 } from '../../domain/format';
-import { breakdownText } from '../../domain/cost';
+import { breakdownText, notOfferedLabel, notOfferedText } from '../../domain/cost';
 import { CARD_BADGES, othersSummary, ratingsSummary, starRange } from '../../domain/people';
 import type { OthersSummary } from '../../domain/people';
 import type { Settings } from '../../model';
@@ -17,6 +17,7 @@ import type { UnitRow } from '../../state/derive';
 import {
   FlagMark,
   LabelSwatch,
+  LeaseMark,
   PersonBadge,
   Stars,
   StatusPill,
@@ -188,6 +189,9 @@ export function UnitCard({
         <span className={styles.foot}>
           {u.isFloorPlanOnly && <Tag>floor plan</Tag>}
           {b && b.location === null && <Tag>Needs location</Tag>}
+          {cost.termStatus === 'not-offered' && (
+            <LeaseMark label={notOfferedLabel(cost)} explain={notOfferedText(cost)} />
+          )}
           {rejected ? (
             <FlagMark flag="reject" reasons={rejectReasonText(mine.rejectReasonIds, settings)} />
           ) : (

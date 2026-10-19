@@ -1,7 +1,12 @@
 import type { RentalDB } from '../db/db';
 import { unitFullName } from '../domain/format';
 import { diffPaths } from '../domain/history';
-import { changedFields, dropStaleSources, reconcileRent } from '../domain/unitForm';
+import {
+  pruneTermCharges,
+  changedFields,
+  dropStaleSources,
+  reconcileRent,
+} from '../domain/unitForm';
 import type { RentEffect } from '../domain/unitForm';
 import { building as buildingSchema, listing as listingSchema, unit as unitSchema } from '../model';
 import type { Building, ID, ISODate, Listing, PetPolicy, Unit } from '../model';
@@ -73,7 +78,7 @@ export async function saveUnitForm(db: RentalDB, input: UnitFormInput): Promise<
       today: input.today,
       newListing: () => newListing({ unitId: id, firstSeen: input.today }, at),
     });
-    let next = withIdentity(r.unit);
+    let next = withIdentity(pruneTermCharges(r.unit));
     if (stored) {
       const changed = changedFields(stored, next);
       next = { ...next, fieldSources: dropStaleSources(next.fieldSources, changed, 'unit') };

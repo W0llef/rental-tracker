@@ -30,6 +30,11 @@ export const PRICE_COLOR_LABEL = 'Total cost';
 export interface PinCost {
   total: number | null;
   perSqft: number | null;
+  /** Whether the unit lists your lease length (M9 review); see `UnitCost`. */
+  termStatus?: 'offered' | 'not-offered' | 'unknown';
+  wantedMonths?: number;
+  leaseMonths?: number;
+  offeredTerms?: number[];
 }
 
 export interface PinUnit {

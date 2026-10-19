@@ -3,10 +3,16 @@ import { describe, expect, it } from 'vitest';
 import {
   breakdownText,
   isPetFee,
+  nearestTerm,
+  notOfferedLabel,
+  notOfferedText,
+  offeredTerms,
   perSqftLabel,
   profileEstimate,
   unitCost,
 } from '../../src/domain/cost';
+import { aLease } from '../../src/domain/format';
+import { pruneTermCharges } from '../../src/domain/unitForm';
 import { defaultSettings, UTILITY_KEYS } from '../../src/model';
 import type { Building, CostProfile, Unit } from '../../src/model';
 import { makeAddress, newBuilding, newUnit } from '../../src/model/factories';
@@ -323,7 +329,124 @@ describe('unitCost', () => {
     );
   });
 
+  it('uses the nearest lease length the unit lists when yours isn’t one of them', () => {
+    expect(nearestTerm([12, 18], 15)).toBe(12); // a tie goes to the shorter lease
+    expect(nearestTerm([12, 18], 16)).toBe(18);
+    expect(nearestTerm([6], 15)).toBe(6);
+    expect(
+      offeredTerms({ leaseTermsMonths: [18, 12], rentByTerm: [{ months: 15, rent: 1 }] }),
+    ).toEqual([12, 15, 18]);
+    const b = building();
+    const u = unitIn(b, {
+      rent: 1650,
+      utilities: allIncluded,
+      leaseTermsMonths: [12, 18],
+      rentByTerm: [
+        { months: 12, rent: 1650 },
+        { months: 18, rent: 1550 },
+      ],
+    });
+    const fifteen = profile((x) => {
+      noInsurance(x);
+      x.defaultLeaseMonths = 15;
+    });
+    const c = unitCost(u, b, fifteen);
+    expect(c).toMatchObject({
+      wantedMonths: 15,
+      leaseMonths: 12,
+      termStatus: 'not-offered',
+      rent: 1650,
+      leaseMatters: true,
+    });
+    expect(notOfferedLabel(c)).toBe('No 15-month lease');
+    expect(notOfferedText(c)).toBe(
+      'Doesn’t list a 15-month lease (it lists 12 and 18 months), so its costs use the 12-month lease.',
+    );
+    expect(unitCost({ ...u, plannedLeaseMonths: 17 }, b, fifteen)).toMatchObject({
+      leaseMonths: 18,
+      rent: 1550,
+    });
+    expect(unitCost(unitIn(b, { rent: 1000 }), b, fifteen)).toMatchObject({
+      termStatus: 'unknown',
+      leaseMonths: 15,
+    });
+    expect(unitCost(unitIn(b, { rent: 1000, leaseTermsMonths: [15] }), b, fifteen).termStatus).toBe(
+      'offered',
+    );
+  });
+
+  it('prices the deposit, fees and special for the lease length used', () => {
+    const b = building();
+    const u = unitIn(b, {
+      rent: 1650,
+      utilities: allIncluded,
+      deposit: 500,
+      applicationFee: 50,
+      adminFee: 200,
+      recurringFees: [{ id: 'f1', label: 'Amenity fee', amount: 40 }],
+      moveInSpecial: { text: 'A month free', valueUsd: 1650 },
+      leaseTermsMonths: [12, 15],
+      rentByTerm: [
+        { months: 12, rent: 1650 },
+        { months: 15, rent: 1595 },
+      ],
+      termCharges: [
+        { charge: 'deposit', months: 12, amount: 500 },
+        { charge: 'deposit', months: 15, amount: 250 },
+        { charge: 'adminFee', months: 15, amount: null },
+        { charge: 'fee:f1', months: 15, amount: 0 },
+        { charge: 'moveInSpecial', months: 12, amount: 0 },
+      ],
+    });
+    const p = profile(noInsurance);
+    const twelve = unitCost(u, b, p);
+    expect(twelve.moveIn.parts.find((x) => x.key === 'deposit')?.amount).toBe(500);
+    expect(twelve.effectiveRent).toBeNull(); // no special on a 12-month lease
+    expect(twelve.total).toBe(1650 + 40);
+    const fifteen = unitCost({ ...u, plannedLeaseMonths: 15 }, b, p);
+    expect(fifteen.moveIn.parts.find((x) => x.key === 'deposit')?.amount).toBe(250);
+    expect(fifteen.moveIn.unknown).toContain('Admin fee');
+    expect(line(fifteen, 'fee:f1')).toMatchObject({ amount: 0, note: 'for a 15-month lease' });
+    expect(fifteen.effectiveRent).toBe(Math.round(1595 - 1650 / 15));
+    expect(fifteen.termPriced.sort()).toEqual(['adminFee', 'deposit', 'fee:f1']);
+  });
+
   it('formats cost per ft²', () => {
     expect(perSqftLabel(2.6833)).toBe('$2.68/ft²');
+  });
+});
+
+describe('charges by lease length in the form (M9 review)', () => {
+  it('drops charges for lengths, fees and specials that are gone', () => {
+    const base = {
+      rentByTerm: [
+        { months: 12, rent: 1650 },
+        { months: 15, rent: 1595 },
+      ],
+      recurringFees: [{ id: 'f1', label: 'Amenity fee', amount: 40 }],
+      moveInSpecial: null,
+      termCharges: [
+        { charge: 'deposit' as const, months: 12, amount: 500 },
+        { charge: 'deposit' as const, months: 18, amount: 400 }, // no 18-month rent
+        { charge: 'fee:f1' as const, months: 15, amount: 0 },
+        { charge: 'fee:gone' as const, months: 15, amount: 0 },
+        { charge: 'moveInSpecial' as const, months: 15, amount: 100 },
+      ],
+    };
+    expect(pruneTermCharges(base).termCharges.map((c) => `${c.charge}@${c.months}`)).toEqual([
+      'deposit@12',
+      'fee:f1@15',
+    ]);
+    // One priced length: nothing can differ any more.
+    expect(
+      pruneTermCharges({ ...base, rentByTerm: [{ months: 12, rent: 1650 }] }).termCharges,
+    ).toEqual([]);
+  });
+
+  it('says "a" or "an" before a lease length', () => {
+    expect(aLease(12)).toBe('a 12-month lease');
+    expect(aLease(18)).toBe('an 18-month lease');
+    expect(aLease(8)).toBe('an 8-month lease');
+    expect(aLease(11)).toBe('an 11-month lease');
   });
 });

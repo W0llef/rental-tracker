@@ -169,3 +169,34 @@
     0 0 0 1.5px var(--surface),
     0 0 0 3px var(--ink);
 }
+
+/* "No 15-month lease" (M9 review): the unit doesn't list your lease length */
+.leaseMark,
+.leaseMarkIcon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--assumed-ink);
+  border: 1px solid color-mix(in srgb, var(--plow) 70%, var(--ice));
+  background: color-mix(in srgb, var(--plow) 12%, var(--surface));
+  border-radius: 3px;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.leaseMark {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 5px 0 4px;
+}
+
+.leaseMarkIcon {
+  padding: 1px 2px;
+}
+
+.leaseIcon {
+  width: 11px;
+  height: 11px;
+  flex: none;
+}

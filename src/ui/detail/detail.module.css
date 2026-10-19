@@ -975,3 +975,26 @@
     margin: -10px -6px -10px 0;
   }
 }
+
+/* The unit doesn't list your lease length, or its terms are unknown (M9 review) */
+.leaseNote,
+.leaseNoteQuiet {
+  margin: 0 0 var(--s3);
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.leaseNote {
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--plow) 10%, var(--surface));
+  color: var(--ink);
+}
+
+.leaseNote > span {
+  vertical-align: 1px;
+}
+
+.leaseNoteQuiet {
+  color: var(--slate);
+}

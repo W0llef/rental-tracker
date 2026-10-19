@@ -577,6 +577,12 @@
   font: 800 10px/1 var(--font);
 }
 
+.rowLease {
+  flex: none;
+  display: inline-flex;
+  margin-left: 4px;
+}
+
 .rowNewDot {
   flex: none;
   width: 9px;

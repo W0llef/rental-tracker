@@ -211,6 +211,7 @@ const UNIT_FIELDS: Record<string, string> = {
   rent: 'Rent',
   rentIsFrom: 'Rent is “from”',
   rentByTerm: 'Rent by lease length',
+  termCharges: 'Charges by lease length',
   availableDate: 'Available date',
   leaseTermsMonths: 'Lease terms',
   plannedLeaseMonths: 'Lease length',
@@ -541,7 +542,7 @@ function unitItems(c: RecordChange, lookup: HistoryLookup, ctx: Context): Item[]
       now === null ||
       path[0] === 'utilities' ||
       key === 'moveInSpecial' ||
-      Array.isArray(now);
+      (Array.isArray(now) && key !== 'termCharges');
     items.push({
       ...base,
       group: simple ? `unit:${key}:${JSON.stringify(now)}` : `unit:${key}`,

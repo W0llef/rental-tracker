@@ -170,3 +170,23 @@ export function dropStaleSources(
 export function feeProblem(fees: readonly { label: string }[] | null): string | null {
   return fees?.some((f) => !f.label.trim()) ? 'Give every monthly fee a name.' : null;
 }
+
+/**
+ * Drops charges by lease length that no longer apply (M9 review): lengths without a rent
+ * by lease length, monthly fees that were removed, a special that's gone. With fewer than
+ * two priced lengths nothing can differ, so every charge is the same for all lengths.
+ */
+export function pruneTermCharges<
+  T extends Pick<Unit, 'rentByTerm' | 'termCharges' | 'recurringFees' | 'moveInSpecial'>,
+>(u: T): T {
+  const months = new Set((u.rentByTerm ?? []).map((t) => t.months));
+  if (months.size < 2) return u.termCharges.length ? { ...u, termCharges: [] } : u;
+  const fees = new Set((u.recurringFees ?? []).map((f) => `fee:${f.id}`));
+  const kept = u.termCharges.filter(
+    (c) =>
+      months.has(c.months) &&
+      (!c.charge.startsWith('fee:') || fees.has(c.charge)) &&
+      (c.charge !== 'moveInSpecial' || u.moveInSpecial !== null),
+  );
+  return kept.length === u.termCharges.length ? u : { ...u, termCharges: kept };
+}

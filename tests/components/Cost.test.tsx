@@ -1,7 +1,9 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
-import { createBuilding, createUnit, getSettings } from '../../src/commands/records';
+import { setLeaseLength, updateCostProfile } from '../../src/commands/cost';
+import { createBuilding, createUnit, getSettings, updateUnit } from '../../src/commands/records';
+import { unitCost } from '../../src/domain/cost';
 import { db } from '../../src/db/db';
 import { ensureMe } from '../../src/db/me';
 import { UTILITY_KEYS } from '../../src/model';
@@ -164,5 +166,85 @@ describe('the list', () => {
     await user.click(screen.getByRole('button', { name: 'Clear' }));
     expect(screen.getByRole('link', { name: /Unit 201/ })).toBeVisible();
     expect(cheapId).toBeTruthy();
+  });
+});
+
+describe('charges by lease length (M9 review)', () => {
+  it('lets a charge differ by lease length in the form, and the costs follow', async () => {
+    const user = userEvent.setup();
+    render(
+      <RouterProvider
+        router={createMemoryRouter(routes, {
+          initialEntries: ['/', `/unit/${unitId}/edit`],
+          initialIndex: 1,
+        })}
+      />,
+    );
+    const group = await screen.findByRole('group', { name: 'Other charges by lease length' });
+    await user.click(
+      within(group).getByRole('button', { name: 'Deposit differs by lease length' }),
+    );
+    await user.type(
+      within(group).getByRole('textbox', { name: 'Deposit on a 12-month lease' }),
+      '500',
+    );
+    await user.type(
+      within(group).getByRole('textbox', { name: 'Deposit on a 15-month lease' }),
+      '250',
+    );
+    await user.click(screen.getByRole('button', { name: /^Save/ }));
+    await waitFor(async () =>
+      expect((await db.units.get(unitId))?.termCharges).toEqual(
+        expect.arrayContaining([
+          { charge: 'deposit', months: 12, amount: 500 },
+          { charge: 'deposit', months: 15, amount: 250 },
+        ]),
+      ),
+    );
+    await setLeaseLength(db, unitId, 15);
+    expect(
+      unitCost((await db.units.get(unitId))!, undefined, (await getSettings(db)).costProfile).moveIn
+        .parts,
+    ).toContainEqual({ key: 'deposit', label: 'Deposit', amount: 250 });
+  });
+
+  it('marks units without your lease length and can leave them out', async () => {
+    const user = userEvent.setup();
+    await updateCostProfile(db, (p) => ({ ...p, defaultLeaseMonths: 18 }));
+    await updateUnit(db, cheapId, { leaseTermsMonths: [18] });
+    renderAt('/');
+    const card = await screen.findByRole('link', { name: /Unit 1504/ });
+    expect(card).toHaveTextContent('No 18-month lease');
+    expect(within(card).getByTitle(/so its costs use the 15-month lease/)).toBeVisible();
+    expect(screen.getByRole('link', { name: /Unit 201/ })).not.toHaveTextContent('lease');
+
+    await user.click(screen.getByRole('button', { name: 'Cost limits' }));
+    await user.click(
+      screen.getByRole('checkbox', { name: /Only units that list your lease length/ }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(screen.getByTestId('list-count')).toHaveTextContent('1 of 2 units match');
+    expect(screen.getByText('Listing your lease length')).toBeVisible();
+    expect(screen.queryByRole('link', { name: /Unit 1504/ })).toBeNull();
+  });
+
+  it('explains in the unit’s monthly cost which lease length it used', async () => {
+    await updateCostProfile(db, (p) => ({ ...p, defaultLeaseMonths: 18 }));
+    renderAt(`/unit/${unitId}`);
+    await waitFor(() =>
+      expect(costRegion()).toHaveTextContent(
+        'This unit doesn’t list an 18-month lease (it lists 12 and 15 months), so its costs use the 15-month lease.',
+      ),
+    );
+    expect(line('Rent')).toHaveTextContent('$1,595');
+  });
+
+  it('says when a unit’s lease terms are unknown', async () => {
+    renderAt(`/unit/${cheapId}`);
+    await waitFor(() =>
+      expect(costRegion()).toHaveTextContent(
+        'Lease terms unknown, so the costs assume a 12-month lease',
+      ),
+    );
   });
 });

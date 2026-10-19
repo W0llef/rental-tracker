@@ -18,6 +18,7 @@ function limitsText(l: CostLimits): string {
   const parts: string[] = [];
   if (l.maxTotal !== null) parts.push(`Total up to ${money(l.maxTotal)}/mo`);
   if (l.maxPerSqft !== null) parts.push(`up to ${perSqftLabel(l.maxPerSqft)}`);
+  if (l.offeredLeaseOnly) parts.push('listing your lease length');
   const text = parts.join(', ');
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
@@ -35,12 +36,21 @@ function parsePerSqft(
   return { ok: true, value: Number(t) };
 }
 
-function LimitsForm({ limits, onDone }: { limits: CostLimits; onDone: () => void }) {
+function LimitsForm({
+  limits,
+  leaseMonths,
+  onDone,
+}: {
+  limits: CostLimits;
+  leaseMonths: number;
+  onDone: () => void;
+}) {
   const setLimits = useUi((s) => s.setCostLimits);
   const id = useId();
   const [total, setTotal] = useState(limits.maxTotal === null ? '' : String(limits.maxTotal));
   const [psf, setPsf] = useState(limits.maxPerSqft === null ? '' : String(limits.maxPerSqft));
   const [unknown, setUnknown] = useState(limits.includeUnknown);
+  const [offered, setOffered] = useState(limits.offeredLeaseOnly);
   const [error, setError] = useState<string | null>(null);
 
   const apply = () => {
@@ -49,7 +59,12 @@ function LimitsForm({ limits, onDone }: { limits: CostLimits; onDone: () => void
     const p = parsePerSqft(psf);
     if (!p.ok) return setError(p.error);
     setError(null);
-    setLimits({ maxTotal: t.value, maxPerSqft: p.value, includeUnknown: unknown });
+    setLimits({
+      maxTotal: t.value,
+      maxPerSqft: p.value,
+      includeUnknown: unknown,
+      offeredLeaseOnly: offered,
+    });
     onDone();
   };
 
@@ -103,6 +118,17 @@ function LimitsForm({ limits, onDone }: { limits: CostLimits; onDone: () => void
         <input type="checkbox" checked={unknown} onChange={(e) => setUnknown(e.target.checked)} />
         Keep units whose cost or size is unknown
       </label>
+      <label className={styles.limitCheck}>
+        <input type="checkbox" checked={offered} onChange={(e) => setOffered(e.target.checked)} />
+        <span>
+          Only units that list your lease length
+          <span className={styles.limitHint}>
+            {' '}
+            ({leaseMonths} months, or the one you picked for a unit; units with unknown lease terms
+            are left out too)
+          </span>
+        </span>
+      </label>
       {error && (
         <p className={styles.limitError} role="alert">
           {error}
@@ -130,7 +156,7 @@ export function CostLimitsButton({ open, onToggle }: { open: boolean; onToggle: 
       aria-expanded={open}
       aria-controls={open ? 'cost-limits' : undefined}
       data-active={active || undefined}
-      title="Limit by total cost or cost per ft²"
+      title="Limit by total cost, cost per ft² or lease length"
       onClick={onToggle}
     >
       {active ? 'Cost limits on' : 'Cost limits'}
@@ -142,16 +168,19 @@ export function CostLimitsButton({ open, onToggle }: { open: boolean; onToggle: 
 export function CostLimitsPanel({
   open,
   setOpen,
+  leaseMonths,
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
+  /** Your default lease length (Settings → Cost profile). */
+  leaseMonths: number;
 }) {
   const limits = useUi((s) => s.costLimits);
   const setLimits = useUi((s) => s.setCostLimits);
   if (open)
     return (
       <div id="cost-limits">
-        <LimitsForm limits={limits} onDone={() => setOpen(false)} />
+        <LimitsForm limits={limits} leaseMonths={leaseMonths} onDone={() => setOpen(false)} />
       </div>
     );
   if (!costLimitsActive(limits)) return null;

@@ -634,6 +634,28 @@
   font-size: 13px;
 }
 
+/* Other charges by lease length (M9 review): a charge's name, then a box per length */
+.termCharge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+  padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--ice);
+}
+
+.termChargeName {
+  flex: 0 0 9.5em;
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.termCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .addBtn,
 .textButton,
 .dangerText {

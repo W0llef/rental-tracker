@@ -133,6 +133,12 @@ export const COST_ITEM_LABELS: Record<CostItemKey, string> = {
   'pet-rent': 'Pet rent, per pet',
 };
 
+/** "a 15-month lease", "an 18-month lease", "an 8-month lease", "an 11-month lease". */
+export function aLease(months: number): string {
+  const an = /^8/.test(String(months)) || months === 11 || months === 18;
+  return `${an ? 'an' : 'a'} ${months}-month lease`;
+}
+
 /** "12 months", "1 month". */
 export const monthsLabel = (n: number): string => `${n} month${n === 1 ? '' : 's'}`;
 
