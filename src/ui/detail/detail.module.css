@@ -644,3 +644,112 @@
 .smallSave:disabled {
   opacity: 0.6;
 }
+
+/* ── M8: essentials and the panel's actions ─────────────────────────────── */
+
+.essentials {
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--ice);
+}
+
+.essentialsTitle {
+  margin: 0 0 var(--s2);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 700;
+  color: var(--slate);
+}
+
+.ready {
+  display: inline-block;
+  padding: 2px 8px 0;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--st-approved) 16%, var(--surface));
+  color: var(--pick-ink);
+  font-weight: 800;
+}
+
+.prompts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.prompt {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 2px 10px 0;
+  border: 1px dashed color-mix(in srgb, var(--slate) 55%, var(--ice));
+  border-radius: var(--r-md);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.prompt:hover {
+  background: var(--frost);
+  border-style: solid;
+}
+
+/* Sticky footer (DESIGN.md §4.2): Edit (E) and what else can be done with the record */
+.actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  padding: var(--s2) var(--s4);
+  background: var(--surface);
+  border-top: 1px solid var(--ice);
+}
+
+.action,
+.actionPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 2px 12px 0;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 13.5px;
+  text-decoration: none;
+}
+
+.action:hover {
+  background: var(--frost);
+}
+
+.actionPrimary {
+  background: var(--river);
+  border-color: var(--river);
+  color: var(--on-river);
+}
+
+.actionPrimary:hover {
+  filter: brightness(1.15);
+}
+
+.action kbd,
+.actionPrimary kbd {
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+}
+
+@media (max-width: 759px) {
+  .action,
+  .actionPrimary,
+  .prompt {
+    min-height: 44px;
+  }
+}

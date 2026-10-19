@@ -1,5 +1,6 @@
 import { buildingSearchText, matchesWords, queryWords, unitSearchText } from '../domain/filter';
 import { listingAgeDays } from '../domain/listings';
+import { isStandalone } from '../domain/standalone';
 import { sortBuildings, sortUnits } from '../domain/sort';
 import type { PersonOpinion } from '../domain/people';
 import { emptyOpinionFields, newPerson } from '../model/factories';
@@ -48,6 +49,8 @@ export interface UnitRow {
   opinions: PersonOpinion[];
   listingAgeDays: number | null;
   searchText: string;
+  /** Its building is a standalone home (Q30): shown as just the home. */
+  standalone: boolean;
 }
 
 export interface BuildingRow {
@@ -62,6 +65,8 @@ export interface BuildingRow {
   minRent: number | null;
   maxRent: number | null;
   searchText: string;
+  /** A standalone home (Q30): one unit, shown as the home rather than as a building. */
+  standalone: boolean;
 }
 
 export interface Dataset {
@@ -135,7 +140,13 @@ export function deriveDataset(raw: RawData, today: ISODate): Dataset {
     buildings.map((b) => [b.id, buildingSearchText(b, notesByBuilding.get(b.id))]),
   );
 
-  const units: UnitRow[] = live(raw.units).map((unit) => {
+  const liveUnits = live(raw.units);
+  const unitsIn = groupBy(liveUnits, (u) => u.buildingId);
+  const standaloneById = new Map(
+    buildings.map((b) => [b.id, isStandalone(b, unitsIn.get(b.id) ?? [])]),
+  );
+
+  const units: UnitRow[] = liveUnits.map((unit) => {
     const listings = listingsByUnit.get(unit.id) ?? [];
     const unitNotes = notesByUnit.get(unit.id) ?? [];
     const stored = new Map((opinionsByUnit.get(unit.id) ?? []).map((o) => [o.personId, o]));
@@ -157,6 +168,7 @@ export function deriveDataset(raw: RawData, today: ISODate): Dataset {
       opinions,
       listingAgeDays: listingAgeDays(listings, today),
       searchText: `${unitSearchText(unit, unitNotes)} ${buildingText.get(unit.buildingId) ?? ''}`,
+      standalone: standaloneById.get(unit.buildingId) ?? false,
     };
   });
 
@@ -173,6 +185,7 @@ export function deriveDataset(raw: RawData, today: ISODate): Dataset {
       minRent: rents.length ? Math.min(...rents) : null,
       maxRent: rents.length ? Math.max(...rents) : null,
       searchText: buildingText.get(building.id) ?? '',
+      standalone: standaloneById.get(building.id) ?? false,
     };
   });
 

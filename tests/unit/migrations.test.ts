@@ -1,5 +1,6 @@
 import fixtureV1 from '../fixtures/backup-v1.json';
 import fixtureV2 from '../fixtures/backup-v2.json';
+import fixtureV3 from '../fixtures/backup-v3.json';
 import {
   applyMigration,
   migrateBackupData,
@@ -14,7 +15,7 @@ import { backupEnvelope, currentBackup } from '../../src/model/backup';
  * Every schema version keeps a frozen fixture backup (tests/fixtures/backup-vN.json).
  * Each must migrate to the current version and pass validation. Never edit old fixtures.
  */
-const fixtures = [fixtureV1, fixtureV2];
+const fixtures = [fixtureV1, fixtureV2, fixtureV3];
 
 describe('backup fixtures', () => {
   it.each(fixtures.map((f) => [f.schemaVersion, f] as const))(

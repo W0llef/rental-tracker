@@ -4,7 +4,7 @@ Status: **Draft 3** · Oct 15, 2026 · covers spec Draft v1 (`SPEC.md`)
 
 This plan covers Phase 1 only (spec §12: "track and compare"). The data model, however, contains every field from spec §3 now, plus the few supporting fields later phases need, so Phases 2–4 add screens and services without reshaping stored data.
 
-**Status:** approved in principle; Q11 answered (fast data entry is in Phase 1). M0–M4 done. M5 next. Workflow, versions and progress: §13–§14 and `CLAUDE.md`.
+**Status:** approved in principle; Q11 answered (fast data entry is in Phase 1). Progress is in §14. Workflow, versions and progress: §13–§14 and `CLAUDE.md`.
 
 **Draft 2 changes:** design direction C (Wayfinding) chosen; your answers to Q1–Q10 applied (§11); lease length for spreading one-time costs (§5.3); switchable base maps and customizable pins (§4.3); a fast data-entry and AI-import section (§5.7) with revised milestones (§9). One new scope question, Q11, is in §11.
 
@@ -237,6 +237,9 @@ export interface Building extends Base {
   // Map extras (Phase 2 buildings layer / Phase 4 3D)
   osmId: Maybe<string>;
   floorHeightFt: Maybe<number>;     // default 10 ft when null
+  // v3 (M8 review)
+  standalone: boolean | null;       // a house or townhome on its own (Q30); null = default by type
+  checkedUnknown: { field: string; at: ISODate }[];  // fields checked and found unknown (Q29)
 }
 ```
 
@@ -327,6 +330,7 @@ export interface Unit extends Base {
   // Media
   links: Link[];                    // listing links live in listings; photos in photos table
   fieldSources: FieldSource[];
+  checkedUnknown: { field: string; at: ISODate }[];  // v3 (M8 review, Q29)
 }
 ```
 
@@ -541,6 +545,11 @@ db.version(2).stores({
 });
 ```
 
+```ts
+// v3 (M8 review): new unindexed fields only (building.standalone, building/unit.checkedUnknown)
+db.version(3).stores({});
+```
+
 ### 3.7 Schema changes (migrations)
 
 There are two places old data can come from — the browser's own database and old backup files — and both go through the same code.
@@ -553,6 +562,7 @@ There are two places old data can come from — the browser's own database and o
 6. Rule for the build: from Milestone 1 on, data is never wiped to change its shape. You can start entering real units at Milestone 4 and keep them through Phase 4.
 7. **Before any migration runs on real data**, the app asks you to download a backup file first (built in M5 with backup export; no migration ships before then) ("This update changes how your data is stored. Download a backup before continuing."). That file is what makes rolling back to an older version possible, because an older version can't open a database a newer one has upgraded (§13). *As built in M5:* before the database is opened, `main.tsx` reads the stored version with plain IndexedDB (`indexedDB.databases()`, or opening without a version and never creating one) and, if it's older than `SCHEMA_VERSION` and holds data, shows that screen instead of the app. *Download backup* reads the stored records as they are, so the file is in the old format and opens in the previous app version too; *Continue* (or *Continue without a backup*) opens the database, which runs the upgrade and its snapshot. Tested against a real v1 database (`tests/db/upgradeCheck.test.ts`, `tests/db/upgradeV2.test.ts`, and in the browser by `tests/e2e/people.spec.ts`, which builds a v0.5 database before the app opens it).
 9. **v2 (M6, the first real change)**: `db/migrations/v2.ts`. A migration can now also transform several tables at once (`transform`, for records that move between tables), say that the undo history can't survive it (`clearsHistory`: the browser's database clears the change log after the snapshot; restores always did), and create this copy's person (`createsMe`: the browser records the new person in `meta.meId`). Backup files run the same transform with "me" being the person already using the browser (`checkBackup(file, me)`), so an old file's ratings become yours.
+10. **v3 (M8 review)**: `db/migrations/v3.ts` adds `standalone: null` and `checkedUnknown: []` to buildings and `checkedUnknown: []` to units. Nothing changes meaning, so undo history survives. The zod schemas give both fields defaults, so a record from before v3 brought back by an undo still validates. An update across several versions (v1 → v3) now takes **one** safety copy, before the first step (`declareVersions`), instead of one per step. Fixture `tests/fixtures/backup-v3.json`; tested on a real v2 database (`tests/db/upgradeV3.test.ts`) and in the browser (`tests/e2e/review8.spec.ts`).
 8. **Preview builds use a separate database** (`rental-tracker-preview`) and show a "Preview" banner, so testing a milestone never touches your real data even though both live at the same web address.
 
 ---
@@ -572,6 +582,7 @@ There are two places old data can come from — the browser's own database and o
 | dialog | **AI research prompt** | Scope (unit, building, selection), which fields, copy button, tips |
 | `#/import/:id` | **Import review** | Field-by-field diff for pasted AI JSON or listing text; accept/reject, source links, one undo step |
 | `#/unit/:id/edit` | **Full unit form** | Section nav (Identity, Specs, Windows, Features, Lease, Costs, Parking & storage, Review, Photos, Listings, Sources), UnknownInput fields, completeness meter, building summary with "Edit building" |
+| `#/new-unit?from=<id>` or `?building=<id>` (M8) | **New unit in the full form** | "New unit from Plan C": the same form, starting from the plan's copied details; nothing is stored until **Add unit** |
 | `#/building/:id/edit` | **Building form** | Identity, Structure, Amenities, Policies, Neighborhood, Links, Photos |
 | `#/compare?ids=…` | **Compare table** | 2–6 unit columns, grouped field rows, differences highlighted, "hide identical rows" |
 | `#/duplicates` | **Duplicate review** | candidate pairs with reason, MergeDialog (pick value per conflicting field) |
@@ -817,6 +828,20 @@ Goal: nothing is typed twice, and each field can be filled from wherever you're 
 | Bulk edit | Select several units, then "Edit together" to set any field for all of them (e.g. heat included for every Riverlight unit). Fields that differ show "Mixed". |
 | Research mode | In Shortlist mode the detail panel lists missing essentials as one-click prompts. In the edit form, ⌘↓ / Ctrl+↓ jumps to the next empty field and `?` marks it unknown, so a unit can be completed without the mouse. |
 
+*As built (M8):*
+
+- **Forms** (`ui/edit/`; `#/unit/:id/edit`, `#/new-unit`, `#/building/:id/edit`, loaded on demand): one scrolling page per record with a sticky section nav whose dots (● ◐ ○, drawn in CSS) come from the completeness checks, the fields, and a side column (building summary, completeness, essentials; the building form lists its units). Every §3 field is there except `costOverrides` (M9's cost breakdown), `placement3d` (Phase 4), `collectionIds` (M10) and photos (M12, a placeholder section). Fields: text, numbers read leniently (`domain/input.ts`: "$1,650", "720 sq ft", "1 1/2"), dates, menus, **Yes · No** groups (Y and N), exposure (eight direction buttons, first pressed is the main one, *Add the windows' directions*), windows (room, direction, size, obstruction), utilities (**Included · Extra $ · You pay** with an amount; the estimate's hint shows the cost profile's number, `domain/cost.ts` `profileEstimate`), monthly fees (or *No monthly fees*), rent by lease length, move-in special, lease terms ("12, 15", "none"), the lease you'd sign, status and shared label, links, and **listings with their price history** (site, link, first/last seen, off market, every price with its date and note; add, correct, delete). The building form edits the address text (the pin stays; *Place on map* moves it) and the neighborhood (becomes `manual`).
+- **Draft and save**: edits are a draft; **Save** (⌘/Ctrl+S) runs one action (`commands/forms.ts` `saveUnitForm`, `saveBuildingForm`), validated with zod before anything is written, so Undo and History take a save back in one step and describe it field by field ("Changed 7 details on Unit 1504 at Riverlight"; `domain/history.ts` now names building fields, says utilities and the move-in special as a whole, and keeps sources quiet). Saving an untouched form writes nothing. Typing errors are shown under the field and block saving; leaving with unsaved changes asks first (`useBlocker`, and the browser's own prompt on closing the tab).
+- **Rent and price history** (`domain/unitForm.ts` `reconcileRent`): a typed rent becomes today's price on the most recent listing (same day replaces) or on a new listing without a link, as in Quick-add; editing the price history so its newest price changes moves the rent to it. The form says which will happen ("Saving records $1,600 as today's price on the Zillow listing"). A rent change and its price point read as one line in History.
+- **Sources**: a value changed by hand loses its `fieldSources` entry when saved (it no longer came from there); the Sources section lists the rest with a remove button. Building facts typed in the building form drop the matching `building.*` sources on its units.
+- **Unknown and research mode**: the `?` button or key marks a field unknown (italic "Unknown", no dashed border) and moves to the next empty field; pressing the button again un-marks it. Since the M8 review (Q29, v3) marks on research fields are **saved** with the record (`checkedUnknown`, with the date first checked) and count as done in the completeness meter; a value replaces the mark. Only fields that count toward completeness (`RESEARCH_FIELDS`) show the dashed border and stop ⌘/Ctrl+↓ (⌘/Ctrl+↑ goes back); notes and preferences don't. "Nothing left empty" shows when there's none.
+- **Standalone homes** (Q30, `domain/standalone.ts`) and **complex names** (Q31, `ui/edit/BuildingFields.tsx`): see §11.1.
+- **Completeness and essentials** (`domain/completeness.ts`): one list of *checks* (≈ 60: unit specs, features, lease, utilities, parking and storage; building structure, amenities, policies, neighborhood, website, management) with "applies" rules (a floor plan has no floor, exposure or windows; street parking has no space price; storage cost only when it isn't included; pet rent only when pets are allowed). Group checks: *Parking* (type, plus spaces included for garage or lot) and *Pet policy* (cats and dogs). `Settings.essentialFields` stores check keys (the defaults were already stored since M1); **Settings → Essential fields** chooses them (undoable). The unit panel shows **Essentials N of M** with each missing one as a prompt (*Add laundry*) linking to the form at that field (`?field=`), building ones to the building form, and **Ready to compare** when none are missing (Q28: on every unit until Shortlist mode).
+- **Copy from** (`domain/copyFrom.ts`): *Copy details from* (units and plans in the same building) fills only what the unit doesn't know and says what it kept; **New unit from Plan C** / **New unit like this** opens the form for a new unit with the copied details. Copied: type, beds, baths, size, layout notes, features, lease terms, deposit and fees, monthly fees (new ids), move-in special, utilities, parking, storage. Not copied: number, floor, rent, rent by term, available date, exposure, windows, view, status, labels, opinions, notes, listings, links, the lease you'd sign.
+- **Edit together for buildings** (Q23): ⌘/Ctrl- and Shift-click building cards in the Buildings view (and ⌘/Ctrl-click pins there) select buildings; a bar offers **Edit together…** for type, elevator, management company, amenities, cats, dogs, pet rent and deposit, smoking and subletting (`updateBuildings`, one undo step; amenities and pets change only the parts set). Esc clears it.
+- **Going between forms** (owner, M8 review): *Edit building* in a unit's form, a building's *Your units here* links and *More about the home* take the current form's place in the history rather than stacking on it (`ui/edit/FormLink.tsx`). However often you go back and forth, Save or Cancel returns to where the first form was opened (the main screen, list and map, with that panel open); unsaved changes in the form you leave are asked about once.
+- **Keys**: `E` opens the open unit's or building's form; in a form ⌘/Ctrl+S, ⌘/Ctrl+↓/↑, `?`, Y/N; the shortcut sheet lists them.
+
 **AI-assisted path**
 
 Works with any AI assistant that can browse the web (for example Claude with web search). The app itself never calls an AI, so it costs nothing.
@@ -869,6 +894,8 @@ A draft for the M6 chat to confirm with the owner before building:
 Shortcuts act on the selected unit (or all selected units). Full table in DESIGN.md.
 
 *As built (M7, `hooks/useListKeys.ts`, Q22):* labels by physical key (`e.code`), so ⇧6–9 set the shared label on any keyboard; `⏎` moves focus to the open unit's details; keys of later milestones (E, C, F, M, R) say which milestone brings them; `?` opens the sheet (`ui/triage/shortcuts.ts`). Targets are the multi-selection (⌘/Ctrl-click toggles, Shift-click selects the range from the last ⌘/Ctrl-clicked unit; plain click or Esc clears it), else the open unit.
+
+*As built (M8):* `E` opens the full form of the open unit or building; in a form `⌘/Ctrl+S` saves, `⌘/Ctrl+↓` / `⌘/Ctrl+↑` move to the next / previous field still to research, `?` marks a field unknown and moves on (in a text box only while it's empty), `Y` / `N` answer a yes/no field, and the arrow keys move within a choice. Form keys work while typing.
 
 `P` pick · `X` reject (opens reason dialog) · `U` unflag · `0`–`5` stars · `6` red · `7` yellow · `8` green · `9` blue · `↑/↓` or `J/K` previous/next unit · `Enter` open detail · `E` edit · `N` quick-add · `C` add to compare · `/` search · `F` filters · `L` map layers · `M` toggle Explore/Shortlist · `B` toggle units/buildings view · `R` copy research prompt · `⌘/Ctrl+Z` undo · `⇧⌘/Ctrl+Shift+Z` redo · `?` shortcut sheet · `Esc` close panel. In forms: `⌘/Ctrl+↓` next empty field, `?` mark unknown, `⌘/Ctrl+S` save. Disabled while typing in a field (except the form keys).
 
@@ -988,12 +1015,15 @@ Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 15
 | Q25 | Where the Data check page lives (M7 review, Oct 18) | **Settings → Data** (what's stored, database and version, preview-only sample data tools); the link under the list is gone and `#/debug` redirects. History stays its own panel beside the list and map (clock in the top bar), because undoing is easier with the unit and map in view; Settings → Data links to it. |
 | Q26 | Hover fading and map selection (M7 review, Oct 18) | Pointing at **anything** (list card, pin, card row) fades every other pin and card; ⌘/Ctrl-click works on the map too; every selected unit is highlighted on the map. Single-unit editing waits for the M8 form (owner). |
 | Q27 | Resizing, hiding and moving panels (owner, after M7 approval, Oct 18) | **In M14** (layout polish; no data change, so it can move earlier): drag the borders between list, details and map to resize; a button and the `[` key fold the list to a thin strip (a unit picked on the map then shows just details + map); the details panel can sit **left of the map, right of it, or under it** as a choice of preset layouts rather than free drag-and-drop docking (simpler, and each preset can be checked at every width); widths and layout remembered per browser. |
+| Q28 | Missing-essentials prompts before Shortlist mode exists (M8 chat, Oct 18) | **On every unit's panel** when an essential is missing, "Ready to compare" otherwise (owner, M8 review, Oct 19). M10 may keep them to Shortlist mode. |
+| Q29 | Remember "checked, still unknown" after the form closes? (M8 chat) | **Yes** (owner, M8 review, Oct 19), built in M8 with Q30 (data format v3): `checkedUnknown` on units and buildings. Completeness counts them as done, ⌘↓ skips them, essentials list them as "checked and unknown" (not ready to compare); giving the field a value drops the mark, and pressing `?` again un-marks it. |
+| Q30 | Standalone houses and townhomes clutter the Building menu (owner, M8 review, Oct 19) | **A "Part of a larger building or complex" checkbox** in the unit form, defaulting from the unit type (house and townhome: no; apartment, condo, room: yes; a complex name or several of your units: yes), stored as `building.standalone` (null = default). A standalone home keeps its one-unit building under the hood; its unit form shows **The home** (address, landlord, contact, year built, stories, pets, smoking) saved with the unit in one step; the Building menu lists only shared buildings; its panel shows "The home" with no building to open; its essentials prompts open the unit form; the Buildings view shows it as a **Home** card that opens the unit. |
+| Q31 | Name vs. Complex in the building form were confusing; both seemed to override each other (owner, M8 review, Oct 19) | **One Name box by default**; **"This complex has several buildings"** turns it into *Complex name* (with names used before offered) and adds *This building's name* (optional). Ticking moves the name into the complex; unticking moves the complex name back and says the building's own name goes. Shown as "North Tower · Cedar Mill". No data change (the checkbox is "a complex name is set"). Example text in empty boxes reads "e.g. …". |
 | Q12 | SPEC §5 "clicking it fans out the units" (M3 review 4, Oct 16) | The owner chose **one card per building** listing its units instead of fanning out separate plates: it can't scatter units or cross lines, and keeps dots visible. Clicking a grouped pin still shows every unit at the building, each clickable. |
 
 ### 11.2 Open
 
 None. New questions will be added here as they come up.
-
 
 **Assumptions I'll proceed with unless you object**
 
@@ -1012,6 +1042,9 @@ None. New questions will be added here as they come up.
 
 | Date | Change |
 | --- | --- |
+| 2026-10-19 | M8, owner review: going between a unit's form and its building's no longer stacks forms; Save or Cancel goes back to where the first was opened. |
+| 2026-10-19 | M8, owner review: **data format v3**: standalone homes (**Q30**), remembered unknowns (**Q29**); complex names behind "This complex has several buildings" (**Q31**); building names shown as "North Tower · Cedar Mill"; example text reads "e.g. …"; a multi-step update takes one safety copy. **Q28 decided** (prompts on every unit). |
+| 2026-10-18 | M8: **full unit and building forms**, research mode, essentials and completeness, copy from unit / new unit from plan, listings and price-history editing, Edit together for buildings (Q23), Settings → Essential fields, `E` to edit (§5.7 "As built (M8)", §6). Q28 (missing-essentials prompts on every unit until Shortlist mode) and Q29 ("checked, still unknown" not remembered) proposed for the owner. New route `#/new-unit`. No data-format change. |
 | 2026-10-18 | After M7 approval: **Q27** resizable and foldable panels, and the details panel left of, right of or under the map (preset layouts), planned for M14. |
 | 2026-10-18 | M7, owner review: ⌘/Ctrl-click on map pins, card rows and a card's building name (all its units) adds to the selection; selected units are highlighted on the map; pointing at any card, pin or row fades the other pins and cards; ⌘/Ctrl-click on building cards no longer opens a tab (building multi-select and Edit together for buildings move to **M8**, Q23); History search and filters planned for **M14** (Q24); the Data check page became **Settings → Data** (Q25). |
 | 2026-10-18 | M7: **triage and bulk edit**. Marker controls in the unit panel and a selection bar (flag, stars, your label, shared label, status), Reject dialog with reusable and new reasons and a note, flag/rating notes per person, notes log (add, edit, delete your own; units and buildings), multi-select, **Edit together** (Q20 fields), all Phase 1 keys with a `?` sheet, toasts with Undo/Redo after every action, **History** (`#/history`: specific descriptions, Undo this with clash check, Restore to here, Deleted with Restore), Settings → **Labels and reasons**, pins colored by shared or your label (pin color option `myLabel`, kept in the browser like other pin choices). `setOpinion` now records "last reviewed" and skips changes that change nothing. No data-format change. |
@@ -1081,7 +1114,7 @@ The full working agreement for every session is in `CLAUDE.md`; this is the summ
 | M5 Backup and restore | Approved | v0.5.0 | 2026-10-18 |
 | M6 People and per-person ratings | Approved | v0.6.0 | 2026-10-18 |
 | M7 Triage and bulk edit | Approved | v0.7.0 | 2026-10-18 |
-| M8 Forms and research mode | Not started | — | — |
+| M8 Forms and research mode | In review (preview), data format v3 | 0.8.0 | — |
 | M9 Cost profile and lease length | Not started | — | — |
 | M10 Collections, filters, compare | Not started | — | — |
 | M11 Batch add and AI import | Not started | — | — |

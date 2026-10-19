@@ -69,6 +69,8 @@ export function newBuilding(input: BuildingInput, at: ISODateTime = nowIso()): B
     lastCheckedAt: null,
     osmId: null,
     floorHeightFt: null,
+    standalone: null,
+    checkedUnknown: [],
     ...input,
   };
 }
@@ -123,6 +125,7 @@ export function newUnit(input: UnitInput, at: ISODateTime = nowIso()): Unit {
     placement3d: null,
     links: [],
     fieldSources: [],
+    checkedUnknown: [],
     ...input,
   };
 }

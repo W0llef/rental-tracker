@@ -54,7 +54,7 @@ describe('updating a v1 database to v2', () => {
 
     // The safety copy holds the data exactly as it was.
     const [snap] = await db.snapshots.toArray();
-    expect(snap).toMatchObject({ fromVersion: 1, toVersion: 2, reason: 'migration' });
+    expect(snap).toMatchObject({ fromVersion: 1, toVersion: SCHEMA_VERSION, reason: 'migration' });
     expect(
       (snap!.data.units as { id: string; rating: number }[]).find((u) => u.id === 'u-1'),
     ).toMatchObject({ rating: 4 });

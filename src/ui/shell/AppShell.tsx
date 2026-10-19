@@ -28,6 +28,7 @@ import {
   toggleSharedLabel,
 } from '../triage/actions';
 import { BulkEditDialog } from '../triage/BulkEditDialog';
+import { BuildingsTogetherDialog } from '../edit/BuildingsTogether';
 import { RejectDialog } from '../triage/RejectDialog';
 import { LATER_KEYS } from '../triage/shortcuts';
 import { ShortcutSheet } from '../triage/ShortcutSheet';
@@ -124,6 +125,18 @@ export function AppShell() {
         : [],
     [data, picked],
   );
+  // Buildings selected together (M8, Q23), in the Buildings view.
+  const pickedBuildings = useUi((s) => s.pickedBuildings);
+  const editingBuildings = useUi((s) => s.editingBuildings);
+  const pickedBuildingRows = useMemo(
+    () =>
+      data
+        ? pickedBuildings
+            .map((id) => data.buildingById.get(id))
+            .filter((r): r is NonNullable<typeof r> => !!r)
+        : [],
+    [data, pickedBuildings],
+  );
   const unitRowNow = unitId ? data?.unitById.get(unitId) : undefined;
   const targets = pickedRows.length ? pickedRows : unitRowNow ? [unitRowNow] : [];
   const showNotice = useUi((s) => s.showNotice);
@@ -144,7 +157,8 @@ export function AppShell() {
       const ui = useUi.getState();
       if (ui.placing) ui.setPlacing(null);
       else if (ui.panel) ui.setPanel(null);
-      else if (ui.picked.length) ui.clearPicked();
+      else if (ui.picked.length && view === 'units') ui.clearPicked();
+      else if (ui.pickedBuildings.length && view === 'buildings') ui.clearPickedBuildings();
       else if (ui.openFans.length) ui.collapseFans();
       else if (selectedKey || historyOpen) navigate('/');
     },
@@ -175,6 +189,11 @@ export function AppShell() {
           if (!done) showNotice('Nothing to redo.');
         })
         .catch((e: unknown) => showNotice(`Couldn’t redo. ${(e as Error).message}`)),
+    edit: () => {
+      if (unitId) navigate(`/unit/${unitId}/edit`, { state: { inApp: true } });
+      else if (buildingId) navigate(`/building/${buildingId}/edit`, { state: { inApp: true } });
+      else nothingSelected();
+    },
     later: (key) => {
       const text = LATER_KEYS[key];
       if (text) showNotice(text);
@@ -341,6 +360,30 @@ export function AppShell() {
                 ui.setPicked(next, id);
               }
             }}
+            pickedBuildingRows={pickedBuildingRows}
+            onBuildingPickClick={(e, id) => {
+              const ui = useUi.getState();
+              if (!(e.metaKey || e.ctrlKey || e.shiftKey)) {
+                if (ui.pickedBuildings.length) ui.clearPickedBuildings();
+                return;
+              }
+              const order = listView?.buildings.map((r) => r.building.id) ?? [];
+              const start = ui.pickedBuildings.length
+                ? ui.pickedBuildings
+                : buildingId
+                  ? [buildingId]
+                  : [];
+              if (e.shiftKey) {
+                const anchor = ui.buildingAnchor ?? buildingId ?? id;
+                const [a, b] = [order.indexOf(anchor), order.indexOf(id)].sort((x, y) => x - y);
+                const range = a! >= 0 ? order.slice(a, (b ?? a!) + 1) : [id];
+                const next = e.metaKey || e.ctrlKey ? [...new Set([...start, ...range])] : range;
+                ui.setPickedBuildings(next, anchor);
+              } else {
+                const next = start.includes(id) ? start.filter((x) => x !== id) : [...start, id];
+                ui.setPickedBuildings(next, id);
+              }
+            }}
           />
         </section>
 
@@ -407,6 +450,12 @@ export function AppShell() {
           rows={pickedRows}
           data={data}
           onClose={() => useUi.getState().setEditingTogether(false)}
+        />
+      )}
+      {editingBuildings && pickedBuildingRows.length > 0 && (
+        <BuildingsTogetherDialog
+          rows={pickedBuildingRows}
+          onClose={() => useUi.getState().setEditingBuildings(false)}
         />
       )}
       {shortcutsOpen && <ShortcutSheet onClose={() => useUi.getState().setShortcutsOpen(false)} />}

@@ -98,6 +98,15 @@ interface TriageUi {
   setRejecting: (r: Rejecting | null) => void;
   setEditingTogether: (open: boolean) => void;
   setShortcutsOpen: (open: boolean) => void;
+  /** Buildings chosen with ⌘/Ctrl- or Shift-click in the Buildings view (M8, Q23). */
+  pickedBuildings: string[];
+  buildingAnchor: string | null;
+  editingBuildings: boolean;
+  setPickedBuildings: (ids: string[], anchor?: string | null) => void;
+  /** Adds buildings to the selection, or takes them out if they're all in it. */
+  togglePickedBuildings: (ids: string[], openBuildingId: string | null) => void;
+  clearPickedBuildings: () => void;
+  setEditingBuildings: (open: boolean) => void;
 }
 
 export interface UiState extends Remembered, MapUi, TriageUi {
@@ -262,6 +271,23 @@ export const useUi = create<UiState>()((set, get) => {
     setRejecting: (rejecting) => set({ rejecting }),
     setEditingTogether: (editingTogether) => set({ editingTogether }),
     setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
+    pickedBuildings: [],
+    buildingAnchor: null,
+    editingBuildings: false,
+    setPickedBuildings: (pickedBuildings, anchor) =>
+      set({ pickedBuildings, ...(anchor !== undefined ? { buildingAnchor: anchor } : {}) }),
+    togglePickedBuildings: (ids, openBuildingId) => {
+      const current = get().pickedBuildings;
+      const start = current.length ? current : openBuildingId ? [openBuildingId] : [];
+      const all = ids.length > 0 && ids.every((id) => start.includes(id));
+      const next = all
+        ? start.filter((id) => !ids.includes(id))
+        : [...start, ...ids.filter((id) => !start.includes(id))];
+      set({ pickedBuildings: next, buildingAnchor: ids.at(-1) ?? null });
+    },
+    clearPickedBuildings: () =>
+      set({ pickedBuildings: [], buildingAnchor: null, editingBuildings: false }),
+    setEditingBuildings: (editingBuildings) => set({ editingBuildings }),
     setView: (view) => update({ view }),
     toggleView: () => update({ view: get().view === 'units' ? 'buildings' : 'units' }),
     setQuery: (query) => set({ query }),
@@ -328,6 +354,9 @@ export function resetUi() {
     rejecting: null,
     editingTogether: false,
     shortcutsOpen: false,
+    pickedBuildings: [],
+    buildingAnchor: null,
+    editingBuildings: false,
   });
 }
 

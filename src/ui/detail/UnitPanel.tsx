@@ -23,6 +23,7 @@ import type { UnitRow } from '../../state/derive';
 import { PasteIntoUnit } from '../add/PasteIntoUnit';
 import { PlaceOnMapButton } from '../add/PlaceOnMap';
 import { DeleteSection } from '../edit/DeleteSection';
+import { EssentialsSection } from './Essentials';
 import { Tag, Value } from '../common/Markers';
 import { MarkerControls } from '../triage/MarkerControls';
 import { NotesLog } from '../triage/NotesLog';
@@ -187,12 +188,24 @@ function BuildingSection({ row }: { row: UnitRow }) {
   if (!b) return null;
   const pets = petsText(b.pets);
   const structure = structureText(b, b.buildingType && BUILDING_TYPE_LABELS[b.buildingType]);
+  const text = (structure || pets) && (
+    <p className={styles.para}>{[structure, pets].filter(Boolean).join('. ')}.</p>
+  );
+  if (row.standalone) {
+    // A standalone home (Q30): no separate building; amenities only when some are known.
+    const anyAmenity = Object.values(b.amenities).some((v) => v !== null);
+    return (
+      <Section title="The home">
+        {text ?? <p className={styles.muted}>Year built, pets and the rest: Edit (E).</p>}
+        {b.managementCompany && <p className={styles.para}>Rented by {b.managementCompany}.</p>}
+        {anyAmenity && <Amenities building={b} />}
+      </Section>
+    );
+  }
   return (
     <Section title={buildingName(b)} action={<Link to={`/building/${b.id}`}>Open building</Link>}>
       <Amenities building={b} />
-      {(structure || pets) && (
-        <p className={styles.para}>{[structure, pets].filter(Boolean).join('. ')}.</p>
-      )}
+      {text}
     </Section>
   );
 }
@@ -259,7 +272,7 @@ function ListingsSection({ row, today }: { row: UnitRow; today: ISODate }) {
   );
 }
 
-/** The unit detail panel (DESIGN.md §4.2): triage here (M7); full editing arrives in M8. */
+/** The unit detail panel (DESIGN.md §4.2): triage here (M7); Edit opens the full form (M8). */
 export function UnitPanel({
   row,
   settings,
@@ -297,7 +310,11 @@ export function UnitPanel({
             {b && buildingName(b) !== title && buildingName(b) !== b.address.line1 && (
               <b>{buildingName(b)}, </b>
             )}
-            {b ? b.address.line1 : 'Building missing'}
+            {!b
+              ? 'Building missing'
+              : title === b.address.line1
+                ? [b.address.city, b.address.state].filter(Boolean).join(', ')
+                : b.address.line1}
             {b?.neighborhood && (
               <>
                 <br />
@@ -328,6 +345,9 @@ export function UnitPanel({
       </header>
 
       <MarkerControls rows={[row]} me={me} settings={settings} />
+      {b && (
+        <EssentialsSection unit={u} building={b} settings={settings} standalone={row.standalone} />
+      )}
       <RatingsSection unitId={u.id} rows={row.opinions} settings={settings} />
       <LeaseSection u={u} today={today} />
       <UnitFacts u={u} floors={b?.floors ?? null} />
@@ -359,6 +379,26 @@ export function UnitPanel({
         id={u.id}
         name={b && buildingName(b) !== title ? `${title} at ${buildingName(b)}` : title}
       />
+      <footer className={styles.actions}>
+        <Link
+          to={`/unit/${u.id}/edit`}
+          state={{ inApp: true }}
+          className={styles.actionPrimary}
+          aria-keyshortcuts="e"
+        >
+          Edit <kbd aria-hidden="true">E</kbd>
+        </Link>
+        {b && !row.standalone && (
+          <Link
+            to={`/new-unit?from=${u.id}`}
+            state={{ inApp: true }}
+            className={styles.action}
+            title="A new unit in this building with the same specs, features, fees and utilities"
+          >
+            {u.floorPlanName ? `New unit from ${u.floorPlanName}` : 'New unit like this'}
+          </Link>
+        )}
+      </footer>
     </article>
   );
 }

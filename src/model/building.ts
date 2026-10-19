@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   address,
   base,
+  checkedUnknown,
   count,
   geoPoint,
   isoDate,
@@ -93,5 +94,10 @@ export const building = base.extend({
   // Map extras (Phase 2 buildings layer / Phase 4 3D)
   osmId: maybe(z.string()),
   floorHeightFt: maybe(measure), // default 10 ft when null
+  // v3 (M8): a house or townhome that stands on its own rather than being part of a larger
+  // building or complex (Q30). null follows the default for its unit's type
+  // (domain/standalone.ts). The default keeps records from before v3 valid.
+  standalone: z.boolean().nullable().default(null),
+  checkedUnknown, // Q29
 });
 export type Building = z.infer<typeof building>;

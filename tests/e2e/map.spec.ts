@@ -133,7 +133,7 @@ test.describe('map (preview/dev build)', () => {
     await page.keyboard.press('Escape');
     await expect(bar).toHaveCount(0);
 
-    // Buildings view: ⌘/Ctrl-click a building card says when that arrives, and stays here
+    // Buildings view: ⌘/Ctrl-click selects the building to edit together (M8, Q23), in this tab
     await page.getByRole('button', { name: 'Buildings', exact: true }).click();
     const pagesBefore = page.context().pages().length;
     await page
@@ -141,9 +141,9 @@ test.describe('map (preview/dev build)', () => {
       .getByRole('link')
       .first()
       .click({ modifiers: ['ControlOrMeta'] });
-    await expect(
-      page.getByRole('status').filter({ hasText: 'arrives with the building form' }),
-    ).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Selected buildings' })).toContainText(
+      '1 building selected',
+    );
     expect(page.context().pages().length).toBe(pagesBefore);
   });
 

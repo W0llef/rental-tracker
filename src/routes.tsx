@@ -26,6 +26,19 @@ export const routes: RouteObject[] = [
     // Loaded on demand, like the Data check page.
     lazy: () => import('./ui/settings/SettingsPage').then((m) => ({ Component: m.SettingsPage })),
   },
+  // The full forms (M8): pages of their own, loaded on demand like Settings.
+  {
+    path: '/unit/:unitId/edit',
+    lazy: () => import('./ui/edit/UnitForm').then((m) => ({ Component: m.UnitFormPage })),
+  },
+  {
+    path: '/new-unit',
+    lazy: () => import('./ui/edit/UnitForm').then((m) => ({ Component: m.UnitFormPage })),
+  },
+  {
+    path: '/building/:buildingId/edit',
+    lazy: () => import('./ui/edit/BuildingForm').then((m) => ({ Component: m.BuildingFormPage })),
+  },
   { path: '*', element: <Navigate to="/" replace /> },
 ];
 

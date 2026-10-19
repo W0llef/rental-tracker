@@ -1,6 +1,5 @@
 import type { Building, GeoPoint, Listing, Unit } from '../model';
 import { sameAddress } from './address';
-import { buildingName } from './format';
 import { distanceMeters } from './geo';
 import { canonicalUrl } from './listingUrl';
 import { unitKeyOf } from './unitKey';
@@ -76,7 +75,11 @@ export function matchBuilding(
   if (c.location && c.name) {
     const near = live
       .filter((b) => b.location && distanceMeters(b.location, c.location!) <= NEARBY_METERS)
-      .find((b) => similarName(buildingName(b), c.name) || similarName(b.complexName, c.name));
+      .find(
+        (b) =>
+          similarName(b.name ?? b.complexName ?? b.address.line1, c.name) ||
+          similarName(b.complexName, c.name),
+      );
     if (near) return { building: near, reason: 'nearby' };
   }
   return null;
