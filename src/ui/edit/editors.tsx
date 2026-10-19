@@ -407,6 +407,11 @@ export function UtilityField({
       empty={value === null}
       labelId={labelId}
       onUnknown={() => unknown()}
+      hint={
+        value?.mode === 'tenant-paid' && value.estimate === null && profileEstimate !== null
+          ? `Blank uses your cost profile: about ${money(profileEstimate)}/mo.`
+          : undefined
+      }
     >
       <div className={styles.utility}>
         <Segmented
@@ -438,11 +443,6 @@ export function UtilityField({
               )
             }
           />
-        )}
-        {value?.mode === 'tenant-paid' && value.estimate === null && profileEstimate !== null && (
-          <span className={styles.hintInline}>
-            Your cost profile: about {money(profileEstimate)}/mo
-          </span>
         )}
       </div>
     </FieldRow>

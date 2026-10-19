@@ -23,7 +23,6 @@ export interface NavSection {
   status?: SectionStatus;
 }
 
-const DOT: Record<SectionStatus, string> = { complete: '●', partly: '◐', empty: '○' };
 const DOT_WORDS: Record<SectionStatus, string> = {
   complete: 'complete',
   partly: 'partly filled',
@@ -232,7 +231,6 @@ export function FormFrame({
                     <span>{s.label}</span>
                     {s.status && (
                       <span className={styles.dot} data-status={s.status}>
-                        <span aria-hidden="true">{DOT[s.status]}</span>
                         <span className={styles.visuallyHidden}>, {DOT_WORDS[s.status]}</span>
                       </span>
                     )}

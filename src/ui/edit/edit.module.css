@@ -188,16 +188,22 @@
 }
 
 .dot {
-  color: var(--slate);
-  font-size: 12px;
+  /* ● complete · ◐ partly · ○ empty, drawn so every font shows them alike */
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--slate);
 }
 
 .dot[data-status='complete'] {
-  color: var(--pick-ink);
+  border-color: var(--pick-ink);
+  background: var(--pick-ink);
 }
 
 .dot[data-status='partly'] {
-  color: var(--assumed-ink);
+  border-color: var(--assumed-ink);
+  background: linear-gradient(90deg, var(--assumed-ink) 50%, transparent 50%);
 }
 
 .keys {

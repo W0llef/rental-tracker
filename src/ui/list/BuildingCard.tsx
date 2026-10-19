@@ -1,7 +1,7 @@
+import type { MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { BUILDING_TYPE_LABELS, buildingName, rangeLabel } from '../../domain/format';
 import type { BuildingRow } from '../../state/derive';
-import { useUi } from '../../state/ui';
 import { Tag, TypeIcon } from '../common/Markers';
 import styles from './list.module.css';
 
@@ -10,11 +10,17 @@ export function BuildingCard({
   row,
   selected,
   hovered = false,
+  picked = false,
+  onPickClick,
 }: {
   row: BuildingRow;
   selected: boolean;
   /** Its pin is under the pointer on the map. */
   hovered?: boolean;
+  /** Selected with others to edit them together (M8, Q23). */
+  picked?: boolean;
+  /** Any click (with ⌘/Ctrl or Shift it selects instead of opening). */
+  onPickClick?: (e: MouseEvent, buildingId: string) => void;
 }) {
   const b = row.building;
   const name = buildingName(b);
@@ -35,20 +41,24 @@ export function BuildingCard({
       aria-current={selected ? 'true' : undefined}
       data-hover={hovered || undefined}
       data-key={`building:${b.id}`}
+      data-picked={picked || undefined}
       onClick={(e) => {
-        // ⌘/Ctrl- or Shift-click would open a new tab or window; selecting several buildings
-        // to edit them together arrives with the building form (M8, M7 review).
-        if (!(e.metaKey || e.ctrlKey || e.shiftKey)) return;
-        e.preventDefault();
-        useUi
-          .getState()
-          .showNotice(
-            'Selecting several buildings to edit them together arrives with the building form in M8.',
-          );
+        // ⌘/Ctrl- or Shift-click selects buildings to edit together (Q23) instead of
+        // opening a new tab or window.
+        if (e.metaKey || e.ctrlKey || e.shiftKey) e.preventDefault();
+        onPickClick?.(e, b.id);
       }}
     >
+      {picked && <span className={styles.visuallyHidden}>Selected: </span>}
       <span className={styles.thumb}>
         <TypeIcon type={b.buildingType === 'house' ? 'house' : 'building'} />
+        {picked && (
+          <span className={styles.pickBox} aria-hidden="true">
+            <svg viewBox="0 0 12 12">
+              <path d="M2.5 6.2 5 8.5l4.5-5" fill="none" stroke="currentColor" strokeWidth="2" />
+            </svg>
+          </span>
+        )}
       </span>
       <span className={styles.body}>
         <span className={styles.titleRow}>

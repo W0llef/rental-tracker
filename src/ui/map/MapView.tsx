@@ -200,6 +200,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
   // Units selected together (M7): highlighted on the map like the open one.
   const picked = useMemo(() => new Set(ui.picked), [ui.picked]);
   const isPicked = useCallback((key: string) => picked.has(key.slice(5)), [picked]);
+  const pickedBuildings = useMemo(() => new Set(ui.pickedBuildings), [ui.pickedBuildings]);
   const selectedBuildingId =
     selKind === 'unit'
       ? (data.unitById.get(selId as string)?.unit.buildingId ?? null)
@@ -331,11 +332,11 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
         selected: single
           ? selectedKey === unitKey(single) || isPicked(unitKey(single))
           : view === 'buildings'
-            ? selectedKey === `building:${b.id}`
+            ? selectedKey === `building:${b.id}` || pickedBuildings.has(b.id)
             : b.pinned.some((u) => unitKey(u) === selectedKey || isPicked(unitKey(u))),
       };
     },
-    [prefs.style, view, newMark, selectedKey, isPicked],
+    [prefs.style, view, newMark, selectedKey, isPicked, pickedBuildings],
   );
   /** An open building's card: one row per unit, cheapest first, rejected last. */
   const cardRows = useCallback(
@@ -613,14 +614,13 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     navigate(`/${key.replace(':', '/')}`, { replace: selectedKey !== null });
   /**
    * ⌘/Ctrl- or Shift-click (M7 review): a unit joins (or leaves) the selection; a building's
-   * pin or card name does the same for all its units in the Units view. Selecting several
-   * buildings to edit their own facts together arrives with the building form (M8).
+   * pin or card name does the same for all its units in the Units view. In the Buildings
+   * view it selects the building itself, to edit buildings' own facts together (M8, Q23).
    */
-  const pickUnits = (keys: string[]) => {
+  const pickUnits = (keys: string[], buildingId?: string) => {
     if (view === 'buildings') {
-      ui.showNotice(
-        'Selecting several buildings to edit them together arrives with the building form in M8.',
-      );
+      if (buildingId)
+        ui.togglePickedBuildings([buildingId], selKind === 'building' ? (selId as string) : null);
       return;
     }
     ui.togglePicked(
@@ -696,7 +696,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
         }
         expanded={b.group ? false : undefined}
         onClick={(additive) => {
-          if (additive) pickUnits(b.pinned.map(unitKey));
+          if (additive) pickUnits(b.pinned.map(unitKey), b.id);
           else if (single || view === 'buildings') select(key);
           else ui.openFan(b.id);
         }}
@@ -757,7 +757,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
                 dim={dim}
                 onSelect={(key, additive) => (additive ? pickUnits([key]) : select(key))}
                 onOpenBuilding={(additive) =>
-                  additive ? pickUnits(b.pinned.map(unitKey)) : select(`building:${b.id}`)
+                  additive ? pickUnits(b.pinned.map(unitKey), b.id) : select(`building:${b.id}`)
                 }
                 onClose={() => ui.foldFan(b.id)}
                 onHover={setHover}

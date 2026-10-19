@@ -489,3 +489,52 @@
 .table tbody tr:last-child td {
   border-bottom: 0;
 }
+
+/* Essential fields (M8) */
+.essentialsHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2) var(--s4);
+  margin-bottom: var(--s3);
+}
+
+.essentialsGroup {
+  margin: 0 0 var(--s3);
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px var(--s4);
+}
+
+.essentialsLegend {
+  float: left;
+  width: 100%;
+  margin-bottom: 2px;
+  padding: 0;
+  color: var(--slate);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.essentialsCheck {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 32px;
+  min-width: 12em;
+}
+
+.essentialsCheck input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--river);
+}
+
+@media (max-width: 759px) {
+  .essentialsCheck {
+    min-height: 44px;
+  }
+}

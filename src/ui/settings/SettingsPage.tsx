@@ -3,6 +3,7 @@ import { Notice } from '../shell/Notice';
 import { PreviewBanner } from '../shell/PreviewBanner';
 import { BackupSection } from './BackupSection';
 import { DataSection } from './DataSection';
+import { EssentialsSection } from './EssentialsSection';
 import { LabelsSection } from './LabelsSection';
 import { PeopleSection } from './PeopleSection';
 import { StorageSection } from './StorageSection';
@@ -10,12 +11,14 @@ import styles from './settings.module.css';
 
 /**
  * Settings (#/settings/:section; DESIGN.md §4.5). Sections arrive with the milestones that
- * need them: Backup and restore and Storage in M5; People in M6; Labels and reasons in M7; cost profile (M9),
+ * need them: Backup and restore and Storage in M5; People in M6; Labels and reasons in M7;
+ * Essential fields in M8; cost profile (M9),
  * display, photo archive (M12) and keyboard shortcuts later.
  */
 const SECTIONS = [
   { id: 'people', label: 'People', Component: PeopleSection },
   { id: 'labels', label: 'Labels and reasons', Component: LabelsSection },
+  { id: 'essentials', label: 'Essential fields', Component: EssentialsSection },
   { id: 'backup', label: 'Backup and restore', Component: BackupSection },
   { id: 'storage', label: 'Storage', Component: StorageSection },
   { id: 'data', label: 'Data', Component: DataSection },

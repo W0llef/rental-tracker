@@ -199,6 +199,17 @@ export const CHECKS: readonly Check[] = [
 
 export const CHECK_BY_KEY = new Map(CHECKS.map((c) => [c.key, c]));
 
+/**
+ * The form fields that research fills: every check's field, plus the second fields of the
+ * group checks. Only these show the dashed "not asked yet" look and stop ⌘/Ctrl+↓; notes,
+ * preferences and optional extras are depth, not gaps.
+ */
+export const RESEARCH_FIELDS: ReadonlySet<string> = new Set([
+  ...CHECKS.map((c) => c.field),
+  'unit.parking.spacesIncluded',
+  'building.pets.dogs',
+]);
+
 export interface CheckState {
   check: Check;
   filled: boolean;

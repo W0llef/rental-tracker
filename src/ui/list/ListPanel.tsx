@@ -5,8 +5,9 @@ import { BUILDING_SORTS, isBuildingSortKey, isUnitSortKey, UNIT_SORTS } from '..
 import type { SortDir } from '../../domain/sort';
 import type { SortSpec } from '../../model';
 import type { MouseEvent } from 'react';
-import type { Dataset, ListView, UnitRow } from '../../state/derive';
+import type { BuildingRow, Dataset, ListView, UnitRow } from '../../state/derive';
 import { SelectionBar } from '../triage/SelectionBar';
+import { BuildingSelectionBar } from '../edit/BuildingsTogether';
 import { useUi } from '../../state/ui';
 import type { ListMode } from '../../state/ui';
 import { BuildInfo } from '../shell/BuildInfo';
@@ -113,6 +114,8 @@ export function ListPanel({
   selectedKey,
   pickedRows = [],
   onPickClick,
+  pickedBuildingRows = [],
+  onBuildingPickClick,
 }: {
   data: Dataset | undefined;
   view: ListView | undefined;
@@ -121,8 +124,12 @@ export function ListPanel({
   pickedRows?: UnitRow[];
   /** Any click on a unit card (with ⌘/Ctrl or Shift it selects instead of opening). */
   onPickClick?: (e: MouseEvent, unitId: string) => void;
+  /** Buildings selected together (M8, Q23). */
+  pickedBuildingRows?: BuildingRow[];
+  onBuildingPickClick?: (e: MouseEvent, buildingId: string) => void;
 }) {
   const pickedIds = new Set(pickedRows.map((r) => r.unit.id));
+  const pickedBuildingIds = new Set(pickedBuildingRows.map((r) => r.building.id));
   const {
     view,
     setView,
@@ -200,7 +207,12 @@ export function ListPanel({
         </p>
       </div>
 
-      {data && pickedRows.length > 0 && <SelectionBar rows={pickedRows} data={data} />}
+      {data && pickedRows.length > 0 && view === 'units' && (
+        <SelectionBar rows={pickedRows} data={data} />
+      )}
+      {pickedBuildingRows.length > 0 && view === 'buildings' && (
+        <BuildingSelectionBar rows={pickedBuildingRows} />
+      )}
       <div className={styles.scroller} ref={scroller}>
         {data && totalUnits === 0 && <EmptyNoData />}
         {data && totalUnits > 0 && shown === 0 && (
@@ -248,6 +260,8 @@ export function ListPanel({
                       row={row}
                       selected={selectedKey === `building:${row.building.id}`}
                       hovered={hoverBuilding === row.building.id}
+                      picked={pickedBuildingIds.has(row.building.id)}
+                      onPickClick={onBuildingPickClick}
                     />
                   </li>
                 ))}

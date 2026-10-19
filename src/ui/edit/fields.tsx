@@ -1,5 +1,6 @@
 import { useId, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
+import { RESEARCH_FIELDS } from '../../domain/completeness';
 import { numText } from '../../domain/input';
 import type { Parsed } from '../../domain/input';
 import { useFormApi } from './formState';
@@ -8,8 +9,9 @@ import styles from './edit.module.css';
 /**
  * Form fields with the three states of DESIGN.md §4.3: filled, unknown (`?` pressed, italic
  * "Unknown") and empty-not-yet-asked (a faint dashed border, so you can see what's left).
- * Every field row carries `data-field` (its path) and, while empty and not marked unknown,
- * `data-empty`, which is what ⌘/Ctrl+↓ jumps between.
+ * Every field row carries `data-field` (its path) and, while a field research fills
+ * (RESEARCH_FIELDS) is empty and not marked unknown, `data-empty`: what ⌘/Ctrl+↓ jumps
+ * between and what the dashed border shows.
  */
 
 const modified = (e: KeyboardEvent) => e.metaKey || e.ctrlKey || e.altKey;
@@ -54,7 +56,7 @@ export function FieldRow({
     <div
       className={wide ? `${styles.row} ${styles.rowWide}` : styles.row}
       data-field={path}
-      data-empty={(empty && !marked && !notApplicable) || undefined}
+      data-empty={(empty && !marked && !notApplicable && RESEARCH_FIELDS.has(path)) || undefined}
       data-unknown={(empty && marked && !notApplicable) || undefined}
       data-invalid={error ? true : undefined}
     >
