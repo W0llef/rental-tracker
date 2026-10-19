@@ -45,7 +45,6 @@ const FIELD_LABELS: Record<PinView, Record<PinField, string>> = {
 };
 
 const PENDING_TITLE: Record<string, string> = {
-  M9: 'Arrives with total cost (M9)',
   'Phase 2': 'Needs destinations (Phase 2)',
 };
 
@@ -118,7 +117,8 @@ export function PinsPanel({
   }, []);
 
   const plateOff = prefs.style === 'dot';
-  const priceOff = plateOff || !prefs.fields.includes('rent');
+  const priceOff =
+    plateOff || !(['total', 'rent', 'psf'] as const).some((f) => prefs.fields.includes(f));
 
   return (
     <section
@@ -206,7 +206,9 @@ export function PinsPanel({
         })}
         {plateOff && <p className={styles.lnote}>Dots carry no text: pick a plate or photo.</p>}
         <p className={`${styles.lsub} ${priceOff ? styles.off : ''}`} id="price-mode-label">
-          {editing === 'units' ? 'Rent for a building with several units' : 'Rent for a building'}
+          {editing === 'units'
+            ? 'Prices for a building with several units'
+            : 'Prices for a building'}
         </p>
         <div role="radiogroup" aria-labelledby="price-mode-label">
           {(
@@ -255,7 +257,7 @@ export function PinsPanel({
           onChange={(colorBy) => set({ colorBy })}
         />
         {prefs.colorBy === 'price' && (
-          <p className={styles.lnote}>Uses rent until total cost arrives (M9).</p>
+          <p className={styles.lnote}>Total monthly cost, from your cheapest to your priciest.</p>
         )}
         {legend && (
           <div className={styles.inlineLegend}>

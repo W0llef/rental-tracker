@@ -44,10 +44,14 @@ export interface UnitSortInput {
   building: Building | undefined;
   /** Days since the unit was first seen listed; null when it has no listings. */
   listingAgeDays: number | null;
+  /** Total monthly cost and cost per ft² (M9); null when unknown. */
+  cost: { total: number | null; perSqft: number | null };
 }
 
 export const UNIT_SORT_KEYS = [
+  'total',
   'rent',
+  'psf',
   'availableDate',
   'squareFeet',
   'bedrooms',
@@ -61,11 +65,13 @@ export const UNIT_SORT_KEYS = [
 ] as const;
 export type UnitSortKey = (typeof UNIT_SORT_KEYS)[number];
 
-/** Label and the direction a sort starts in when picked. Total cost and $/ft² join in M9. */
+/** Label and the direction a sort starts in when picked. */
 export const UNIT_SORTS: Record<
   UnitSortKey,
   { label: string; dir: SortDir; asc: string; desc: string }
 > = {
+  total: { label: 'Total cost', dir: 'asc', asc: 'low to high', desc: 'high to low' },
+  psf: { label: 'Cost per ft²', dir: 'asc', asc: 'low to high', desc: 'high to low' },
   rent: { label: 'Rent', dir: 'asc', asc: 'low to high', desc: 'high to low' },
   availableDate: {
     label: 'Available date',
@@ -84,7 +90,7 @@ export const UNIT_SORTS: Record<
   building: { label: 'Building', dir: 'asc', asc: 'A to Z', desc: 'Z to A' },
 };
 
-export const DEFAULT_UNIT_SORT: SortSpec = { key: 'rent', dir: 'asc' };
+export const DEFAULT_UNIT_SORT: SortSpec = { key: 'total', dir: 'asc' };
 
 const statusOrder = (s: UnitStatus): number => UNIT_STATUSES.indexOf(s);
 
@@ -94,6 +100,10 @@ export const isUnitSortKey = (key: string): key is UnitSortKey =>
 export function unitSortValue(row: UnitSortInput, key: UnitSortKey): SortValue {
   const u = row.unit;
   switch (key) {
+    case 'total':
+      return row.cost.total;
+    case 'psf':
+      return row.cost.perSqft;
     case 'rent':
       return u.rent;
     case 'availableDate':
@@ -124,7 +134,7 @@ export const unitTiebreak = (row: UnitSortInput): string =>
   `${row.building ? buildingName(row.building) : ''}\u0000${unitTitle(row.unit, row.building)}\u0000${row.unit.id}`;
 
 export function sortUnits<T extends UnitSortInput>(rows: readonly T[], spec: SortSpec): T[] {
-  const key = isUnitSortKey(spec.key) ? spec.key : 'rent';
+  const key = isUnitSortKey(spec.key) ? spec.key : 'total';
   return sortBy(rows, (r) => unitSortValue(r, key), spec.dir, unitTiebreak);
 }
 
@@ -133,29 +143,34 @@ export function sortUnits<T extends UnitSortInput>(rows: readonly T[], spec: Sor
 export interface BuildingSortInput {
   building: Building;
   minRent: number | null;
+  /** Lowest known total monthly cost of its units (M9). */
+  minTotal: number | null;
   unitCount: number;
 }
 
-export const BUILDING_SORT_KEYS = ['minRent', 'name', 'unitCount', 'createdAt'] as const;
+export const BUILDING_SORT_KEYS = ['minTotal', 'minRent', 'name', 'unitCount', 'createdAt'] as const;
 export type BuildingSortKey = (typeof BUILDING_SORT_KEYS)[number];
 
 export const BUILDING_SORTS: Record<
   BuildingSortKey,
   { label: string; dir: SortDir; asc: string; desc: string }
 > = {
+  minTotal: { label: 'Lowest total cost', dir: 'asc', asc: 'low to high', desc: 'high to low' },
   minRent: { label: 'Lowest rent', dir: 'asc', asc: 'low to high', desc: 'high to low' },
   name: { label: 'Name', dir: 'asc', asc: 'A to Z', desc: 'Z to A' },
   unitCount: { label: 'Your units', dir: 'desc', asc: 'fewest first', desc: 'most first' },
   createdAt: { label: 'Date added', dir: 'desc', asc: 'oldest first', desc: 'newest first' },
 };
 
-export const DEFAULT_BUILDING_SORT: SortSpec = { key: 'minRent', dir: 'asc' };
+export const DEFAULT_BUILDING_SORT: SortSpec = { key: 'minTotal', dir: 'asc' };
 
 export const isBuildingSortKey = (key: string): key is BuildingSortKey =>
   (BUILDING_SORT_KEYS as readonly string[]).includes(key);
 
 export function buildingSortValue(row: BuildingSortInput, key: BuildingSortKey): SortValue {
   switch (key) {
+    case 'minTotal':
+      return row.minTotal;
     case 'minRent':
       return row.minRent;
     case 'name':
@@ -171,7 +186,7 @@ export function sortBuildings<T extends BuildingSortInput>(
   rows: readonly T[],
   spec: SortSpec,
 ): T[] {
-  const key = isBuildingSortKey(spec.key) ? spec.key : 'minRent';
+  const key = isBuildingSortKey(spec.key) ? spec.key : 'minTotal';
   return sortBy(
     rows,
     (r) => buildingSortValue(r, key),

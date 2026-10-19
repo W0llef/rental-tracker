@@ -7,7 +7,7 @@ import {
   edgeStripes,
   fanOrder,
   legendFor,
-  lowestRent,
+  lowestTotal,
   pinContent,
   pinnedUnits,
   PRICE_STEPS,
@@ -34,15 +34,23 @@ const riverlight = newBuilding({
   address: makeAddress('200 Portland Ave S', 'Minneapolis'),
 });
 
-/** A unit with your rating and flag (pins show your view, M6). */
+/** A unit with your rating and flag (pins show your view, M6); total = rent unless given. */
 const row = ({
   rating = 0,
   flag = 'none',
+  total,
+  perSqft = null,
   ...input
-}: Partial<Unit> & { rating?: Rating; flag?: Flag }): PinUnit => ({
+}: Partial<Unit> & {
+  rating?: Rating;
+  flag?: Flag;
+  total?: number | null;
+  perSqft?: number | null;
+}): PinUnit => ({
   unit: newUnit({ buildingId: riverlight.id, ...input }),
   building: riverlight,
   mine: { rating, flag },
+  cost: { total: total === undefined ? (input.rent ?? null) : total, perSqft },
 });
 
 const labelNames = {
@@ -58,10 +66,10 @@ const prefs = (patch: Partial<PinPrefs>): PinPrefs => ({ ...units, ...patch });
 const texts = (c: ReturnType<typeof pinContent>) => c.segments.map((s) => s.text);
 
 describe('pin preferences', () => {
-  it('starts with rent on a plate, the New tag, rejected units faded', () => {
+  it('starts with the total cost on a plate, the New tag, rejected units faded', () => {
     expect(units).toMatchObject({
       style: 'plate',
-      fields: ['rent'],
+      fields: ['total'],
       newBadge: 'tag',
       rejected: 'fade',
       autoFan: true,
@@ -75,7 +83,8 @@ describe('pin preferences', () => {
   it('greys out text fields for dots and pending fields everywhere', () => {
     expect(fieldEnabled({ style: 'dot' }, 'rent')).toBe(false);
     expect(fieldEnabled({ style: 'photo' }, 'rent')).toBe(true);
-    expect(fieldEnabled({ style: 'plate' }, 'total')).toBe(false);
+    expect(fieldEnabled({ style: 'plate' }, 'total')).toBe(true);
+    expect(fieldEnabled({ style: 'plate' }, 'psf')).toBe(true);
     expect(fieldEnabled({ style: 'plate' }, 'travel')).toBe(false);
     expect(activeFields({ style: 'dot', fields: ['rent', 'beds'] })).toEqual([]);
   });
@@ -83,12 +92,13 @@ describe('pin preferences', () => {
   it('keeps ticked fields in display order and never stores pending ones', () => {
     let p = toggleField(units, 'rating', true);
     p = toggleField(p, 'type', true);
-    expect(p.fields).toEqual(['type', 'rent', 'rating']);
-    expect(toggleField(p, 'rent', false).fields).toEqual(['type', 'rating']);
+    p = toggleField(p, 'rent', true);
+    expect(p.fields).toEqual(['type', 'total', 'rent', 'rating']);
+    expect(toggleField(p, 'total', false).fields).toEqual(['type', 'rent', 'rating']);
     expect(
-      parseMapMemory({ pins: { units: { fields: ['rating', 'total', 'rent', 'nope'] } } }).pins
-        .units.fields,
-    ).toEqual(['rent', 'rating']);
+      parseMapMemory({ pins: { units: { fields: ['rating', 'travel', 'rent', 'total', 'nope'] } } })
+        .pins.units.fields,
+    ).toEqual(['total', 'rent', 'rating']);
   });
 
   it('keeps every valid stored choice and defaults the rest', () => {
@@ -137,6 +147,9 @@ describe('pin content for one unit', () => {
     expect(texts(pinContent([row({ rent: 2560, rentIsFrom: true })], units, false))).toEqual([
       'from $2,560',
     ]);
+    expect(texts(pinContent([row({ rent: 1650, total: 1932 })], units, false))).toEqual([
+      '$1,932',
+    ]);
     expect(texts(pinContent([row({ rent: null })], units, false))).toEqual(['?']);
     expect(bedsSizeText({ bedrooms: 0, squareFeet: 480 })).toBe('Studio · 480 ft²');
     expect(bedsSizeText({ bedrooms: null, squareFeet: null })).toBe('? bd · ? ft²');
@@ -183,8 +196,26 @@ describe('pin content for a building (only what is true of all its units)', () =
     expect(texts(c)).toEqual(['$1,090–$1,815', 'Studio–1 bd · 521–690 ft²', 'Riverlight', '★1–4']);
   });
 
-  it('can show the lowest rent with + instead of the range', () => {
+  it('can show the lowest price with + instead of the range', () => {
     expect(texts(pinContent(group, prefs({ priceMode: 'lowest' }), true))).toEqual(['$1,090+']);
+  });
+
+  it('prints total cost and cost per ft² as ranges too', () => {
+    const priced = [
+      row({ rent: 1500, total: 1800, perSqft: 2.5 }),
+      row({ rent: 1700, total: 2100, perSqft: 2.07 }),
+    ];
+    expect(texts(pinContent(priced, prefs({ fields: ['total', 'psf'] }), true))).toEqual([
+      '$1,800–$2,100',
+      '$2.07–$2.50/ft²',
+    ]);
+    expect(
+      texts(pinContent(priced, prefs({ fields: ['psf'], priceMode: 'lowest' }), true)),
+    ).toEqual(['$2.07/ft²+']);
+    expect(texts(pinContent([priced[0]!], prefs({ fields: ['psf'] }), false))).toEqual([
+      '$2.50/ft²',
+    ]);
+    expect(texts(pinContent([row({})], prefs({ fields: ['psf'] }), false))).toEqual(['?/ft²']);
   });
 
   it('drops the type icon when the units differ', () => {
@@ -227,38 +258,38 @@ describe('rejected units', () => {
       'C',
       'B',
     ]);
-    expect(lowestRent([high, unknown])).toBe(1900);
-    expect(lowestRent([unknown])).toBe(Infinity);
+    expect(lowestTotal([high, unknown])).toBe(1900);
+    expect(lowestTotal([unknown])).toBe(Infinity);
   });
 });
 
 describe('spoken labels', () => {
   it('names a unit pin with its building, price and status', () => {
-    expect(unitPinLabel(row({ unitNumber: '1504', rent: 1650, status: 'shortlisted' }))).toBe(
-      'Riverlight, Unit 1504, $1,650 rent, Shortlisted',
-    );
+    expect(
+      unitPinLabel(row({ unitNumber: '1504', rent: 1650, total: 1932, status: 'shortlisted' })),
+    ).toBe('Riverlight, Unit 1504, $1,932 a month in total, $1,650 rent, Shortlisted');
     expect(unitPinLabel(row({ rent: null, flag: 'reject' }))).toBe(
       'Riverlight, rent unknown, New, rejected',
     );
   });
 
-  it('names a building pin with its count and rent range', () => {
+  it('names a building pin with its count and total cost range', () => {
     const two = [row({ rent: 1900 }), row({ rent: 1575 })];
     expect(buildingPinLabel(riverlight, two, 'units')).toBe(
-      '2 units at Riverlight, $1,575 to $1,900',
+      '2 units at Riverlight, $1,575 to $1,900 a month',
     );
     expect(buildingPinLabel(riverlight, [row({ rent: 1575 })], 'buildings')).toBe(
-      'Riverlight, 1 of your units, $1,575',
+      'Riverlight, 1 of your units, $1,575 a month',
     );
   });
 });
 
 describe('pin color', () => {
   it('colors by status and label tokens', () => {
-    const u = row({ status: 'toured', colorLabel: 'green' }).unit;
+    const u = row({ status: 'toured', colorLabel: 'green' });
     expect(edgeColor(u, 'status', null)).toBe('var(--st-toured)');
     expect(edgeColor(u, 'label', null)).toBe('var(--lb-green)');
-    expect(edgeColor(row({}).unit, 'label', null)).toBe('var(--ice)');
+    expect(edgeColor(row({}), 'label', null)).toBe('var(--ice)');
   });
 
   it('gives a building one stripe per unit, like colors together', () => {
@@ -270,7 +301,7 @@ describe('pin color', () => {
     ]);
   });
 
-  it('spans the price scale over known, non-rejected rents', () => {
+  it('spans the price scale over known, non-rejected totals', () => {
     const us = [
       row({ rent: 1000 }),
       row({ rent: 3000 }),
@@ -279,9 +310,9 @@ describe('pin color', () => {
     ];
     const scale = priceScale(us);
     expect(scale).toEqual({ min: 1000, max: 3000 });
-    expect(edgeColor(us[0]!.unit, 'price', scale)).toBe(PRICE_STEPS[0]);
-    expect(edgeColor(us[1]!.unit, 'price', scale)).toBe(PRICE_STEPS[4]);
-    expect(edgeColor(us[3]!.unit, 'price', scale)).toBe('var(--ice)');
+    expect(edgeColor(us[0]!, 'price', scale)).toBe(PRICE_STEPS[0]);
+    expect(edgeColor(us[1]!, 'price', scale)).toBe(PRICE_STEPS[4]);
+    expect(edgeColor(us[3]!, 'price', scale)).toBe('var(--ice)');
     expect(priceScale([row({ rent: null })])).toBeNull();
   });
 
@@ -324,8 +355,8 @@ describe('legend', () => {
 
   it('colors and names by your private label (Q19)', () => {
     const mineRed = { ...us[0]!, mine: { ...us[0]!.mine, colorLabel: 'red' as const } };
-    expect(edgeColor(mineRed.unit, 'myLabel', null, 'red')).toBe('var(--lb-red)');
-    expect(edgeColor(mineRed.unit, 'myLabel', null, null)).toBe('var(--ice)');
+    expect(edgeColor(mineRed, 'myLabel', null, 'red')).toBe('var(--lb-red)');
+    expect(edgeColor(mineRed, 'myLabel', null, null)).toBe('var(--ice)');
     const l = legendFor([mineRed, us[1]!], 'myLabel', labelNames, {
       ...labelNames,
       red: 'Too far?',
@@ -334,13 +365,13 @@ describe('legend', () => {
     expect(l.kind === 'label' && l.rows.map((r) => r.label)).toEqual(['Too far?', 'No label']);
   });
 
-  it('shows the rent range for price colors', () => {
+  it('shows the total cost range for price colors', () => {
     const l = legendFor(us, 'price', labelNames);
     expect(l).toMatchObject({
       kind: 'price',
       min: '$1,500',
       max: '$2,100',
-      title: 'Pin color: rent',
+      title: 'Pin color: total cost',
     });
     expect(legendFor([], 'price', labelNames).kind).toBe('price-empty');
   });

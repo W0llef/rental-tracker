@@ -1,7 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { appInfo } from '../../config';
-import { BUILDING_SORTS, isBuildingSortKey, isUnitSortKey, UNIT_SORTS } from '../../domain/sort';
+import {
+  BUILDING_SORTS,
+  DEFAULT_BUILDING_SORT,
+  DEFAULT_UNIT_SORT,
+  isBuildingSortKey,
+  isUnitSortKey,
+  UNIT_SORTS,
+} from '../../domain/sort';
 import type { SortDir } from '../../domain/sort';
 import type { SortSpec } from '../../model';
 import type { MouseEvent } from 'react';
@@ -188,15 +195,13 @@ export function ListPanel({
           <ViewSwitch view={view} onChange={setView} />
           {view === 'units' ? (
             <SortControl
-              sort={isUnitSortKey(unitSort.key) ? unitSort : { key: 'rent', dir: 'asc' }}
+              sort={isUnitSortKey(unitSort.key) ? unitSort : DEFAULT_UNIT_SORT}
               options={UNIT_SORTS}
               onChange={setUnitSort}
             />
           ) : (
             <SortControl
-              sort={
-                isBuildingSortKey(buildingSort.key) ? buildingSort : { key: 'minRent', dir: 'asc' }
-              }
+              sort={isBuildingSortKey(buildingSort.key) ? buildingSort : DEFAULT_BUILDING_SORT}
               options={BUILDING_SORTS}
               onChange={setBuildingSort}
             />

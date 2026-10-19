@@ -40,7 +40,7 @@ import {
   isNew,
   isRejected,
   legendFor,
-  lowestRent,
+  lowestTotal,
   pinContent,
   pinnedUnits,
   priceScale,
@@ -347,7 +347,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
           key: unitKey(r),
           content: pinContent([r], prefs, false),
           type: r.unit.type,
-          stripe: edgeColor(r.unit, prefs.colorBy, scale, r.mine.colorLabel ?? null),
+          stripe: edgeColor(r, prefs.colorBy, scale, r.mine.colorLabel ?? null),
           newMark: newMark(isNew(r.unit)),
           selected: selectedKey === unitKey(r) || isPicked(unitKey(r)),
           rejected,
@@ -425,7 +425,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     const ranked = [...shown]
       .map((id) => byId.get(id))
       .filter((b): b is Placed => !!b)
-      .sort((x, y) => lowestRent(x.summary) - lowestRent(y.summary));
+      .sort((x, y) => lowestTotal(x.summary) - lowestTotal(y.summary));
     // Cards you opened go down in the order you opened them
     const openOrder = [
       ...clickedFans,
@@ -679,7 +679,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
         count={spec.count}
         stripes={
           single
-            ? [edgeColor(single.unit, prefs.colorBy, scale, single.mine.colorLabel ?? null)]
+            ? [edgeColor(single, prefs.colorBy, scale, single.mine.colorLabel ?? null)]
             : edgeStripes(b.summary, prefs.colorBy, scale)
         }
         selected={spec.selected}

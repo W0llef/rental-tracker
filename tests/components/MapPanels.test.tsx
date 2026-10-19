@@ -189,6 +189,7 @@ const asRows = (units: Unit[]) =>
     unit,
     building: undefined,
     mine: { rating: 0 as const, flag: 'none' as const },
+    cost: { total: unit.rent, perSqft: null },
   }));
 
 describe('Legend', () => {
@@ -203,13 +204,13 @@ describe('Legend', () => {
     ).toEqual(['New', 'Toured']);
   });
 
-  it('gives the rent range for price colors', () => {
+  it('gives the total cost range for price colors', () => {
     const units = [
       newUnit({ buildingId: 'b', rent: 1200 }),
       newUnit({ buildingId: 'b', rent: 2400 }),
     ];
     render(<Legend legend={legendFor(asRows(units), 'price', defaultSettings().labelNames)} />);
-    expect(screen.getByRole('region', { name: 'Pin color: rent' })).toHaveTextContent(
+    expect(screen.getByRole('region', { name: 'Pin color: total cost' })).toHaveTextContent(
       'Lightest $1,200to darkest $2,400',
     );
   });

@@ -11,6 +11,7 @@ import {
 } from './format';
 import type { ColorBy, PinField, PinPrefs, RejectedMode } from './pinPrefs';
 import { activeFields } from './pinPrefs';
+import { perSqftLabel } from './cost';
 import { sortBy } from './sort';
 
 /**
@@ -22,12 +23,19 @@ import { sortBy } from './sort';
  * they share a type, one edge stripe per unit, and the New badge if any unit is new.
  */
 
-/** The price color option scales on rent until total cost exists (M9). */
-export const PRICE_COLOR_LABEL = 'Rent';
+/** The price color option scales on the total monthly cost (M9). */
+export const PRICE_COLOR_LABEL = 'Total cost';
+
+/** What a pin needs of a unit's cost (`UnitCost`, M9). */
+export interface PinCost {
+  total: number | null;
+  perSqft: number | null;
+}
 
 export interface PinUnit {
   unit: Unit;
   building: Building | undefined;
+  cost: PinCost;
   /** Your rating and flag: pins show your view (PLAN.md §5.8). */
   mine: Pick<OpinionFields, 'flag' | 'rating'> & Partial<Pick<OpinionFields, 'colorLabel'>>;
 }
@@ -37,19 +45,19 @@ export const isRejected = (u: { mine: Pick<OpinionFields, 'flag'> }): boolean =>
   u.mine.flag === 'reject';
 export const isNew = (u: Pick<Unit, 'status'>): boolean => u.status === 'new';
 
-const rentValue = (r: PinUnit) => r.unit.rent;
+const totalValue = (r: PinUnit) => r.cost.total;
 const tiebreak = (r: PinUnit) => r.unit.id;
 
-/** Units of one building in fan-out order: cheapest first, rejected last. */
+/** Units of one building in card order: cheapest total first, rejected last. */
 export function fanOrder<T extends PinUnit>(units: readonly T[]): T[] {
-  const sorted = sortBy(units, rentValue, 'asc', tiebreak);
+  const sorted = sortBy(units, totalValue, 'asc', tiebreak);
   return [...sorted.filter((u) => !isRejected(u)), ...sorted.filter((u) => isRejected(u))];
 }
 
-/** Lowest known rent among the units, for ranking pins; Infinity when none is known. */
-export function lowestRent(units: readonly PinUnit[]): number {
-  const rents = units.map((u) => u.unit.rent).filter((r): r is number => r !== null);
-  return rents.length ? Math.min(...rents) : Infinity;
+/** Lowest known total among the units, for ranking pins; Infinity when none is known. */
+export function lowestTotal(units: readonly PinUnit[]): number {
+  const totals = units.map((u) => u.cost.total).filter((r): r is number => r !== null);
+  return totals.length ? Math.min(...totals) : Infinity;
 }
 
 // ── Rejected units ─────────────────────────────────────────────────────────
@@ -140,6 +148,31 @@ export function pinContent(
         segments.push({ field, text });
         break;
       }
+      case 'total': {
+        const totals = known(units.map((u) => u.cost.total));
+        let text: string;
+        if (!totals.length) text = '?';
+        else if (!many)
+          text = `${first.unit.rentIsFrom ? 'from ' : ''}${money(first.cost.total as number)}`;
+        else if (prefs.priceMode === 'lowest') text = `${money(Math.min(...totals))}+`;
+        else text = range(totals, money, (n) => n);
+        segments.push({ field, text });
+        break;
+      }
+      case 'psf': {
+        const values = known(units.map((u) => u.cost.perSqft));
+        let text: string;
+        if (!values.length) text = '?/ft²';
+        else if (!many) text = perSqftLabel(first.cost.perSqft as number);
+        else if (prefs.priceMode === 'lowest') text = `${perSqftLabel(Math.min(...values))}+`;
+        else {
+          const lo = Math.min(...values);
+          const hi = Math.max(...values);
+          text = lo === hi ? perSqftLabel(lo) : `$${lo.toFixed(2)}–${perSqftLabel(hi)}`;
+        }
+        segments.push({ field, text });
+        break;
+      }
       case 'beds': {
         if (!many) {
           segments.push({ field, text: bedsSizeText(first.unit) });
@@ -188,13 +221,15 @@ export function accessibleName(visible: readonly (string | null)[], label: strin
   return shown.length ? `${shown.join(' ')}, ${label}` : label;
 }
 
-/** "Riverlight, Unit 1504, $1,650 rent, Shortlisted". */
+/** "Riverlight, Unit 1504, $1,932 a month in total, $1,650 rent, Shortlisted". */
 export function unitPinLabel(row: PinUnit): string {
   const u = row.unit;
+  const from = u.rentIsFrom ? 'from ' : '';
   const parts = [
     row.building ? buildingName(row.building) : null,
     unitTitle(u, row.building),
-    u.rent === null ? 'rent unknown' : `${u.rentIsFrom ? 'from ' : ''}${money(u.rent)} rent`,
+    row.cost.total === null ? null : `${from}${money(row.cost.total)} a month in total`,
+    u.rent === null ? 'rent unknown' : `${from}${money(u.rent)} rent`,
     STATUS_LABELS[u.status],
     isRejected(row) ? 'rejected' : null,
   ];
@@ -202,7 +237,7 @@ export function unitPinLabel(row: PinUnit): string {
   return [...new Set(parts.filter((p): p is string => p !== null))].join(', ');
 }
 
-/** "4 units at Lowertown Flats, $1,090 to $1,815" (Buildings view: "4 of your units"). */
+/** "4 units at Lowertown Flats, $1,090 to $1,815 a month" (Buildings view: "4 of your units"). */
 export function buildingPinLabel(
   building: Building | undefined,
   units: readonly PinUnit[],
@@ -211,12 +246,12 @@ export function buildingPinLabel(
   count: number = units.length,
 ): string {
   const name = building ? buildingName(building) : 'this building';
-  const rents = known(units.map((u) => u.unit.rent));
-  const price = !rents.length
+  const totals = known(units.map((u) => u.cost.total));
+  const price = !totals.length
     ? ''
-    : Math.min(...rents) === Math.max(...rents)
-      ? `, ${money(rents[0] as number)}`
-      : `, ${money(Math.min(...rents))} to ${money(Math.max(...rents))}`;
+    : Math.min(...totals) === Math.max(...totals)
+      ? `, ${money(totals[0] as number)} a month`
+      : `, ${money(Math.min(...totals))} to ${money(Math.max(...totals))} a month`;
   const n = count;
   return view === 'buildings'
     ? `${name}, ${n} of your units${price}`
@@ -242,16 +277,16 @@ export interface PriceScale {
 }
 
 /**
- * The range the price colors span: known rents of the units on the map, leaving out
- * rejected ones (unless every unit is rejected). Null when no rent is known.
+ * The range the price colors span: known totals of the units on the map, leaving out
+ * rejected ones (unless every unit is rejected). Null when no total is known.
  */
 export function priceScale(
-  units: readonly { unit: Pick<Unit, 'rent'>; mine: Pick<OpinionFields, 'flag'> }[],
+  units: readonly { cost: Pick<PinCost, 'total'>; mine: Pick<OpinionFields, 'flag'> }[],
 ): PriceScale | null {
   const live = units.filter((u) => !isRejected(u));
-  const rents = known((live.length ? live : units).map((u) => u.unit.rent));
-  if (!rents.length) return null;
-  return { min: Math.min(...rents), max: Math.max(...rents) };
+  const totals = known((live.length ? live : units).map((u) => u.cost.total));
+  if (!totals.length) return null;
+  return { min: Math.min(...totals), max: Math.max(...totals) };
 }
 
 /** Step 0–4 of a value on the scale; values outside the range clamp to the ends. */
@@ -263,19 +298,21 @@ export function priceStep(value: number, scale: PriceScale): number {
 
 /** CSS color for one unit's edge. */
 export function edgeColor(
-  u: Unit,
+  row: { unit: Unit; cost: Pick<PinCost, 'total'> },
   colorBy: ColorBy,
   scale: PriceScale | null,
   /** Your private label, for "Your label" (Q19). */
   myLabel: LabelColor | null = null,
 ): string {
+  const u = row.unit;
   if (colorBy === 'status') return `var(${STATUS_COLOR_VAR[u.status]})`;
   if (colorBy === 'label' || colorBy === 'myLabel') {
     const c = colorBy === 'label' ? u.colorLabel : myLabel;
     return c ? `var(${LABEL_COLOR_VAR[c]})` : 'var(--ice)';
   }
-  if (u.rent === null || !scale) return 'var(--ice)';
-  return PRICE_STEPS[priceStep(u.rent, scale)] as string;
+  const total = row.cost.total;
+  if (total === null || !scale) return 'var(--ice)';
+  return PRICE_STEPS[priceStep(total, scale)] as string;
 }
 
 const statusOrder = new Map(UNIT_STATUSES.map((s, i) => [s, i]));
@@ -300,10 +337,10 @@ export function edgeStripes(
         ? (labelOrder.get(r.unit.colorLabel) ?? 99)
         : colorBy === 'myLabel'
           ? (labelOrder.get(r.mine.colorLabel ?? null) ?? 99)
-          : (r.unit.rent ?? Infinity);
+          : (r.cost.total ?? Infinity);
   return [...units]
     .sort((a, b) => key(a) - key(b))
-    .map((r) => edgeColor(r.unit, colorBy, scale, r.mine.colorLabel ?? null));
+    .map((r) => edgeColor(r, colorBy, scale, r.mine.colorLabel ?? null));
 }
 
 // ── Legend ────────────────────────────────────────────────────────────────
@@ -357,7 +394,7 @@ export function legendFor(
   }
   const title = `Pin color: ${PRICE_COLOR_LABEL.toLowerCase()}`;
   const scale = priceScale(rows);
-  if (!scale) return { kind: 'price-empty', title, text: 'No rents known yet' };
+  if (!scale) return { kind: 'price-empty', title, text: 'No totals known yet' };
   return {
     kind: 'price',
     title,

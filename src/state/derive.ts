@@ -1,4 +1,8 @@
+import { unitCost } from '../domain/cost';
+import type { UnitCost } from '../domain/cost';
 import { buildingSearchText, matchesWords, queryWords, unitSearchText } from '../domain/filter';
+import { costLimitsMatch } from '../domain/filter';
+import type { CostLimits } from '../domain/filter';
 import { listingAgeDays } from '../domain/listings';
 import { isStandalone } from '../domain/standalone';
 import { sortBuildings, sortUnits } from '../domain/sort';
@@ -48,6 +52,8 @@ export interface UnitRow {
   /** Everyone's opinion, you first, then the others in the order they were added. */
   opinions: PersonOpinion[];
   listingAgeDays: number | null;
+  /** Total monthly cost, breakdown, move-in cost and $/ft² (M9, §5.3). */
+  cost: UnitCost;
   searchText: string;
   /** Its building is a standalone home (Q30): shown as just the home. */
   standalone: boolean;
@@ -64,6 +70,9 @@ export interface BuildingRow {
   unitCount: number;
   minRent: number | null;
   maxRent: number | null;
+  /** Lowest and highest known total monthly cost of its units (M9). */
+  minTotal: number | null;
+  maxTotal: number | null;
   searchText: string;
   /** A standalone home (Q30): one unit, shown as the home rather than as a building. */
   standalone: boolean;
@@ -167,6 +176,7 @@ export function deriveDataset(raw: RawData, today: ISODate): Dataset {
       mine: opinions[0]!.opinion,
       opinions,
       listingAgeDays: listingAgeDays(listings, today),
+      cost: unitCost(unit, buildingMap.get(unit.buildingId), raw.settings.costProfile),
       searchText: `${unitSearchText(unit, unitNotes)} ${buildingText.get(unit.buildingId) ?? ''}`,
       standalone: standaloneById.get(unit.buildingId) ?? false,
     };
@@ -176,6 +186,7 @@ export function deriveDataset(raw: RawData, today: ISODate): Dataset {
   const buildingRows: BuildingRow[] = buildings.map((building) => {
     const own = unitsByBuilding.get(building.id) ?? [];
     const rents = own.map((u) => u.unit.rent).filter((r): r is number => r !== null);
+    const totals = own.map((u) => u.cost.total).filter((t): t is number => t !== null);
     return {
       building,
       units: own,
@@ -184,6 +195,8 @@ export function deriveDataset(raw: RawData, today: ISODate): Dataset {
       unitCount: own.length,
       minRent: rents.length ? Math.min(...rents) : null,
       maxRent: rents.length ? Math.max(...rents) : null,
+      minTotal: totals.length ? Math.min(...totals) : null,
+      maxTotal: totals.length ? Math.max(...totals) : null,
       searchText: buildingText.get(building.id) ?? '',
       standalone: standaloneById.get(building.id) ?? false,
     };
@@ -215,18 +228,33 @@ export function deriveListView(
   query: string,
   unitSort: SortSpec,
   buildingSort: SortSpec,
+  /** Cost limits above the list (M9); units outside them are left out of both views. */
+  limits: CostLimits | null = null,
 ): ListView {
   const words = queryWords(query);
-  const units = words.length
-    ? data.units.filter((u) => matchesWords(u.searchText, words))
-    : data.units;
+  const fits = (u: UnitRow) => !limits || costLimitsMatch(u.cost, limits);
+  const units = data.units.filter(
+    (u) => fits(u) && (!words.length || matchesWords(u.searchText, words)),
+  );
 
   const buildings = data.buildings
     .map((b) => {
-      if (!words.length) return b;
-      const matching = b.units.filter((u) => matchesWords(u.searchText, words));
-      const selfMatch = matchesWords(b.searchText, words);
-      return { ...b, matching: selfMatch ? b.units : matching };
+      if (!words.length && !limits) return b;
+      const inLimits = b.units.filter(fits);
+      const selfMatch = words.length > 0 && matchesWords(b.searchText, words);
+      const matching =
+        !words.length || selfMatch
+          ? inLimits
+          : inLimits.filter((u) => matchesWords(u.searchText, words));
+      const totals = matching.map((u) => u.cost.total).filter((t): t is number => t !== null);
+      return limits
+        ? {
+            ...b,
+            matching,
+            minTotal: totals.length ? Math.min(...totals) : null,
+            maxTotal: totals.length ? Math.max(...totals) : null,
+          }
+        : { ...b, matching };
     })
     .filter((b) => b.unitCount > 0 && b.matching.length > 0);
 

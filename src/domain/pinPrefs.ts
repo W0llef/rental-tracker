@@ -15,8 +15,8 @@ export type PinStyle = (typeof PIN_STYLES)[number];
 /** Fields that can be printed on a plate (or under a photo), in the order they appear. */
 export const PIN_FIELDS = [
   'type',
-  'rent',
   'total',
+  'rent',
   'psf',
   'beds',
   'unit',
@@ -27,8 +27,6 @@ export type PinField = (typeof PIN_FIELDS)[number];
 
 /** Fields that need a later milestone; shown disabled with this tag until then. */
 export const PENDING_FIELDS: Partial<Record<PinField, string>> = {
-  total: 'M9',
-  psf: 'M9',
   travel: 'Phase 2',
 };
 
@@ -110,8 +108,8 @@ export function defaultMapMemory(): MapMemory {
     baseLayer: 'wayfinding',
     sharperRaster: false,
     pins: {
-      units: { ...base, fields: ['rent'] },
-      buildings: { ...base, fields: ['rent'], autoFan: false },
+      units: { ...base, fields: ['total'] },
+      buildings: { ...base, fields: ['total'], autoFan: false },
     },
   };
 }

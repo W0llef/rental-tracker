@@ -30,6 +30,7 @@ function row(
     building,
     listingAgeDays,
     mine: { rating },
+    cost: { total: input.rent ?? null, perSqft: null },
   };
 }
 
@@ -155,7 +156,7 @@ describe('sortUnits', () => {
     ]);
   });
 
-  it('falls back to rent for an unknown sort key', () => {
+  it('falls back to total cost for an unknown sort key', () => {
     expect(titles(sortUnits(rows, { key: 'nonsense', dir: 'asc' }))).toEqual([
       '310',
       '1504',
@@ -172,8 +173,8 @@ describe('sortUnits', () => {
 
 describe('sortBuildings', () => {
   const rows = [
-    { building: larkin, minRent: null, unitCount: 1 },
-    { building: riverlight, minRent: 1650, unitCount: 3 },
+    { building: larkin, minRent: null, minTotal: null, unitCount: 1 },
+    { building: riverlight, minRent: 1650, minTotal: 1900, unitCount: 3 },
   ];
 
   it('sorts by lowest rent with unknown last, and by name', () => {

@@ -36,7 +36,7 @@ export function BuildingPanel({
   const b = row.building;
   const name = buildingName(b);
   const range = rangeLabel(row.minRent, row.maxRent);
-  const units = sortUnits(row.units, { key: 'rent', dir: 'asc' });
+  const units = sortUnits(row.units, { key: 'total', dir: 'asc' });
   const links = [
     ...(isWebUrl(b.website) ? [{ key: 'website', label: 'Building website', url: b.website }] : []),
     ...(isWebUrl(b.availabilityUrl)

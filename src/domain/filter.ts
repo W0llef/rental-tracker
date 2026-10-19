@@ -1,4 +1,5 @@
 import type { Building, NoteEntry, Unit } from '../model';
+import type { UnitCost } from './cost';
 
 /**
  * Text search (FilterSpec.text). Every word typed must appear somewhere in the unit's
@@ -58,5 +59,36 @@ export function unitSearchText(u: Unit, notes: readonly NoteEntry[] = []): strin
     ]
       .filter(Boolean)
       .join(' '),
+  );
+}
+
+// ── Cost limits (M9) ───────────────────────────────────────────────────────
+
+/**
+ * "Total up to $X", "per ft² up to $Y" above the list (M9). The same shape as the
+ * FilterSpec ranges `totalMonthly` and `pricePerSqft` (PLAN.md §3.5), which M10's filter
+ * panel takes over. A unit whose value is unknown passes only with `includeUnknown`.
+ */
+export interface CostLimits {
+  maxTotal: number | null;
+  maxPerSqft: number | null;
+  includeUnknown: boolean;
+}
+
+export const NO_COST_LIMITS: CostLimits = { maxTotal: null, maxPerSqft: null, includeUnknown: true };
+
+export const costLimitsActive = (l: CostLimits): boolean =>
+  l.maxTotal !== null || l.maxPerSqft !== null;
+
+function withinMax(value: number | null, max: number | null, includeUnknown: boolean): boolean {
+  if (max === null) return true;
+  if (value === null) return includeUnknown;
+  return value <= max;
+}
+
+export function costLimitsMatch(cost: Pick<UnitCost, 'total' | 'perSqft'>, l: CostLimits): boolean {
+  return (
+    withinMax(cost.total, l.maxTotal, l.includeUnknown) &&
+    withinMax(cost.perSqft, l.maxPerSqft, l.includeUnknown)
   );
 }
