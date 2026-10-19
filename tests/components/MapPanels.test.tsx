@@ -35,7 +35,7 @@ describe('PinsPanel', () => {
   it('greys out text fields for dots and brings them back for plates', async () => {
     const user = userEvent.setup();
     render(<PinsHarness log={[]} />);
-    const rent = screen.getByRole('checkbox', { name: 'Rent' });
+    const rent = screen.getByRole('checkbox', { name: 'Total cost' });
     expect(rent).toBeChecked();
     await user.click(within(group('Pin style')).getByRole('button', { name: 'Dot' }));
     expect(rent).toBeDisabled();
@@ -52,9 +52,10 @@ describe('PinsPanel', () => {
     render(<PinsHarness log={log} />);
     await user.click(screen.getByRole('checkbox', { name: 'Your rating' }));
     await user.click(screen.getByRole('checkbox', { name: 'Unit type icon' }));
-    expect(log.at(-1)?.fields).toEqual(['type', 'rent', 'rating']);
-    expect(screen.getByRole('checkbox', { name: /Total cost/ })).toBeDisabled();
-    expect(screen.getByRole('checkbox', { name: /Cost per ft²/ })).toBeDisabled();
+    expect(log.at(-1)?.fields).toEqual(['type', 'total', 'rating']);
+    await user.click(screen.getByRole('checkbox', { name: 'Cost per ft²' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Rent' }));
+    expect(log.at(-1)?.fields).toEqual(['type', 'total', 'rent', 'psf', 'rating']);
     expect(screen.getByRole('checkbox', { name: /Travel time/ })).toBeDisabled();
   });
 
@@ -116,7 +117,7 @@ describe('PinsPanel', () => {
       }),
     ).toBeNull();
     await user.click(screen.getByRole('checkbox', { name: 'Building name' }));
-    expect(log.at(-1)?.fields).toEqual(['rent', 'unit']);
+    expect(log.at(-1)?.fields).toEqual(['total', 'unit']);
   });
 });
 

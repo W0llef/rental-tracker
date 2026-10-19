@@ -75,7 +75,11 @@ export interface CostLimits {
   includeUnknown: boolean;
 }
 
-export const NO_COST_LIMITS: CostLimits = { maxTotal: null, maxPerSqft: null, includeUnknown: true };
+export const NO_COST_LIMITS: CostLimits = {
+  maxTotal: null,
+  maxPerSqft: null,
+  includeUnknown: true,
+};
 
 export const costLimitsActive = (l: CostLimits): boolean =>
   l.maxTotal !== null || l.maxPerSqft !== null;

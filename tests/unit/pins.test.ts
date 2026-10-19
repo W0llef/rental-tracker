@@ -147,9 +147,7 @@ describe('pin content for one unit', () => {
     expect(texts(pinContent([row({ rent: 2560, rentIsFrom: true })], units, false))).toEqual([
       'from $2,560',
     ]);
-    expect(texts(pinContent([row({ rent: 1650, total: 1932 })], units, false))).toEqual([
-      '$1,932',
-    ]);
+    expect(texts(pinContent([row({ rent: 1650, total: 1932 })], units, false))).toEqual(['$1,932']);
     expect(texts(pinContent([row({ rent: null })], units, false))).toEqual(['?']);
     expect(bedsSizeText({ bedrooms: 0, squareFeet: 480 })).toBe('Studio · 480 ft²');
     expect(bedsSizeText({ bedrooms: null, squareFeet: null })).toBe('? bd · ? ft²');

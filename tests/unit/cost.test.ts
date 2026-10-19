@@ -25,7 +25,9 @@ const profile = (change: (p: CostProfile) => void = () => {}): CostProfile => {
   return p;
 };
 /** Every utility known as included: only the lines a test is about remain non-zero. */
-const allIncluded = Object.fromEntries(UTILITY_KEYS.map((k) => [k, { mode: 'included' }])) as Unit['utilities'];
+const allIncluded = Object.fromEntries(
+  UTILITY_KEYS.map((k) => [k, { mode: 'included' }]),
+) as Unit['utilities'];
 const noInsurance = (p: CostProfile) => {
   p.items['renters-insurance'].monthly = 0;
   p.parkingSpacesNeeded = 0;
@@ -105,26 +107,43 @@ describe('unitCost', () => {
     const b = building();
     const p = profile((x) => (x.parkingSpacesNeeded = 2));
     const one = unitCost(
-      unitIn(b, { rent: 1000, parking: { spacesIncluded: 1, extraSpaceCost: 75, type: 'surface' } }),
+      unitIn(b, {
+        rent: 1000,
+        parking: { spacesIncluded: 1, extraSpaceCost: 75, type: 'surface' },
+      }),
       b,
       p,
     );
     expect(line(one, 'parking')).toMatchObject({ amount: 75, assumed: false });
     const both = unitCost(
-      unitIn(b, { rent: 1000, parking: { spacesIncluded: 2, extraSpaceCost: 75, type: 'surface' } }),
+      unitIn(b, {
+        rent: 1000,
+        parking: { spacesIncluded: 2, extraSpaceCost: 75, type: 'surface' },
+      }),
       b,
       p,
     );
     expect(line(both, 'parking')).toMatchObject({ amount: 0, note: '2 spaces included' });
     const unknown = unitCost(unitIn(b, { rent: 1000 }), b, p);
-    expect(line(unknown, 'parking')).toMatchObject({ amount: 200, assumed: true, overrideKey: 'parking' });
+    expect(line(unknown, 'parking')).toMatchObject({
+      amount: 200,
+      assumed: true,
+      overrideKey: 'parking',
+    });
     const street = unitCost(
-      unitIn(b, { rent: 1000, parking: { spacesIncluded: null, extraSpaceCost: null, type: 'street' } }),
+      unitIn(b, {
+        rent: 1000,
+        parking: { spacesIncluded: null, extraSpaceCost: null, type: 'street' },
+      }),
       b,
       p,
     );
     expect(line(street, 'parking')).toMatchObject({ amount: 0, note: 'street parking' });
-    const none = unitCost(unitIn(b, { rent: 1000 }), b, profile((x) => (x.parkingSpacesNeeded = 0)));
+    const none = unitCost(
+      unitIn(b, { rent: 1000 }),
+      b,
+      profile((x) => (x.parkingSpacesNeeded = 0)),
+    );
     expect(line(none, 'parking')).toBeUndefined();
   });
 
@@ -138,10 +157,16 @@ describe('unitCost', () => {
       assumed: true,
     });
     expect(
-      line(unitCost(unitIn(b, { rent: 1000, storage: { included: true, cost: null } }), b, p), 'storage'),
+      line(
+        unitCost(unitIn(b, { rent: 1000, storage: { included: true, cost: null } }), b, p),
+        'storage',
+      ),
     ).toMatchObject({ amount: 0, note: 'included' });
     expect(
-      line(unitCost(unitIn(b, { rent: 1000, storage: { included: false, cost: 25 } }), b, p), 'storage'),
+      line(
+        unitCost(unitIn(b, { rent: 1000, storage: { included: false, cost: 25 } }), b, p),
+        'storage',
+      ),
     ).toMatchObject({ amount: 25, assumed: false });
   });
 
@@ -160,7 +185,9 @@ describe('unitCost', () => {
     expect(c.moveIn.parts.map((p) => p.key)).toEqual(['first', 'pet-fee', 'pet-deposit']);
     // Unknown pet rent: your estimate, per pet, assumed.
     const unknown = building();
-    expect(line(unitCost(unitIn(unknown, { rent: 1000 }), unknown, twoPets), 'pet-rent')).toMatchObject({
+    expect(
+      line(unitCost(unitIn(unknown, { rent: 1000 }), unknown, twoPets), 'pet-rent'),
+    ).toMatchObject({
       amount: 70,
       assumed: true,
       overrideKey: 'pet-rent',
@@ -178,10 +205,14 @@ describe('unitCost', () => {
       recurringFees: [{ id: 'p', label: 'Pet rent', amount: 50 }],
     });
     expect(unitCost(u, b, profile(noInsurance)).total).toBe(1000);
-    const withCat = unitCost(u, b, profile((x) => {
-      noInsurance(x);
-      x.hasPets = { cats: 1, dogs: 0 };
-    }));
+    const withCat = unitCost(
+      u,
+      b,
+      profile((x) => {
+        noInsurance(x);
+        x.hasPets = { cats: 1, dogs: 0 };
+      }),
+    );
     expect(withCat.total).toBe(1050);
     expect(line(withCat, 'pet-rent')).toBeUndefined();
   });
@@ -199,7 +230,12 @@ describe('unitCost', () => {
     });
     const p = profile(noInsurance);
     const twelve = unitCost(u, b, p);
-    expect(twelve).toMatchObject({ leaseMonths: 12, rent: 1650, rentForTerm: true, leaseMatters: true });
+    expect(twelve).toMatchObject({
+      leaseMonths: 12,
+      rent: 1650,
+      rentForTerm: true,
+      leaseMatters: true,
+    });
     const fifteen = unitCost({ ...u, plannedLeaseMonths: 15 }, b, p);
     expect(fifteen).toMatchObject({ leaseMonths: 15, rent: 1595, total: 1595, leaseIsUnits: true });
     expect(line(fifteen, 'rent')?.note).toBe('for a 15-month lease');
@@ -242,7 +278,10 @@ describe('unitCost', () => {
   it('lists unknown move-in parts by name', () => {
     const b = building();
     const c = unitCost(unitIn(b, { rent: 1000 }), b, profile());
-    expect(c.moveIn).toMatchObject({ total: 1000, unknown: ['Deposit', 'Application fee', 'Admin fee'] });
+    expect(c.moveIn).toMatchObject({
+      total: 1000,
+      unknown: ['Deposit', 'Application fee', 'Admin fee'],
+    });
   });
 
   it('always adds up: the total is the sum of whole-dollar lines', () => {

@@ -151,7 +151,8 @@ describe('main screen with units', () => {
     const card = await screen.findByRole('link', { name: /Unit 1504/ });
     expect(card).toHaveTextContent('720 ft²');
     expect(card).toHaveTextContent('Floor 15');
-    expect(card).toHaveTextContent('$1,650/mo rent');
+    expect(card).toHaveTextContent('$1,650 rent');
+    expect(card).toHaveTextContent(/\$[\d,]+\/mo/); // the total comes first (M9)
     expect(card).toHaveTextContent('Pick');
     expect(within(card).getByRole('img', { name: '4 of 5 stars' })).toBeInTheDocument();
     expect(within(card).getByRole('img', { name: 'Shared label: Blue' })).toBeInTheDocument();
@@ -300,10 +301,10 @@ describe('main screen with units', () => {
     renderAt();
     await waitFor(() => expect(cardTitles()).toHaveLength(4));
     await user.click(screen.getByRole('button', { name: 'Buildings' }));
-    // Lowest rent first: The Larkin ($1,295) before Riverlight ($1,650)
+    // Lowest total first: The Larkin (rent $1,295) before Riverlight (rent $1,650)
     expect(cardTitles()).toEqual(['The Larkin', 'Riverlight']);
     expect(screen.getByTestId('list-count')).toHaveTextContent('2 buildings with 4 units');
-    expect(screen.getByRole('link', { name: /Riverlight/ })).toHaveTextContent('$1,650/mo rent');
+    expect(screen.getByRole('link', { name: /Riverlight/ })).toHaveTextContent('$1,650 rent');
     expect(screen.getByRole('link', { name: /Riverlight/ })).toHaveTextContent('2 of your units');
 
     await user.click(screen.getByRole('link', { name: /The Larkin/ }));

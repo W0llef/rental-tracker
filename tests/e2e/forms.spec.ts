@@ -143,7 +143,9 @@ test.describe('forms', () => {
 
   test('edits the price history and the rent follows it', async ({ page }, info) => {
     await openFirst(page);
-    await panel(page).getByRole('link', { name: /^Edit/ }).click();
+    await panel(page)
+      .getByRole('link', { name: /^Edit( building)?$/ })
+      .click();
     const listing = page.getByRole('group', { name: /^Listing 1/ });
     await listing.getByRole('button', { name: '+ Add price' }).click();
     const rents = listing.getByRole('textbox', { name: /: rent$/ });
@@ -175,7 +177,9 @@ test.describe('forms', () => {
     page,
   }) => {
     await openFirst(page);
-    await panel(page).getByRole('link', { name: /^Edit/ }).click();
+    await panel(page)
+      .getByRole('link', { name: /^Edit( building)?$/ })
+      .click();
     for (let i = 0; i < 2; i++) {
       await page.getByRole('link', { name: 'Edit building' }).click();
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
@@ -203,7 +207,9 @@ test.describe('forms', () => {
 
   test('asks before leaving with unsaved changes', async ({ page }) => {
     await openFirst(page);
-    await panel(page).getByRole('link', { name: /^Edit/ }).click();
+    await panel(page)
+      .getByRole('link', { name: /^Edit( building)?$/ })
+      .click();
     await page.getByRole('textbox', { name: 'Flooring' }).fill('Carpet');
     await page.getByRole('button', { name: 'Cancel' }).click();
     const dialog = page.getByRole('dialog', { name: 'Leave without saving?' });
@@ -238,12 +244,16 @@ test.describe('forms', () => {
   test('the forms work at phone width', async ({ page }, info) => {
     test.skip(!isPhone(info.project.name), 'Phone layout');
     await openFirst(page);
-    await panel(page).getByRole('link', { name: /^Edit/ }).click();
+    await panel(page)
+      .getByRole('link', { name: /^Edit( building)?$/ })
+      .click();
     await page.getByRole('textbox', { name: 'Flooring' }).fill('Vinyl plank');
     await page.getByRole('button', { name: /^Save/ }).click();
     await expect(panel(page)).toContainText('Vinyl plank');
     // Nothing spills sideways
-    await panel(page).getByRole('link', { name: /^Edit/ }).click();
+    await panel(page)
+      .getByRole('link', { name: /^Edit( building)?$/ })
+      .click();
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
@@ -260,7 +270,9 @@ test.describe('forms', () => {
       const axe = () => new AxeBuilder({ page }).exclude('.maplibregl-canvas').analyze();
       await page.mouse.move(1, 1);
       expect((await axe()).violations).toEqual([]);
-      await panel(page).getByRole('link', { name: /^Edit/ }).click();
+      await panel(page)
+        .getByRole('link', { name: /^Edit( building)?$/ })
+        .click();
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       // Mark one unknown, leave a typo, add a window: every state on screen
       await page.getByRole('button', { name: 'Mark Balcony unknown' }).click();

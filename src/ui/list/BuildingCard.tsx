@@ -5,7 +5,8 @@ import type { BuildingRow } from '../../state/derive';
 import { Tag, TypeIcon } from '../common/Markers';
 import styles from './list.module.css';
 
-/** One building in the Buildings view (DESIGN.md §4.1, last bullet). */
+/** One building in the Buildings view (DESIGN.md §4.1, last bullet): its units' total
+ *  monthly cost range first (M9), then their rents. */
 export function BuildingCard({
   row,
   selected,
@@ -32,7 +33,8 @@ export function BuildingCard({
     row.matching.length === row.unitCount
       ? `${row.unitCount} of your units`
       : `${row.matching.length} of ${row.unitCount} of your units match`;
-  const range = rangeLabel(row.minRent, row.maxRent);
+  const range = rangeLabel(row.minTotal, row.maxTotal);
+  const rents = rangeLabel(row.minRent, row.maxRent);
   // A standalone home (Q30) opens as its unit: there's no building to look at.
   const home = row.standalone && row.units.length === 1 ? row.units[0] : undefined;
 
@@ -73,10 +75,13 @@ export function BuildingCard({
         </span>
         <span className={styles.money}>
           {range ? (
-            <span className={styles.rent}>
-              {range}
-              <small>/mo rent</small>
-            </span>
+            <>
+              <span className={styles.rent}>
+                {range}
+                <small>/mo</small>
+              </span>
+              {rents && <span className={styles.rentSub}>{rents} rent</span>}
+            </>
           ) : (
             <span className={styles.rentUnknown}>Rents unknown</span>
           )}

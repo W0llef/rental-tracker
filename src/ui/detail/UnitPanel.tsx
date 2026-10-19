@@ -23,6 +23,7 @@ import type { UnitRow } from '../../state/derive';
 import { PasteIntoUnit } from '../add/PasteIntoUnit';
 import { PlaceOnMapButton } from '../add/PlaceOnMap';
 import { DeleteSection } from '../edit/DeleteSection';
+import { CostSection } from './CostSection';
 import { EssentialsSection } from './Essentials';
 import { Tag, Value } from '../common/Markers';
 import { MarkerControls } from '../triage/MarkerControls';
@@ -287,7 +288,6 @@ export function UnitPanel({
 }) {
   const { unit: u, building: b } = row;
   const title = unitTitle(u, b);
-  const rent = rentLabel(u);
   const links: ExternalLink[] = [
     ...row.listings
       .filter((l) => isWebUrl(l.url))
@@ -324,13 +324,17 @@ export function UnitPanel({
           </p>
         </div>
         <div className={styles.big}>
-          {rent ? (
+          {row.cost.total !== null ? (
             <>
               <div className={styles.bigNum}>
-                {rent}
+                {u.rentIsFrom && <small>from </small>}
+                {money(row.cost.total)}
                 <small> /mo</small>
               </div>
-              <div className={styles.bigSub}>rent</div>
+              <div className={styles.bigSub}>
+                {rentLabel({ ...u, rent: row.cost.rent })} rent
+                {row.cost.assumed > 0 && ` · ${row.cost.assumed} assumed`}
+              </div>
             </>
           ) : (
             <div className={styles.bigSub}>Rent unknown</div>
@@ -349,6 +353,7 @@ export function UnitPanel({
         <EssentialsSection unit={u} building={b} settings={settings} standalone={row.standalone} />
       )}
       <RatingsSection unitId={u.id} rows={row.opinions} settings={settings} />
+      <CostSection unit={u} cost={row.cost} profile={settings.costProfile} />
       <LeaseSection u={u} today={today} />
       <UnitFacts u={u} floors={b?.floors ?? null} />
       <WindowsSection u={u} />

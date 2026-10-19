@@ -753,3 +753,163 @@
     min-height: 44px;
   }
 }
+
+/* Monthly cost (M9, DESIGN.md §4.2): line · where it came from · amount */
+.costTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.costTable th,
+.costTable td {
+  padding: 4px 0;
+  vertical-align: baseline;
+  text-align: left;
+}
+
+.costTable tbody th {
+  font-weight: 400;
+  padding-right: var(--s3);
+  white-space: nowrap;
+}
+
+.costNote {
+  color: var(--slate);
+  font-size: 12.5px;
+  width: 100%;
+}
+
+.costAmount {
+  font-weight: 600;
+  text-align: right !important;
+  white-space: nowrap;
+  padding-left: var(--s3) !important;
+}
+
+.costTotal th,
+.costTotal td {
+  border-top: 1px solid var(--ice);
+  padding-top: var(--s2) !important;
+}
+
+.costTotal th,
+.costTotal .costAmount {
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.costTotal .costAmount small {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--slate);
+}
+
+.assumedTag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 5px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--plow) 18%, var(--surface));
+  color: var(--assumed-ink);
+  font-weight: 700;
+  font-size: 11.5px;
+}
+
+.costExtras {
+  display: grid;
+  gap: 4px;
+  margin: var(--s3) 0 0;
+  padding-top: var(--s3);
+  border-top: 1px solid var(--ice);
+  font-size: 13.5px;
+}
+
+.costSub {
+  color: var(--slate);
+  font-size: 12.5px;
+}
+
+.override,
+.lease {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+  margin: var(--s2) 0;
+  color: var(--ink);
+}
+
+.lease {
+  margin: 0 0 var(--s3);
+}
+
+.overrideLabel,
+.leaseLabel {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.overrideInput {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.overrideInput .input {
+  width: 5em;
+  text-align: right;
+}
+
+.input,
+.select {
+  min-height: 32px;
+  padding: 2px var(--s2) 0;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+}
+
+.select {
+  font-weight: 600;
+  max-width: 100%;
+}
+
+.input:focus-visible,
+.select:focus-visible {
+  outline: 2px solid var(--lake);
+  outline-offset: 1px;
+}
+
+.overrideHint,
+.overrideError {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--slate);
+}
+
+.overrideHint:empty {
+  display: none;
+}
+
+.overrideError {
+  color: var(--reject-ink);
+  font-weight: 600;
+}
+
+@media (max-width: 759px) {
+  .input,
+  .select,
+  .override .plainButton,
+  .lease .plainButton {
+    min-height: 44px;
+  }
+
+  .costTable tbody th {
+    white-space: normal;
+  }
+}

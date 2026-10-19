@@ -88,7 +88,9 @@ test.describe('standalone homes and complexes', () => {
     await card.click();
     await expect(panel(page).getByRole('heading', { level: 2 })).toHaveText('3624 15th Ave S');
     await expect(panel(page).getByRole('heading', { name: 'The home' })).toBeVisible();
-    await panel(page).getByRole('link', { name: /^Edit/ }).click();
+    await panel(page)
+      .getByRole('link', { name: /^Edit( building)?$/ })
+      .click();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('3624 15th Ave S');
     await expect(page.getByRole('combobox', { name: 'Building' })).toHaveCount(0);
     await page.getByRole('textbox', { name: 'Landlord or manager' }).fill('J. Lindqvist');
@@ -96,7 +98,9 @@ test.describe('standalone homes and complexes', () => {
     await page.getByRole('button', { name: /^Save/ }).click();
     await expect(panel(page)).toContainText('Rented by J. Lindqvist');
     // The unknown is remembered next time
-    await panel(page).getByRole('link', { name: /^Edit/ }).click();
+    await panel(page)
+      .getByRole('link', { name: /^Edit( building)?$/ })
+      .click();
     await expect(page.getByRole('button', { name: 'Mark Balcony unknown' })).toHaveAttribute(
       'aria-pressed',
       'true',

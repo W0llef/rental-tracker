@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { appInfo } from '../../config';
 import {
@@ -19,6 +19,8 @@ import { useUi } from '../../state/ui';
 import type { ListMode } from '../../state/ui';
 import { BuildInfo } from '../shell/BuildInfo';
 import { BuildingCard } from './BuildingCard';
+import { CostLimitsButton, CostLimitsPanel } from './CostLimits';
+import { costLimitsActive, NO_COST_LIMITS } from '../../domain/filter';
 import { UnitCard } from './UnitCard';
 import styles from './list.module.css';
 
@@ -169,9 +171,12 @@ export function ListPanel({
     if (el && 'scrollIntoView' in el) el.scrollIntoView({ block: 'nearest' });
   }, [selectedKey, view]);
 
+  const [limitsOpen, setLimitsOpen] = useState(false);
+  const limitsActive = costLimitsActive(useUi((s) => s.costLimits));
+  const setCostLimits = useUi((s) => s.setCostLimits);
   const totalUnits = data?.units.length ?? 0;
   const totalBuildings = data?.buildings.filter((b) => b.unitCount > 0).length ?? 0;
-  const searching = query.trim() !== '';
+  const searching = query.trim() !== '' || limitsActive;
 
   let count = '';
   if (data && listView) {
@@ -206,7 +211,9 @@ export function ListPanel({
               onChange={setBuildingSort}
             />
           )}
+          <CostLimitsButton open={limitsOpen} onToggle={() => setLimitsOpen(!limitsOpen)} />
         </div>
+        <CostLimitsPanel open={limitsOpen} setOpen={setLimitsOpen} />
         <p className={styles.count} aria-live="polite" data-testid="list-count">
           {count}
         </p>
@@ -223,15 +230,32 @@ export function ListPanel({
         {data && totalUnits > 0 && shown === 0 && (
           <div className={styles.empty}>
             <p className={styles.emptyTitle}>
-              No {view} match “{query.trim()}”
+              {query.trim()
+                ? `No ${view} match “${query.trim()}”${limitsActive ? ' within your cost limits' : ''}`
+                : `No ${view} within your cost limits`}
             </p>
-            <p className={styles.emptyText}>
-              Search looks at unit numbers, floor plans, building names, addresses, neighborhoods
-              and notes.
-            </p>
-            <button type="button" className={styles.button} onClick={() => setQuery('')}>
-              Clear search
-            </button>
+            {query.trim() && (
+              <p className={styles.emptyText}>
+                Search looks at unit numbers, floor plans, building names, addresses, neighborhoods
+                and notes.
+              </p>
+            )}
+            <span className={styles.emptyActions}>
+              {query.trim() && (
+                <button type="button" className={styles.button} onClick={() => setQuery('')}>
+                  Clear search
+                </button>
+              )}
+              {limitsActive && (
+                <button
+                  type="button"
+                  className={styles.button}
+                  onClick={() => setCostLimits(NO_COST_LIMITS)}
+                >
+                  Clear cost limits
+                </button>
+              )}
+            </span>
           </div>
         )}
         {data && listView && (shown ?? 0) > 0 && (

@@ -3,6 +3,7 @@ import {
   BUILDING_TYPE_LABELS,
   buildingName,
   enumLabel,
+  money,
   num,
   rangeLabel,
   rentLabel,
@@ -35,7 +36,8 @@ export function BuildingPanel({
 }) {
   const b = row.building;
   const name = buildingName(b);
-  const range = rangeLabel(row.minRent, row.maxRent);
+  const range = rangeLabel(row.minTotal, row.maxTotal);
+  const rents = rangeLabel(row.minRent, row.maxRent);
   const units = sortUnits(row.units, { key: 'total', dir: 'asc' });
   const links = [
     ...(isWebUrl(b.website) ? [{ key: 'website', label: 'Building website', url: b.website }] : []),
@@ -71,6 +73,7 @@ export function BuildingPanel({
             </div>
           )}
           <div className={styles.bigSub}>
+            {rents ? `${rents} rent · ` : ''}
             {row.unitCount} of your unit{row.unitCount === 1 ? '' : 's'}
           </div>
         </div>
@@ -103,7 +106,11 @@ export function BuildingPanel({
               <li key={u.unit.id}>
                 <Link to={`/unit/${u.unit.id}`}>
                   <span className={styles.ulTitle}>{unitTitle(u.unit, b)}</span>
-                  <span className={styles.ulRent}>{rentLabel(u.unit) ?? 'Rent unknown'}</span>
+                  <span className={styles.ulRent}>
+                    {u.cost.total !== null
+                      ? `${u.unit.rentIsFrom ? 'from ' : ''}${money(u.cost.total)}/mo`
+                      : (rentLabel(u.unit) ?? 'Rent unknown')}
+                  </span>
                   <StatusPill status={u.unit.status} />
                 </Link>
               </li>

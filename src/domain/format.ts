@@ -1,6 +1,7 @@
 import type {
   Building,
   BuildingType,
+  CostItemKey,
   Direction,
   ISODate,
   Settings,
@@ -122,6 +123,18 @@ export const UTILITY_LABELS: Record<UtilityKey, string> = {
   gas: 'Gas',
   internet: 'Internet',
 };
+
+/** Cost-profile items (Settings → Cost profile, M9). */
+export const COST_ITEM_LABELS: Record<CostItemKey, string> = {
+  ...UTILITY_LABELS,
+  parking: 'Parking, per space',
+  storage: 'Storage',
+  'renters-insurance': 'Renters insurance',
+  'pet-rent': 'Pet rent, per pet',
+};
+
+/** "12 months", "1 month". */
+export const monthsLabel = (n: number): string => `${n} month${n === 1 ? '' : 's'}`;
 
 export const DIRECTION_NAMES: Record<Direction, string> = {
   N: 'north',

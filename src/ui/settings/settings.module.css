@@ -538,3 +538,107 @@
     min-height: 44px;
   }
 }
+
+/* Cost profile (M9) */
+.costTable th,
+.costTable td {
+  text-align: left;
+  vertical-align: middle;
+  padding-right: var(--s3);
+}
+
+.costTable tbody th {
+  white-space: nowrap;
+}
+
+.numberBox {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--s2);
+}
+
+.numberBox .error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.numberLabel {
+  font-weight: 600;
+}
+
+.numberInput {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.numberInput .input {
+  min-width: 0;
+  text-align: right;
+}
+
+.numberSuffix,
+.example {
+  color: var(--slate);
+  font-size: 13px;
+}
+
+.scale {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+}
+
+.costFields {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s3);
+}
+
+.costFields .note {
+  margin: 0;
+}
+
+.pets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s4);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.pets legend {
+  float: left;
+  margin-right: var(--s2);
+  padding: 0;
+}
+
+@media (max-width: 759px) {
+  .costTable,
+  .costTable tbody,
+  .costTable tr,
+  .costTable th,
+  .costTable td {
+    display: block;
+  }
+
+  .costTable thead {
+    display: none;
+  }
+
+  .costTable tr {
+    padding: var(--s2) 0;
+    border-bottom: 1px solid var(--ice);
+  }
+
+  .costTable th,
+  .costTable td {
+    border: 0;
+    padding: 2px 0;
+  }
+}

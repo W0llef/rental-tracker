@@ -11,6 +11,7 @@ import { redo, undo } from '../../commands/undo';
 import { db } from '../../db/db';
 import { localDate } from '../../domain/format';
 import { useListKeys } from '../../hooks/useListKeys';
+import { costLimitsActive } from '../../domain/filter';
 import { deriveListView } from '../../state/derive';
 import { useDataset } from '../../state/useDataset';
 import { useUi } from '../../state/ui';
@@ -75,10 +76,19 @@ export function AppShell() {
   const placing = useUi((s) => s.placing);
 
   const data = useDataset();
-  const { query, unitSort, buildingSort, view, toggleView, togglePanel } = useUi();
+  const { query, unitSort, buildingSort, view, toggleView, togglePanel, costLimits } = useUi();
   const listView = useMemo(
-    () => (data ? deriveListView(data, query, unitSort, buildingSort) : undefined),
-    [data, query, unitSort, buildingSort],
+    () =>
+      data
+        ? deriveListView(
+            data,
+            query,
+            unitSort,
+            buildingSort,
+            costLimitsActive(costLimits) ? costLimits : null,
+          )
+        : undefined,
+    [data, query, unitSort, buildingSort, costLimits],
   );
   const today = localDate();
   const hasData = !!data && (data.units.length > 0 || data.buildings.length > 0);

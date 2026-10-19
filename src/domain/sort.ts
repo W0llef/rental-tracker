@@ -148,7 +148,13 @@ export interface BuildingSortInput {
   unitCount: number;
 }
 
-export const BUILDING_SORT_KEYS = ['minTotal', 'minRent', 'name', 'unitCount', 'createdAt'] as const;
+export const BUILDING_SORT_KEYS = [
+  'minTotal',
+  'minRent',
+  'name',
+  'unitCount',
+  'createdAt',
+] as const;
 export type BuildingSortKey = (typeof BUILDING_SORT_KEYS)[number];
 
 export const BUILDING_SORTS: Record<

@@ -263,6 +263,27 @@
   letter-spacing: 0;
 }
 
+.rentSub {
+  font-size: 13px;
+  color: var(--slate);
+  white-space: nowrap;
+}
+
+/* "1 assumed": costs standing in for unknowns (Q5); the breakdown is in the tooltip */
+.assumed {
+  font-size: 12px;
+  white-space: nowrap;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+  color: var(--assumed-ink);
+  font-weight: 600;
+}
+
+.card[data-dim] .assumed {
+  color: var(--slate);
+}
+
 .rentUnknown {
   font-size: 13px;
   font-style: italic;
@@ -419,4 +440,111 @@
 
 .otherReject {
   color: var(--reject-ink);
+}
+
+/* Cost limits (M9): a small form under the head row, and a summary while they apply */
+.dirButton[data-active] {
+  border-color: var(--lake);
+  color: var(--lake);
+}
+
+.limits {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+  margin-top: var(--s3);
+  padding: var(--s3);
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  background: var(--frost);
+  font-size: 13.5px;
+}
+
+.limitLabel {
+  font-weight: 600;
+}
+
+.limitInput {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.limitBox {
+  width: 6em;
+  min-height: 32px;
+  padding: 2px var(--s2) 0;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: right;
+}
+
+.limitBox:focus-visible {
+  outline: 2px solid var(--lake);
+  outline-offset: 1px;
+}
+
+.limitUnit {
+  color: var(--slate);
+  font-size: 12.5px;
+}
+
+.limitCheck {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.limitError {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--reject-ink);
+  font-weight: 600;
+}
+
+.limitActions {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+
+.limitChip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--s3);
+  margin: var(--s2) 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.textButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--lake);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.emptyActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+@media (max-width: 759px) {
+  .limitBox,
+  .limits .button {
+    min-height: 44px;
+  }
 }

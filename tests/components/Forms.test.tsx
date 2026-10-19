@@ -422,7 +422,7 @@ describe('moving between a unit’s form and its building’s', () => {
     router = createMemoryRouter(routes, { initialEntries: [`/unit/${ids.u1504}`] });
     render(<RouterProvider router={router} />);
     await screen.findByRole('heading', { name: 'Unit 1504' });
-    await user.click(screen.getByRole('link', { name: /^Edit/ }));
+    await user.click(screen.getByRole('link', { name: /^Edit( building)?$/ }));
     await screen.findByRole('heading', { level: 1, name: 'Riverlight · Unit 1504' });
     // Back and forth a few times
     for (let i = 0; i < 2; i++) {

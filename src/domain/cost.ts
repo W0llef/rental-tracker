@@ -137,11 +137,7 @@ export const leaseMonthsFor = (unit: Pick<Unit, 'plannedLeaseMonths'>, profile: 
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-function utilityLine(
-  key: UtilityKey,
-  unit: Unit,
-  profile: CostProfile,
-): CostLine {
+function utilityLine(key: UtilityKey, unit: Unit, profile: CostProfile): CostLine {
   const term = unit.utilities[key];
   const label = UTILITY_LABELS[key];
   const line = (
@@ -412,9 +408,7 @@ export function unitCost(
     moveIn: moveInCost(unit, building, profile, rent),
     leaseOptions: [...terms].sort((a, b) => a - b),
     leaseMatters:
-      profile.amortizeOneTimeFees ||
-      profile.amortizeSpecials ||
-      (unit.rentByTerm ?? []).length > 0,
+      profile.amortizeOneTimeFees || profile.amortizeSpecials || (unit.rentByTerm ?? []).length > 0,
   };
 }
 
@@ -424,7 +418,8 @@ export const perSqftLabel = (v: number): string => `$${v.toFixed(2)}/ft²`;
 /** "$1,932/mo · 1 assumed" style summary of the lines, one per line, for a tooltip. */
 export function breakdownText(cost: UnitCost): string {
   const rows = cost.lines.map(
-    (l) => `${l.label}: ${l.amount < 0 ? '−' : ''}${money(Math.abs(l.amount))}${l.assumed ? ' (assumed)' : ''}`,
+    (l) =>
+      `${l.label}: ${l.amount < 0 ? '−' : ''}${money(Math.abs(l.amount))}${l.assumed ? ' (assumed)' : ''}`,
   );
   if (cost.total !== null) rows.push(`Total: ${money(cost.total)}/mo`);
   else rows.push('Total unknown until the rent is known');

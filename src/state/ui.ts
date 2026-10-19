@@ -1,3 +1,5 @@
+import { NO_COST_LIMITS } from '../domain/filter';
+import type { CostLimits } from '../domain/filter';
 import { create } from 'zustand';
 import { dbName } from '../config';
 import {
@@ -111,6 +113,9 @@ interface TriageUi {
 
 export interface UiState extends Remembered, MapUi, TriageUi {
   query: string;
+  /** Cost limits above the list (M9); for this visit only, like search. */
+  costLimits: CostLimits;
+  setCostLimits: (limits: CostLimits) => void;
   placing: Placing | null;
   notice: Notice | null;
   setPlacing: (placing: Placing | null) => void;
@@ -220,6 +225,8 @@ export const useUi = create<UiState>()((set, get) => {
   return {
     ...loadRemembered(),
     query: '',
+    costLimits: NO_COST_LIMITS,
+    setCostLimits: (costLimits) => set({ costLimits }),
     placing: null,
     notice: null,
     setPlacing: (placing) => set({ placing }),
@@ -347,6 +354,7 @@ export function resetUi() {
     ...defaults,
     ...mapUiStart(),
     query: '',
+    costLimits: NO_COST_LIMITS,
     placing: null,
     notice: null,
     picked: [],

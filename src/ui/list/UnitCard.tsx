@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import {
   buildingName,
   listingAgeLabel,
+  money,
   num,
   rejectReasonText,
   rentLabel,
   unitTitle,
 } from '../../domain/format';
+import { breakdownText } from '../../domain/cost';
 import { CARD_BADGES, othersSummary, ratingsSummary, starRange } from '../../domain/people';
 import type { OthersSummary } from '../../domain/people';
 import type { Settings } from '../../model';
@@ -59,7 +61,8 @@ function OthersChip({ summary }: { summary: OthersSummary }) {
 }
 
 /**
- * One unit in the list (DESIGN.md §4.1). Rent is the headline until total cost (M9).
+ * One unit in the list (DESIGN.md §4.1): the total monthly cost is the headline, then the
+ * rent and how many of the costs are assumed (the breakdown on hover, M9).
  * Stars and flag are yours; other people's sit in one small chip at the foot (§5.8).
  */
 export function UnitCard({
@@ -84,6 +87,7 @@ export function UnitCard({
   const title = unitTitle(u, b);
   const bName = b ? buildingName(b) : null;
   const rent = rentLabel(u);
+  const cost = row.cost;
   const mine = row.mine;
   const rejected = mine.flag === 'reject';
   const others = othersSummary(row.opinions);
@@ -161,11 +165,22 @@ export function UnitCard({
           {u.exposure && u.exposure.length > 0 && <span>{u.exposure.join(' ')}</span>}
         </span>
         <span className={styles.money}>
-          {rent ? (
-            <span className={styles.rent}>
-              {rent}
-              <small>/mo rent</small>
-            </span>
+          {cost.total !== null ? (
+            <>
+              <span className={styles.rent} title={breakdownText(cost)}>
+                {u.rentIsFrom && 'from '}
+                {money(cost.total)}
+                <small>/mo</small>
+              </span>
+              {rent && (
+                <span className={styles.rentSub}>{rentLabel({ ...u, rent: cost.rent })} rent</span>
+              )}
+              {cost.assumed > 0 && (
+                <span className={styles.assumed} title={breakdownText(cost)}>
+                  {cost.assumed} assumed
+                </span>
+              )}
+            </>
           ) : (
             <span className={styles.rentUnknown}>Rent unknown</span>
           )}

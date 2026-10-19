@@ -3,6 +3,8 @@ import { defaultSettings, LABEL_COLORS } from '../model';
 import type {
   BuildingType,
   Building,
+  CostItemKey,
+  CostProfile,
   ID,
   LabelColor,
   Listing,
@@ -24,6 +26,8 @@ import {
   SITE_LABELS,
   STATUS_LABELS,
   UTILITY_LABELS,
+  COST_ITEM_LABELS,
+  monthsLabel,
   unitFullName,
   utilityLabel,
 } from './format';
@@ -209,7 +213,7 @@ const UNIT_FIELDS: Record<string, string> = {
   rentByTerm: 'Rent by lease length',
   availableDate: 'Available date',
   leaseTermsMonths: 'Lease terms',
-  plannedLeaseMonths: 'Planned lease length',
+  plannedLeaseMonths: 'Lease length',
   deposit: 'Deposit',
   applicationFee: 'Application fee',
   adminFee: 'Admin fee',
@@ -272,7 +276,6 @@ const WHOLE = new Set([
   'checkedUnknown',
   'utilities',
   'moveInSpecial',
-  'costOverrides',
   'placement3d',
   'address',
   'neighborhood',
@@ -308,6 +311,10 @@ function fieldLabel(path: Path, table: 'units' | 'buildings'): string {
   if (table === 'units') {
     if (path[0] === 'utilities' && path[1]) {
       return UTILITY_LABELS[path[1] as keyof typeof UTILITY_LABELS] ?? enumLabel(path[1]);
+    }
+    if (path[0] === 'costOverrides' && path[1]) {
+      const item = COST_ITEM_LABELS[path[1] as CostItemKey] ?? enumLabel(path[1]);
+      return `Your ${item.replace(/, per .*$/, '').toLowerCase()} estimate`;
     }
     if (UNIT_FIELDS[key]) return UNIT_FIELDS[key];
     if (UNIT_FIELDS[path[0]!]) return UNIT_FIELDS[path[0]!]!;
@@ -353,6 +360,9 @@ function buildingValue(path: Path, v: unknown): string {
 /** A unit field's value in words ("$1,650", "Included", "12 or 15 months"). */
 function unitValue(path: Path, v: unknown): string {
   const key = path.join('.');
+  if (path[0] === 'costOverrides' && path[1])
+    return typeof v === 'number' ? `${money(v)}/mo` : 'your cost profile’s';
+  if (key === 'plannedLeaseMonths') return typeof v === 'number' ? monthsLabel(v) : 'your default';
   if (v === null || v === undefined) return 'unknown';
   if (MONEY_FIELDS.has(key) && typeof v === 'number') return money(v);
   if (path[0] === 'utilities') return utilityLabel(v as never)?.toLowerCase() ?? 'unknown';
@@ -846,6 +856,61 @@ function personItems(c: RecordChange, lookup: HistoryLookup): Item[] {
   return items;
 }
 
+const SCALE_TEXT = { none: 'not scaled', sqft: 'scaled by size', bedrooms: 'scaled by bedrooms' };
+
+/** Cost profile changes in words (M9): "Electric estimate $55 → $60/mo". */
+export function costProfileChanges(a: CostProfile, b: CostProfile): [string, string][] {
+  const out: [string, string][] = [];
+  for (const key of Object.keys(b.items) as CostItemKey[]) {
+    const was = a.items[key];
+    const now = b.items[key];
+    if (!now) continue;
+    const name = (COST_ITEM_LABELS[key] ?? key).replace(/, per .*$/, '');
+    if (!was || was.monthly !== now.monthly)
+      out.push([
+        `cost:${key}`,
+        `${name} estimate ${was ? money(was.monthly) : 'unknown'} → ${money(now.monthly)}/mo`,
+      ]);
+    if (was && (was.scaleBy !== now.scaleBy || was.basis !== now.basis)) {
+      const basis =
+        now.scaleBy === 'sqft'
+          ? ` at ${num(now.basis)} ft²`
+          : now.scaleBy === 'bedrooms'
+            ? ` at ${plural(now.basis, 'bedroom')}`
+            : '';
+      out.push([`cost-scale:${key}`, `${name} estimate ${SCALE_TEXT[now.scaleBy]}${basis}`]);
+    }
+  }
+  if (a.parkingSpacesNeeded !== b.parkingSpacesNeeded)
+    out.push([
+      'cost:parking-needed',
+      `Parking spaces you need ${a.parkingSpacesNeeded} → ${b.parkingSpacesNeeded}`,
+    ]);
+  if (a.needsStorage !== b.needsStorage)
+    out.push(['cost:storage', b.needsStorage ? 'You need storage' : 'You don’t need storage']);
+  if (a.hasPets.cats !== b.hasPets.cats || a.hasPets.dogs !== b.hasPets.dogs)
+    out.push([
+      'cost:pets',
+      `Pets: ${plural(b.hasPets.cats, 'cat')}, ${plural(b.hasPets.dogs, 'dog')}`,
+    ]);
+  if (a.amortizeOneTimeFees !== b.amortizeOneTimeFees)
+    out.push([
+      'cost:spread-fees',
+      `${b.amortizeOneTimeFees ? 'Spreading' : 'Stopped spreading'} one-time fees over the lease`,
+    ]);
+  if (a.amortizeSpecials !== b.amortizeSpecials)
+    out.push([
+      'cost:spread-specials',
+      `${b.amortizeSpecials ? 'Spreading' : 'Stopped spreading'} move-in specials over the lease`,
+    ]);
+  if (a.defaultLeaseMonths !== b.defaultLeaseMonths)
+    out.push([
+      'cost:lease',
+      `Default lease length ${monthsLabel(a.defaultLeaseMonths)} → ${monthsLabel(b.defaultLeaseMonths)}`,
+    ]);
+  return out;
+}
+
 function settingsItems(c: RecordChange): Item[] {
   const before = (c.before as Settings | null) ?? defaultSettings();
   const after = (c.after as Settings | null) ?? defaultSettings();
@@ -886,8 +951,10 @@ function settingsItems(c: RecordChange): Item[] {
   }
   if (before.backup.remindEveryDays !== after.backup.remindEveryDays)
     say('backup', `Backup reminder every ${plural(after.backup.remindEveryDays, 'day')}`);
+  for (const [group, text] of costProfileChanges(before.costProfile, after.costProfile))
+    say(group, text);
   const other = diffPaths(before, after).filter(
-    (p) => !['labelNames', 'rejectReasons', 'backup'].includes(p[0]!),
+    (p) => !['labelNames', 'rejectReasons', 'backup', 'costProfile'].includes(p[0]!),
   );
   if (other.length) {
     const areas = [...new Set(other.map((p) => p[0]!))];
