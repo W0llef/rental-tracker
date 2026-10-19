@@ -215,7 +215,7 @@ function BuildingForm({ row, focusField }: { row: BuildingRow; focusField: strin
           <div className={styles.listRow}>
             <input
               id="b-city"
-              className={styles.input}
+              className={`${styles.input} ${styles.city}`}
               value={address.city}
               placeholder="Minneapolis"
               onChange={(e) => setAddressPart('city', e.target.value)}

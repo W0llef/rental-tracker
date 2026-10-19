@@ -330,6 +330,10 @@
   width: 7em;
 }
 
+.input.city {
+  width: 14em;
+}
+
 .textarea {
   width: 100%;
   min-height: 64px;
@@ -953,6 +957,14 @@
   .input,
   .textarea {
     width: 100%;
+  }
+
+  /* A field's box shares its line with its ? button */
+  .control > .input,
+  .control > .textarea,
+  .control > .select {
+    flex: 1 1 0;
+    width: auto;
   }
 
   .listingGrid {
