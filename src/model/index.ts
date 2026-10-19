@@ -12,7 +12,7 @@ import { unit } from './unit';
  * backup and photo sidecar. Changing the shape of stored data means a new version, a
  * migration in db/migrations/, a fixture and a test (PLAN.md §3.7).
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export * from './common';
 export * from './building';

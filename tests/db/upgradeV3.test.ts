@@ -33,18 +33,22 @@ describe('updating a v2 database to v3', () => {
     old.close();
     expect(await checkPendingUpgrade(name, SCHEMA_VERSION)).toEqual({
       fromVersion: 2,
-      toVersion: 3,
+      toVersion: SCHEMA_VERSION,
     });
 
     const db = new RentalDB(name);
     await db.open();
-    expect(db.verno).toBe(3);
+    expect(db.verno).toBe(SCHEMA_VERSION);
     expect(await db.buildings.get('b-1')).toMatchObject({ standalone: null, checkedUnknown: [] });
     expect((await db.units.toArray()).every((u) => Array.isArray(u.checkedUnknown))).toBe(true);
     expect(await db.changeLog.count()).toBe(1); // nothing changed meaning: undo survives
     const snaps = await db.snapshots.toArray();
     expect(snaps).toHaveLength(1);
-    expect(snaps[0]).toMatchObject({ fromVersion: 2, toVersion: 3, reason: 'migration' });
+    expect(snaps[0]).toMatchObject({
+      fromVersion: 2,
+      toVersion: SCHEMA_VERSION,
+      reason: 'migration',
+    });
     db.close();
   });
 });

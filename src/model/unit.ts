@@ -83,6 +83,26 @@ export const COST_ITEM_KEYS = [
 export const costItemKey = z.enum(COST_ITEM_KEYS);
 export type CostItemKey = z.infer<typeof costItemKey>;
 
+/**
+ * A charge that differs by lease length (v4, M9 review): the deposit, an application or admin
+ * fee, a monthly fee (`fee:<its id>`) or the move-in special's value, for one lease length.
+ * A charge with no entries is the same for every length; a length without an entry uses the
+ * unit's main amount.
+ */
+export const TERM_CHARGE_KEYS = ['deposit', 'applicationFee', 'adminFee', 'moveInSpecial'] as const;
+export type TermChargeKey = (typeof TERM_CHARGE_KEYS)[number] | `fee:${string}`;
+export const termCharge = z.object({
+  charge: z.custom<TermChargeKey>(
+    (v) =>
+      typeof v === 'string' &&
+      ((TERM_CHARGE_KEYS as readonly string[]).includes(v) || /^fee:.+/.test(v)),
+    'Unknown charge',
+  ),
+  months: z.number().int().min(1),
+  amount: maybe(usd),
+});
+export type TermCharge = z.infer<typeof termCharge>;
+
 /** Amenity fee, tech fee, pet rent… */
 export const recurringFee = z.object({ id, label: z.string(), amount: usd });
 export type RecurringFee = z.infer<typeof recurringFee>;
@@ -125,6 +145,7 @@ export const unit = base.extend({
   rent: maybe(usd), // current asking rent (mirrors the latest listing observation)
   rentIsFrom: z.boolean(), // "from $X" (floor-plan-only pricing)
   rentByTerm: maybe(z.array(z.object({ months: z.number().int().min(1), rent: usd }))),
+  termCharges: z.array(termCharge).default([]), // v4 (M9 review): other charges by lease length
   availableDate: maybe(isoDate),
   leaseTermsMonths: maybe(z.array(z.number().int().min(1))),
   plannedLeaseMonths: maybe(z.number().int().min(1)), // null → cost profile default (Q5)

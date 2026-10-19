@@ -1,20 +1,23 @@
 import fixture from '../fixtures/backup-v2.json';
 import { migrateBackupData } from '../../src/db/migrations';
 import { v3 } from '../../src/db/migrations/v3';
+import { SCHEMA_VERSION } from '../../src/model';
 import { currentBackup } from '../../src/model/backup';
 
 /** Version 3 (M8 review): standalone homes (Q30) and remembered unknowns (Q29). */
 describe('migration to version 3', () => {
   it('adds the new fields with empty defaults and keeps everything else', () => {
-    const data = migrateBackupData(fixture.data, 2, 3);
-    const parsed = currentBackup.parse({ ...fixture, schemaVersion: 3, data });
+    const data = migrateBackupData(fixture.data, 2, SCHEMA_VERSION);
+    const parsed = currentBackup.parse({ ...fixture, schemaVersion: SCHEMA_VERSION, data });
     expect(parsed.data.buildings[0]).toMatchObject({ standalone: null, checkedUnknown: [] });
     expect(parsed.data.units.every((u) => u.checkedUnknown.length === 0)).toBe(true);
     const before = fixture.data.units[0] as Record<string, unknown>;
     const after = data.units![0] as Record<string, unknown>;
-    expect({ ...after, checkedUnknown: undefined }).toEqual({
+    // Later versions add their own fields; v3 only adds checkedUnknown.
+    expect({ ...after, checkedUnknown: undefined, termCharges: undefined }).toEqual({
       ...before,
       checkedUnknown: undefined,
+      termCharges: undefined,
     });
   });
 
@@ -27,13 +30,13 @@ describe('migration to version 3', () => {
   });
 
   it('reads records written before v3 (an undo can bring one back) with the defaults', () => {
-    const data = migrateBackupData(fixture.data, 2, 3);
+    const data = migrateBackupData(fixture.data, 2, SCHEMA_VERSION);
     const old = { ...(data.buildings![0] as Record<string, unknown>) };
     delete old.standalone;
     delete old.checkedUnknown;
     const parsed = currentBackup.parse({
       ...fixture,
-      schemaVersion: 3,
+      schemaVersion: SCHEMA_VERSION,
       data: { ...data, buildings: [old] },
     });
     expect(parsed.data.buildings[0]).toMatchObject({ standalone: null, checkedUnknown: [] });

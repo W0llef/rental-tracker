@@ -5,6 +5,7 @@ import { migrationContext } from './migrations';
 import type { Migration, MigrationContext } from './migrations';
 import { v2 } from './migrations/v2';
 import { v3 } from './migrations/v3';
+import { v4 } from './migrations/v4';
 
 /**
  * Every Dexie version the app has ever had (PLAN.md §3.6–3.7). Never edit a released entry;
@@ -54,7 +55,9 @@ export const versions: VersionSpec[] = [
   { version: 2, stores: STORES_V2, migration: v2 },
   // Version 3 (M8): new unindexed fields only, so no store changes.
   { version: 3, stores: {}, migration: v3 },
-  // Next: { version: 4, stores: { …only changed stores… }, migration: v4 },
+  // Version 4 (M9 review): one new unindexed field.
+  { version: 4, stores: {}, migration: v4 },
+  // Next: { version: 5, stores: { …only changed stores… }, migration: v5 },
 ];
 
 /** The meta key holding which person this browser's copy belongs to (db/me.ts). */

@@ -12,6 +12,7 @@
 
 import { v2 } from './v2';
 import { v3 } from './v3';
+import { v4 } from './v4';
 
 export type RecordTransform = (record: Record<string, unknown>) => Record<string, unknown>;
 
@@ -62,7 +63,7 @@ export interface Migration {
 }
 
 /** Every migration, oldest first. Version 1 is the starting point. */
-export const migrations: Migration[] = [v2, v3];
+export const migrations: Migration[] = [v2, v3, v4];
 
 export type BackupData = Record<string, unknown[]>;
 
