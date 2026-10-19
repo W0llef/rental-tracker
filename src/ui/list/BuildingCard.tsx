@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { BUILDING_TYPE_LABELS, buildingName, rangeLabel } from '../../domain/format';
 import type { BuildingRow } from '../../state/derive';
+import { useUi } from '../../state/ui';
 import { Tag, TypeIcon } from '../common/Markers';
 import styles from './list.module.css';
 
@@ -34,6 +35,17 @@ export function BuildingCard({
       aria-current={selected ? 'true' : undefined}
       data-hover={hovered || undefined}
       data-key={`building:${b.id}`}
+      onClick={(e) => {
+        // ⌘/Ctrl- or Shift-click would open a new tab or window; selecting several buildings
+        // to edit them together arrives with the building form (M8, M7 review).
+        if (!(e.metaKey || e.ctrlKey || e.shiftKey)) return;
+        e.preventDefault();
+        useUi
+          .getState()
+          .showNotice(
+            'Selecting several buildings to edit them together arrives with the building form in M8.',
+          );
+      }}
     >
       <span className={styles.thumb}>
         <TypeIcon type={b.buildingType === 'house' ? 'house' : 'building'} />

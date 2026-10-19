@@ -7,6 +7,7 @@ import './styles/base.css';
 import { dbName } from './config';
 import { checkPendingUpgrade, hasRecords, readStoredData } from './db/upgradeCheck';
 import { router } from './routes';
+import { watchActionsForToasts } from './state/toasts';
 import { watchForFirstChange } from './ui/shell/useStorageSafety';
 
 const element = document.getElementById('root');
@@ -18,6 +19,7 @@ async function renderApp() {
   const [{ db }, { ensureMe }] = await Promise.all([import('./db/db'), import('./db/me')]);
   await ensureMe(db).catch((e: unknown) => console.error('Couldn’t set up your person.', e));
   watchForFirstChange();
+  watchActionsForToasts(db);
   root.render(
     <StrictMode>
       <RouterProvider router={router} />

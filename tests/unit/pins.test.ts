@@ -322,6 +322,18 @@ describe('legend', () => {
     expect(l.kind === 'label' && l.rows.map((r) => r.label)).toEqual(['Both like', 'No label']);
   });
 
+  it('colors and names by your private label (Q19)', () => {
+    const mineRed = { ...us[0]!, mine: { ...us[0]!.mine, colorLabel: 'red' as const } };
+    expect(edgeColor(mineRed.unit, 'myLabel', null, 'red')).toBe('var(--lb-red)');
+    expect(edgeColor(mineRed.unit, 'myLabel', null, null)).toBe('var(--ice)');
+    const l = legendFor([mineRed, us[1]!], 'myLabel', labelNames, {
+      ...labelNames,
+      red: 'Too far?',
+    });
+    expect(l.title).toBe('Pin color: your label');
+    expect(l.kind === 'label' && l.rows.map((r) => r.label)).toEqual(['Too far?', 'No label']);
+  });
+
   it('shows the rent range for price colors', () => {
     const l = legendFor(us, 'price', labelNames);
     expect(l).toMatchObject({

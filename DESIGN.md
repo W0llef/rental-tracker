@@ -95,7 +95,7 @@ Status is never shown by color alone: pills always carry the word, and the legen
 
 Names are set in Settings ("Blue = roommate likes") and shown in tooltips, filters and the legend.
 
-**Shared and private labels (M6, Q16).** A unit can carry two labels at once, each any of the five colors: one **shared** label (names are the household's) and one **private** label per person (each person names their own colors; other people's private labels aren't shown). Nothing converts between the two. Setting, naming and showing them arrives with triage (M7); proposed there: keys 6–9 for your private label and ⇧6–9 for the shared one, and the private label drawn beside the shared square on the thumbnail. Until then cards, pins and "color by label" show the shared label.
+**Shared and private labels (M6, Q16).** A unit can carry two labels at once, each any of the five colors: one **shared** label (names are the household's) and one **private** label per person (each person names their own colors; other people's private labels aren't shown). Nothing converts between the two. Setting, naming and showing them arrives with triage (M7, Q19, Q22): keys 6–9 set your private label and ⇧6–9 the shared one; cards draw the shared label as the square on the thumbnail and your private label as a second square beside it (a ring marks it as yours); the Pins panel colors by **Shared label** or **Your label**.
 
 ### 2.3a People (M6)
 
@@ -224,7 +224,7 @@ Phone gestures: swipe the unit's photo strip; tap a star to rate; long-press a c
 - Floor plan only: "Plan C" plus a "floor plan" tag; specs say "units vary"; prices say "from".
 - New: the status pill reads "New" with its amber edge; no separate badge on the card (it repeated the pill). The amber New dot stays an option on map pins (§2.4), which show no status text.
 - Needs location: a "Needs location" chip with "Place on map".
-- Multi-select: ⌘/Ctrl-click or Shift-click; a checkbox appears in the photo corner.
+- Multi-select: ⌘/Ctrl-click or Shift-click; a check appears in the photo corner and the card gets a lake outline. A **selection bar** above the list (M7) shows the count, the markers for all selected units, **Edit together…** and **Clear**.
 - The **Building card** (Buildings view) shows name, neighborhood, building type, "3 of your units", and the range "$1,857–$2,560".
 
 ### 4.2 Detail panel
@@ -264,7 +264,9 @@ Phone gestures: swipe the unit's photo strip; tap a star to rate; long-press a c
 └────────────────────────────────────────────┘
 ```
 
-**Ratings (M6).** One row per person: badge and name, five star buttons (click the current one again to clear) and a flag menu. Until household sharing exists you set other people's ratings for them here; with only you, a line points to Settings → People. Reject reasons and rating/flag notes show under the row; editing them arrives with triage (M7). Notes in the Notes section name their author when it isn't you ("Oct 18, note · Alex").
+**Markers row (M7).** Flag as three buttons (Pick P · Reject… X · No flag U), your stars, then **Your label** and **Shared label** as five swatches each (pressed one ringed; click again to clear) and the status menu. With several units selected the same controls sit in the selection bar and say "Mixed" where the units differ.
+
+**Ratings (M6).** One row per person: badge and name, five star buttons (click the current one again to clear) and a flag menu. Until household sharing exists you set other people's ratings for them here; with only you, a line points to Settings → People. Reject reasons and rating/flag notes show under the row, with **Add/Edit notes** and **Reasons** (M7). Notes in the Notes section name their author when it isn't you ("Oct 18, note · Alex").
 
 Imported values carry a small source link (site name, or "AI" until you confirm them). A "Paste text" action sits next to Edit for pasting more listing text later.
 
@@ -485,7 +487,8 @@ Shortcuts act on the selected unit, or every selected unit when several are sele
 | `X` | Flag as reject (opens reasons; ⏎ to confirm) |
 | `U` | Remove flag |
 | `0`–`5` | Set stars (0 clears) |
-| `6` / `7` / `8` / `9` | Toggle red / yellow / green / blue label (purple from the menu, Q8) |
+| `6` / `7` / `8` / `9` | Toggle your red / yellow / green / blue label (purple from the menu, Q8) |
+| `⇧6` … `⇧9` | Toggle the shared red / yellow / green / blue label (Q22) |
 | `↑` `↓` or `K` `J` | Previous / next unit in the list |
 | `⏎` | Open the selected unit's detail |
 | `Esc` | Close panel, close open buildings' cards, or clear selection |

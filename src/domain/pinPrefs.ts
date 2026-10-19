@@ -38,7 +38,8 @@ export type NewBadge = (typeof NEW_BADGES)[number];
 export const REJECTED_MODES = ['show', 'fade', 'hide'] as const;
 export type RejectedMode = (typeof REJECTED_MODES)[number];
 
-export const COLOR_BY = ['status', 'label', 'price'] as const;
+/** 'label' is the shared label; 'myLabel' your private one (Q19, M7). */
+export const COLOR_BY = ['status', 'label', 'myLabel', 'price'] as const;
 export type ColorBy = (typeof COLOR_BY)[number];
 
 export type PinView = 'units' | 'buildings';

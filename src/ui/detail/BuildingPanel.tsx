@@ -15,7 +15,8 @@ import { PlaceOnMapButton } from '../add/PlaceOnMap';
 import { DeleteSection } from '../edit/DeleteSection';
 import { StatusPill, Value } from '../common/Markers';
 import { mapLinks } from '../../domain/links';
-import { Amenities, Facts, Links, Notes, Section } from './parts';
+import { NotesLog } from '../triage/NotesLog';
+import { Amenities, Facts, Links, Section } from './parts';
 import { fromLinkRecords, isWebUrl, petsText, tri } from './text';
 import styles from './detail.module.css';
 
@@ -23,7 +24,15 @@ import styles from './detail.module.css';
  * The read-only building panel (#/building/:id, PLAN.md §4.1): building facts, amenities,
  * policies and your units in it, with "Add unit here" and "Place on map" (M4).
  */
-export function BuildingPanel({ row, today }: { row: BuildingRow; today: ISODate }) {
+export function BuildingPanel({
+  row,
+  today,
+  meId,
+}: {
+  row: BuildingRow;
+  today: ISODate;
+  meId: string;
+}) {
   const b = row.building;
   const name = buildingName(b);
   const range = rangeLabel(row.minRent, row.maxRent);
@@ -141,7 +150,7 @@ export function BuildingPanel({ row, today }: { row: BuildingRow; today: ISODate
 
       <Section title="Notes">
         {b.notes && <p className={styles.para}>{b.notes}</p>}
-        <Notes notes={row.notes} today={today} />
+        <NotesLog notes={row.notes} today={today} meId={meId} owner={{ buildingId: b.id }} />
       </Section>
 
       <Section title="Links">

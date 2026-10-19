@@ -7,6 +7,8 @@ import {
   useParams,
   useSearchParams,
 } from 'react-router-dom';
+import { redo, undo } from '../../commands/undo';
+import { db } from '../../db/db';
 import { localDate } from '../../domain/format';
 import { useListKeys } from '../../hooks/useListKeys';
 import { deriveListView } from '../../state/derive';
@@ -17,6 +19,18 @@ import { BuildingPanel } from '../detail/BuildingPanel';
 import { MapPanel } from '../map/MapPanel';
 import { UnitPanel } from '../detail/UnitPanel';
 import { ListPanel } from '../list/ListPanel';
+import { HistoryPanel } from '../history/HistoryPanel';
+import {
+  setFlag,
+  setRating,
+  startReject,
+  togglePrivateLabel,
+  toggleSharedLabel,
+} from '../triage/actions';
+import { BulkEditDialog } from '../triage/BulkEditDialog';
+import { RejectDialog } from '../triage/RejectDialog';
+import { LATER_KEYS } from '../triage/shortcuts';
+import { ShortcutSheet } from '../triage/ShortcutSheet';
 import { BackupBanner } from './BackupBanner';
 import { NameBanner } from './NameBanner';
 import { backupReminder } from '../../services/backup/reminders';
@@ -48,6 +62,7 @@ export function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const adding = useMatch('/add') !== null;
+  const historyOpen = useMatch('/history') !== null;
   const [params] = useSearchParams();
   // Quick-add is a route (#/add), so Back closes it. Opened from the app, closing goes back
   // to where you were; opened from a link, it goes to the main screen.
@@ -81,11 +96,13 @@ export function AppShell() {
       }).due);
 
   // Phone tabs: selecting something opens the Unit tab; closing it returns to the list.
-  const [tab, setTab] = useState<Tab>(selectedKey ? 'unit' : 'list');
-  const [seenKey, setSeenKey] = useState(selectedKey);
-  if (seenKey !== selectedKey) {
-    setSeenKey(selectedKey);
-    if (selectedKey) setTab('unit');
+  // History (M7) opens in the same place as a unit's details.
+  const panelKey = historyOpen ? 'history' : selectedKey;
+  const [tab, setTab] = useState<Tab>(panelKey ? 'unit' : 'list');
+  const [seenKey, setSeenKey] = useState(panelKey);
+  if (seenKey !== panelKey) {
+    setSeenKey(panelKey);
+    if (panelKey) setTab('unit');
     else if (tab === 'unit') setTab('list');
   }
   // "Place on map" shows the map (phones).
@@ -95,17 +112,72 @@ export function AppShell() {
     if (placing) setTab('map');
   }
 
+  // Triage targets (M7): every selected unit, or else the open one.
+  const picked = useUi((s) => s.picked);
+  const rejecting = useUi((s) => s.rejecting);
+  const editingTogether = useUi((s) => s.editingTogether);
+  const shortcutsOpen = useUi((s) => s.shortcutsOpen);
+  const pickedRows = useMemo(
+    () =>
+      data
+        ? picked.map((id) => data.unitById.get(id)).filter((r): r is NonNullable<typeof r> => !!r)
+        : [],
+    [data, picked],
+  );
+  const unitRowNow = unitId ? data?.unitById.get(unitId) : undefined;
+  const targets = pickedRows.length ? pickedRows : unitRowNow ? [unitRowNow] : [];
+  const showNotice = useUi((s) => s.showNotice);
+  const nothingSelected = () =>
+    showNotice('Select a unit first: click a card, or move with J and K.');
+  const onTargets = (fn: (rows: typeof targets, meId: string) => void) => {
+    if (!data) return;
+    if (!targets.length) nothingSelected();
+    else fn(targets, data.me.id);
+  };
+
   const search = useRef<HTMLInputElement>(null);
   const lastMove = useRef<{ from: string | null; to: string } | null>(null);
   useListKeys({
     focusSearch: () => search.current?.focus(),
-    // Esc: close a map panel, then fold the fans you opened, then close the details
+    // Esc: close a map panel, clear the selection, fold the fans you opened, close the details
     close: () => {
       const ui = useUi.getState();
       if (ui.placing) ui.setPlacing(null);
       else if (ui.panel) ui.setPanel(null);
+      else if (ui.picked.length) ui.clearPicked();
       else if (ui.openFans.length) ui.collapseFans();
-      else if (selectedKey) navigate('/');
+      else if (selectedKey || historyOpen) navigate('/');
+    },
+    flag: (f) => onTargets((rows, me) => void setFlag(rows, me, f)),
+    reject: () => onTargets((rows, me) => startReject(rows, me)),
+    rate: (n) => onTargets((rows, me) => void setRating(rows, me, n)),
+    label: (color, shared) =>
+      onTargets((rows, me) =>
+        shared ? void toggleSharedLabel(rows, color) : void togglePrivateLabel(rows, me, color),
+      ),
+    open: () => {
+      const title = document.getElementById('detail-title');
+      if (title) {
+        title.setAttribute('tabindex', '-1');
+        title.focus();
+      }
+    },
+    help: () => useUi.getState().setShortcutsOpen(true),
+    undo: () =>
+      void undo(db)
+        .then((done) => {
+          if (!done) showNotice('Nothing to undo.');
+        })
+        .catch((e: unknown) => showNotice(`Couldn’t undo. ${(e as Error).message}`)),
+    redo: () =>
+      void redo(db)
+        .then((done) => {
+          if (!done) showNotice('Nothing to redo.');
+        })
+        .catch((e: unknown) => showNotice(`Couldn’t redo. ${(e as Error).message}`)),
+    later: (key) => {
+      const text = LATER_KEYS[key];
+      if (text) showNotice(text);
     },
     toggleView,
     toggleLayers: () => togglePanel('layers'),
@@ -138,12 +210,14 @@ export function AppShell() {
     },
   });
 
-  const unitRow = unitId ? data?.unitById.get(unitId) : undefined;
+  const unitRow = unitRowNow;
   const buildingRow = buildingId ? data?.buildingById.get(buildingId) : undefined;
-  const open = selectedKey !== null;
+  const open = selectedKey !== null || historyOpen;
 
   let detail;
-  if (!selectedKey) {
+  if (historyOpen) {
+    detail = data ? <HistoryPanel data={data} unitId={params.get('unit')} /> : null;
+  } else if (!selectedKey) {
     detail = (
       <div className={styles.empty}>
         <p className={styles.emptyTitle}>Nothing selected</p>
@@ -155,9 +229,9 @@ export function AppShell() {
   } else if (!data) {
     detail = null; // still reading the database
   } else if (unitRow) {
-    detail = <UnitPanel row={unitRow} settings={data.settings} today={today} />;
+    detail = <UnitPanel row={unitRow} settings={data.settings} today={today} me={data.me} />;
   } else if (buildingRow) {
-    detail = <BuildingPanel row={buildingRow} today={today} />;
+    detail = <BuildingPanel row={buildingRow} today={today} meId={data.me.id} />;
   } else {
     detail = (
       <div className={styles.empty}>
@@ -201,6 +275,24 @@ export function AppShell() {
           </kbd>
         </button>
         <Link
+          to={historyOpen ? '/' : '/history'}
+          className={styles.iconBtn}
+          title="History: every change, with Undo"
+          aria-label="History"
+          aria-current={historyOpen ? 'page' : undefined}
+        >
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path
+              d="M3.5 10a6.5 6.5 0 1 0 1.9-4.6M3.5 3.5v3h3M10 6.5V10l2.5 1.8"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </Link>
+        <Link
           to="/settings/backup"
           className={styles.iconBtn}
           title="Settings"
@@ -225,12 +317,38 @@ export function AppShell() {
 
       <main className={styles.main}>
         <section className={styles.list} aria-label="List" data-panel="list">
-          <ListPanel data={data} view={listView} selectedKey={selectedKey} />
+          <ListPanel
+            data={data}
+            view={listView}
+            selectedKey={selectedKey}
+            pickedRows={pickedRows}
+            onPickClick={(e, id) => {
+              const ui = useUi.getState();
+              if (!(e.metaKey || e.ctrlKey || e.shiftKey)) {
+                if (ui.picked.length) ui.clearPicked();
+                return;
+              }
+              const order = listView?.units.map((r) => r.unit.id) ?? [];
+              const start = ui.picked.length ? ui.picked : unitId ? [unitId] : [];
+              if (e.shiftKey) {
+                const anchor = ui.anchor ?? unitId ?? id;
+                const [a, b] = [order.indexOf(anchor), order.indexOf(id)].sort((x, y) => x - y);
+                const range = a! >= 0 ? order.slice(a, (b ?? a!) + 1) : [id];
+                const next = e.metaKey || e.ctrlKey ? [...new Set([...start, ...range])] : range;
+                ui.setPicked(next, anchor);
+              } else {
+                const next = start.includes(id) ? start.filter((x) => x !== id) : [...start, id];
+                ui.setPicked(next, id);
+              }
+            }}
+          />
         </section>
 
         <section className={styles.detail} aria-label="Details" data-panel="unit">
           <div className={styles.panelHead}>
-            <p className={styles.panelTitle}>{buildingId ? 'Building' : 'Unit'}</p>
+            <p className={styles.panelTitle}>
+              {historyOpen ? 'History' : buildingId ? 'Building' : 'Unit'}
+            </p>
             {open && (
               <button
                 type="button"
@@ -245,7 +363,10 @@ export function AppShell() {
               </button>
             )}
           </div>
-          <div className={styles.detailScroll} key={selectedKey ?? 'none'}>
+          <div
+            className={styles.detailScroll}
+            key={historyOpen ? 'history' : (selectedKey ?? 'none')}
+          >
             {detail}
           </div>
         </section>
@@ -272,6 +393,23 @@ export function AppShell() {
           onClose={closeAdd}
         />
       )}
+
+      {rejecting && data && (
+        <RejectDialog
+          key={rejecting.unitIds.join(',') + rejecting.personId}
+          rejecting={rejecting}
+          data={data}
+          onClose={() => useUi.getState().setRejecting(null)}
+        />
+      )}
+      {editingTogether && data && pickedRows.length > 0 && (
+        <BulkEditDialog
+          rows={pickedRows}
+          data={data}
+          onClose={() => useUi.getState().setEditingTogether(false)}
+        />
+      )}
+      {shortcutsOpen && <ShortcutSheet onClose={() => useUi.getState().setShortcutsOpen(false)} />}
 
       <nav className={styles.tabs} aria-label="Views">
         {tabs.map((t) => (

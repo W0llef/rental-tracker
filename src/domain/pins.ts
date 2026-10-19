@@ -29,7 +29,7 @@ export interface PinUnit {
   unit: Unit;
   building: Building | undefined;
   /** Your rating and flag: pins show your view (PLAN.md §5.8). */
-  mine: Pick<OpinionFields, 'flag' | 'rating'>;
+  mine: Pick<OpinionFields, 'flag' | 'rating'> & Partial<Pick<OpinionFields, 'colorLabel'>>;
 }
 
 /** You rejected it (other people's flags don't change how it looks). */
@@ -262,10 +262,18 @@ export function priceStep(value: number, scale: PriceScale): number {
 }
 
 /** CSS color for one unit's edge. */
-export function edgeColor(u: Unit, colorBy: ColorBy, scale: PriceScale | null): string {
+export function edgeColor(
+  u: Unit,
+  colorBy: ColorBy,
+  scale: PriceScale | null,
+  /** Your private label, for "Your label" (Q19). */
+  myLabel: LabelColor | null = null,
+): string {
   if (colorBy === 'status') return `var(${STATUS_COLOR_VAR[u.status]})`;
-  if (colorBy === 'label')
-    return u.colorLabel ? `var(${LABEL_COLOR_VAR[u.colorLabel]})` : 'var(--ice)';
+  if (colorBy === 'label' || colorBy === 'myLabel') {
+    const c = colorBy === 'label' ? u.colorLabel : myLabel;
+    return c ? `var(${LABEL_COLOR_VAR[c]})` : 'var(--ice)';
+  }
   if (u.rent === null || !scale) return 'var(--ice)';
   return PRICE_STEPS[priceStep(u.rent, scale)] as string;
 }
@@ -290,8 +298,12 @@ export function edgeStripes(
       ? (statusOrder.get(r.unit.status) ?? 0)
       : colorBy === 'label'
         ? (labelOrder.get(r.unit.colorLabel) ?? 99)
-        : (r.unit.rent ?? Infinity);
-  return [...units].sort((a, b) => key(a) - key(b)).map((r) => edgeColor(r.unit, colorBy, scale));
+        : colorBy === 'myLabel'
+          ? (labelOrder.get(r.mine.colorLabel ?? null) ?? 99)
+          : (r.unit.rent ?? Infinity);
+  return [...units]
+    .sort((a, b) => key(a) - key(b))
+    .map((r) => edgeColor(r.unit, colorBy, scale, r.mine.colorLabel ?? null));
 }
 
 // ── Legend ────────────────────────────────────────────────────────────────
@@ -310,6 +322,8 @@ export function legendFor(
   rows: readonly PinUnit[],
   colorBy: ColorBy,
   labelNames: Record<LabelColor, string>,
+  /** Your names for your private labels ("Your label"). */
+  myLabelNames: Record<LabelColor, string> = labelNames,
 ): Legend {
   const units = rows.map((r) => r.unit);
   if (colorBy === 'status') {
@@ -324,14 +338,22 @@ export function legendFor(
       })),
     };
   }
-  if (colorBy === 'label') {
-    const present = new Set(units.map((u) => u.colorLabel));
-    const rows = LABEL_COLORS.filter((c) => present.has(c)).map((c) => ({
-      label: labelNames[c] ?? c,
+  if (colorBy === 'label' || colorBy === 'myLabel') {
+    const shared = colorBy === 'label';
+    const names = shared ? labelNames : myLabelNames;
+    const present = new Set(
+      rows.map((r) => (shared ? r.unit.colorLabel : (r.mine.colorLabel ?? null))),
+    );
+    const out = LABEL_COLORS.filter((c) => present.has(c)).map((c) => ({
+      label: names[c] ?? c,
       color: `var(${LABEL_COLOR_VAR[c]})`,
     }));
-    if (present.has(null) || !rows.length) rows.push({ label: 'No label', color: 'var(--ice)' });
-    return { kind: 'label', title: 'Pin color: label', rows };
+    if (present.has(null) || !out.length) out.push({ label: 'No label', color: 'var(--ice)' });
+    return {
+      kind: 'label',
+      title: shared ? 'Pin color: shared label' : 'Pin color: your label',
+      rows: out,
+    };
   }
   const title = `Pin color: ${PRICE_COLOR_LABEL.toLowerCase()}`;
   const scale = priceScale(rows);

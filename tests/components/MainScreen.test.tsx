@@ -117,7 +117,7 @@ describe('main screen without data', () => {
     expect(await screen.findByText('No units yet')).toBeVisible();
     expect(screen.getByRole('link', { name: 'load sample data' })).toHaveAttribute(
       'href',
-      '/debug',
+      '/settings/data',
     );
   });
 });
@@ -154,7 +154,7 @@ describe('main screen with units', () => {
     expect(card).toHaveTextContent('$1,650/mo rent');
     expect(card).toHaveTextContent('Pick');
     expect(within(card).getByRole('img', { name: '4 of 5 stars' })).toBeInTheDocument();
-    expect(within(card).getByRole('img', { name: 'Label: Blue' })).toBeInTheDocument();
+    expect(within(card).getByRole('img', { name: 'Shared label: Blue' })).toBeInTheDocument();
     expect(card).toHaveTextContent('Shortlisted');
     expect(screen.getByRole('link', { name: /Plan C/ })).toHaveTextContent('from $2,560');
     expect(screen.getByRole('link', { name: /Unit 310/ })).toHaveTextContent('Rejected: Too far');

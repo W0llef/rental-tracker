@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { deleteBuilding, deleteUnit } from '../../commands/records';
-import { undoAction } from '../../commands/undo';
 import { db } from '../../db/db';
+import { undoFromToast } from '../../state/toasts';
 import { useUi } from '../../state/ui';
 import styles from '../detail/detail.module.css';
 
@@ -44,14 +44,7 @@ export function DeleteSection({
     try {
       const actionId = kind === 'unit' ? await deleteUnit(db, id) : await deleteBuilding(db, id);
       navigate('/', { replace: true });
-      showNotice(`${name} deleted.`, null, () => {
-        void undoAction(db, actionId).then((ok) => {
-          if (!ok)
-            showNotice(
-              'Couldn’t undo: something else changed since. Use Undo on the Data check page.',
-            );
-        });
-      });
+      showNotice(`${name} deleted.`, null, () => void undoFromToast(db, actionId));
     } catch (e) {
       setError(`Couldn’t delete. ${(e as Error).message}`);
       setBusy(false);

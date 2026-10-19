@@ -197,6 +197,9 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
     ? (selectedKey.split(':') as [string, string])
     : [null, null];
   const selectedUnitId = selKind === 'unit' ? (selId as string) : null;
+  // Units selected together (M7): highlighted on the map like the open one.
+  const picked = useMemo(() => new Set(ui.picked), [ui.picked]);
+  const isPicked = useCallback((key: string) => picked.has(key.slice(5)), [picked]);
   const selectedBuildingId =
     selKind === 'unit'
       ? (data.unitById.get(selId as string)?.unit.buildingId ?? null)
@@ -240,8 +243,11 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
   const summaryUnits = useMemo(() => placed.flatMap((b) => b.summary), [placed]);
   const scale: PriceScale | null = useMemo(() => priceScale(summaryUnits), [summaryUnits]);
   const legend = useMemo(
-    () => (placed.length ? legendFor(summaryUnits, prefs.colorBy, data.settings.labelNames) : null),
-    [placed.length, summaryUnits, prefs.colorBy, data.settings.labelNames],
+    () =>
+      placed.length
+        ? legendFor(summaryUnits, prefs.colorBy, data.settings.labelNames, data.me.labelNames)
+        : null,
+    [placed.length, summaryUnits, prefs.colorBy, data.settings.labelNames, data.me.labelNames],
   );
 
   // ── Base map style ──
@@ -323,13 +329,13 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
         count: single ? 1 : b.pinned.length,
         newMark: newMark(b.pinned.some((u) => isNew(u.unit))),
         selected: single
-          ? selectedKey === unitKey(single)
+          ? selectedKey === unitKey(single) || isPicked(unitKey(single))
           : view === 'buildings'
             ? selectedKey === `building:${b.id}`
-            : b.pinned.some((u) => unitKey(u) === selectedKey),
+            : b.pinned.some((u) => unitKey(u) === selectedKey || isPicked(unitKey(u))),
       };
     },
-    [prefs.style, view, newMark, selectedKey],
+    [prefs.style, view, newMark, selectedKey, isPicked],
   );
   /** An open building's card: one row per unit, cheapest first, rejected last. */
   const cardRows = useCallback(
@@ -340,9 +346,9 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
           key: unitKey(r),
           content: pinContent([r], prefs, false),
           type: r.unit.type,
-          stripe: edgeColor(r.unit, prefs.colorBy, scale),
+          stripe: edgeColor(r.unit, prefs.colorBy, scale, r.mine.colorLabel ?? null),
           newMark: newMark(isNew(r.unit)),
-          selected: selectedKey === unitKey(r),
+          selected: selectedKey === unitKey(r) || isPicked(unitKey(r)),
           rejected,
           faded: rejected && prefs.rejected === 'fade',
           hot: false,
@@ -350,7 +356,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
           title: unitTitle(r.unit, r.building),
         };
       }),
-    [prefs, scale, newMark, selectedKey],
+    [prefs, scale, newMark, selectedKey, isPicked],
   );
   /** Everything that decides a card's size. */
   const cardKey = useCallback(
@@ -605,6 +611,23 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
 
   const select = (key: string) =>
     navigate(`/${key.replace(':', '/')}`, { replace: selectedKey !== null });
+  /**
+   * ⌘/Ctrl- or Shift-click (M7 review): a unit joins (or leaves) the selection; a building's
+   * pin or card name does the same for all its units in the Units view. Selecting several
+   * buildings to edit their own facts together arrives with the building form (M8).
+   */
+  const pickUnits = (keys: string[]) => {
+    if (view === 'buildings') {
+      ui.showNotice(
+        'Selecting several buildings to edit them together arrives with the building form in M8.',
+      );
+      return;
+    }
+    ui.togglePicked(
+      keys.map((k) => k.slice(5)),
+      selectedUnitId,
+    );
+  };
 
   // ── The larger photo: beside the card (or single pin) on whichever side has room,
   // level with the row, above everything else on the map ──
@@ -635,7 +658,9 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
   // ── Rendering helpers ──
   // Pointing at a card (or one of its units' list cards) brings it forward and fades the
   // other cards
-  const hoverCard = hoverBuildingId && layout.cards.has(hoverBuildingId) ? hoverBuildingId : null;
+  // Pointing at anything (a list card, a pin, a card row) fades every other pin and card
+  // (M7 review), as long as what's pointed at is on the map.
+  const hoverCard = hoverBuildingId && byId.has(hoverBuildingId) ? hoverBuildingId : null;
   /** Pins, dots and cards scale with the Pin size setting, about the building's point. */
   const scaled = k !== 1 ? { transform: `scale(${k})` } : undefined;
 
@@ -654,7 +679,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
         count={spec.count}
         stripes={
           single
-            ? [edgeColor(single.unit, prefs.colorBy, scale)]
+            ? [edgeColor(single.unit, prefs.colorBy, scale, single.mine.colorLabel ?? null)]
             : edgeStripes(b.summary, prefs.colorBy, scale)
         }
         selected={spec.selected}
@@ -662,6 +687,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
         faded={rejected && prefs.rejected === 'fade'}
         dot={dot && !spec.selected}
         hot={!opts.peek && !dot && hoverBuildingId === b.id}
+        dimmed={!opts.peek && !!hoverCard && hoverCard !== b.id}
         newMark={spec.newMark}
         label={
           single
@@ -669,7 +695,11 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
             : buildingPinLabel(b.building, b.summary, view, b.pinned.length)
         }
         expanded={b.group ? false : undefined}
-        onClick={() => (single ? select(key) : view === 'units' ? ui.openFan(b.id) : select(key))}
+        onClick={(additive) => {
+          if (additive) pickUnits(b.pinned.map(unitKey));
+          else if (single || view === 'buildings') select(key);
+          else ui.openFan(b.id);
+        }}
         onHover={(on) => setHover(on ? key : null)}
         onPreview={
           single && !opts.peek && prefs.style === 'photo'
@@ -725,8 +755,10 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
                 rows={rows}
                 photo={prefs.style === 'photo'}
                 dim={dim}
-                onSelect={select}
-                onOpenBuilding={() => select(`building:${b.id}`)}
+                onSelect={(key, additive) => (additive ? pickUnits([key]) : select(key))}
+                onOpenBuilding={(additive) =>
+                  additive ? pickUnits(b.pinned.map(unitKey)) : select(`building:${b.id}`)
+                }
                 onClose={() => ui.foldFan(b.id)}
                 onHover={setHover}
                 onPreview={showPreview}

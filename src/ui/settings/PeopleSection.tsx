@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { addPerson, removePerson, updatePerson } from '../../commands/people';
-import { undoAction } from '../../commands/undo';
+import { undoFromToast } from '../../state/toasts';
 import { db } from '../../db/db';
 import { readMeId } from '../../db/me';
 import { PERSON_COLOR_LABELS } from '../../domain/people';
@@ -110,11 +110,7 @@ function OtherPerson({ person }: { person: Person }) {
     setError(null);
     try {
       const actionId = await removePerson(db, person.id);
-      showNotice(`${person.name} removed.`, null, () => {
-        void undoAction(db, actionId).then((ok) => {
-          if (!ok) showNotice('Couldn’t undo: something else changed since.');
-        });
-      });
+      showNotice(`${person.name} removed.`, null, () => void undoFromToast(db, actionId));
     } catch (e) {
       setError(`Couldn’t remove ${person.name}. ${errorText(e)}`);
     }

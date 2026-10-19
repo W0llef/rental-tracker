@@ -46,9 +46,14 @@ export async function addPerson(db: RentalDB, name: string): Promise<Person> {
 export async function updatePerson(
   db: RentalDB,
   id: ID,
-  changes: { name?: string; color?: PersonColor },
+  changes: { name?: string; color?: PersonColor; labelNames?: Partial<Person['labelNames']> },
 ): Promise<Person> {
-  const label = changes.name !== undefined ? 'Rename person' : 'Change person’s color';
+  const label =
+    changes.name !== undefined
+      ? 'Rename person'
+      : changes.labelNames
+        ? 'Name private label'
+        : 'Change person’s color';
   const { value } = await action(db, label, async () => {
     const current = await db.people.get(id);
     if (!current || current.deletedAt) throw new NotFoundError('Person', id);
@@ -57,6 +62,9 @@ export async function updatePerson(
       ...current,
       ...(changes.name !== undefined ? { name: requireName(people, changes.name, id) } : {}),
       ...(changes.color ? { color: changes.color } : {}),
+      ...(changes.labelNames
+        ? { labelNames: { ...current.labelNames, ...changes.labelNames } }
+        : {}),
       updatedAt: nowIso(),
     });
     await db.people.put(next);
@@ -112,6 +120,21 @@ export async function setOpinion(
       const next = { ...(base ?? newOpinion(unitId, personId, {}, at)), ...changes };
       if (changes.flag !== undefined && changes.flag !== 'reject') next.rejectReasonIds = [];
       if (!base && !hasOpinion(next)) continue; // nothing to say, nothing to store
+      const said = (o: OpinionFields) =>
+        JSON.stringify([
+          o.rating,
+          o.ratingNote,
+          o.flag,
+          o.flagNote,
+          o.rejectReasonIds,
+          o.colorLabel,
+        ]);
+      if (base && said(base) === said(next)) continue; // already so
+      // "Last reviewed" (spec §3): when this person last flagged, rated or labeled it.
+      const reviewed = ['rating', 'flag', 'colorLabel', 'rejectReasonIds'].some(
+        (k) => k in changes,
+      );
+      if (reviewed && changes.lastReviewedAt === undefined) next.lastReviewedAt = at;
       const record = opinionSchema.parse({
         ...next,
         id: current?.id ?? next.id,

@@ -7,7 +7,6 @@ import {
   leaseTermsLabel,
   money,
   num,
-  rejectReasonText,
   rentLabel,
   shortDate,
   SITE_LABELS,
@@ -19,15 +18,17 @@ import {
 } from '../../domain/format';
 import { listingPrices, priceHistory } from '../../domain/listings';
 import { UTILITY_KEYS } from '../../model';
-import type { ISODate, OpinionFields, Settings, Unit } from '../../model';
+import type { ISODate, Person, Settings, Unit } from '../../model';
 import type { UnitRow } from '../../state/derive';
 import { PasteIntoUnit } from '../add/PasteIntoUnit';
 import { PlaceOnMapButton } from '../add/PlaceOnMap';
 import { DeleteSection } from '../edit/DeleteSection';
-import { FlagMark, LabelSwatch, Stars, StatusPill, Tag, Value } from '../common/Markers';
+import { Tag, Value } from '../common/Markers';
+import { MarkerControls } from '../triage/MarkerControls';
+import { NotesLog } from '../triage/NotesLog';
 import { Compass } from './Compass';
 import { mapLinks } from '../../domain/links';
-import { Amenities, Facts, Links, Notes, Rows, Section } from './parts';
+import { Amenities, Facts, Links, Rows, Section } from './parts';
 import { fromLinkRecords, isWebUrl, petsText, structureText, tri } from './text';
 import type { ExternalLink } from './text';
 import { PriceChart } from './PriceChart';
@@ -39,28 +40,6 @@ const usd = (v: number | null) => (v === null ? null : money(v));
 function floorText(u: Unit, floors: number | null): string | null {
   if (u.floor === null) return u.isFloorPlanOnly ? 'Units vary' : null;
   return floors !== null ? `${u.floor} of ${floors}` : String(u.floor);
-}
-
-/** Your flag and stars, the shared label and the status (everyone's: Ratings below). */
-function Markers({ u, mine, settings }: { u: Unit; mine: OpinionFields; settings: Settings }) {
-  const reasons = rejectReasonText(mine.rejectReasonIds, settings);
-  return (
-    <div className={styles.markers}>
-      <div className={styles.markerRow}>
-        <FlagMark flag={mine.flag} reasons={reasons} showNone />
-        <Stars rating={mine.rating} size="large" />
-        {u.colorLabel && (
-          <span className={styles.labelName}>
-            <LabelSwatch color={u.colorLabel} name={settings.labelNames[u.colorLabel]} />
-            <span aria-hidden="true">{settings.labelNames[u.colorLabel]}</span>
-          </span>
-        )}
-        <span className={styles.statusSlot}>
-          <StatusPill status={u.status} />
-        </span>
-      </div>
-    </div>
-  );
 }
 
 function LeaseSection({ u, today }: { u: Unit; today: ISODate }) {
@@ -280,15 +259,18 @@ function ListingsSection({ row, today }: { row: UnitRow; today: ISODate }) {
   );
 }
 
-/** The read-only unit detail panel (DESIGN.md §4.2). Editing arrives in M7–M8. */
+/** The unit detail panel (DESIGN.md §4.2): triage here (M7); full editing arrives in M8. */
 export function UnitPanel({
   row,
   settings,
   today,
+  me,
 }: {
   row: UnitRow;
   settings: Settings;
   today: ISODate;
+  /** You: your flag, stars and private label (M7). */
+  me: Person;
 }) {
   const { unit: u, building: b } = row;
   const title = unitTitle(u, b);
@@ -345,7 +327,7 @@ export function UnitPanel({
         )}
       </header>
 
-      <Markers u={u} mine={row.mine} settings={settings} />
+      <MarkerControls rows={[row]} me={me} settings={settings} />
       <RatingsSection unitId={u.id} rows={row.opinions} settings={settings} />
       <LeaseSection u={u} today={today} />
       <UnitFacts u={u} floors={b?.floors ?? null} />
@@ -360,11 +342,17 @@ export function UnitPanel({
           here. Arrives with destinations in Phase 2.
         </p>
       </Section>
-      <Section title="Notes">
-        <Notes notes={row.notes} today={today} />
+      <Section title="Notes" id="unit-notes">
+        <NotesLog notes={row.notes} today={today} meId={me.id} owner={{ unitId: u.id }} />
       </Section>
       <Section title="Links">
         <Links links={links} />
+      </Section>
+      <Section title="History" id="unit-history">
+        <p className={styles.muted}>
+          Every change to this unit, with Undo for any of them.{' '}
+          <Link to={`/history?unit=${u.id}`}>Open history</Link>
+        </p>
       </Section>
       <DeleteSection
         kind="unit"

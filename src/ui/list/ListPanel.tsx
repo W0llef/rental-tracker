@@ -4,7 +4,9 @@ import { appInfo } from '../../config';
 import { BUILDING_SORTS, isBuildingSortKey, isUnitSortKey, UNIT_SORTS } from '../../domain/sort';
 import type { SortDir } from '../../domain/sort';
 import type { SortSpec } from '../../model';
-import type { Dataset, ListView } from '../../state/derive';
+import type { MouseEvent } from 'react';
+import type { Dataset, ListView, UnitRow } from '../../state/derive';
+import { SelectionBar } from '../triage/SelectionBar';
 import { useUi } from '../../state/ui';
 import type { ListMode } from '../../state/ui';
 import { BuildInfo } from '../shell/BuildInfo';
@@ -93,7 +95,8 @@ function EmptyNoData() {
       </Link>
       {appInfo.channel !== 'live' && (
         <p className={styles.emptyText}>
-          Or, to try things out, <Link to="/debug">load sample data</Link> on the Data check page.
+          Or, to try things out, <Link to="/settings/data">load sample data</Link> in Settings →
+          Data.
         </p>
       )}
     </div>
@@ -108,11 +111,18 @@ export function ListPanel({
   data,
   view: listView,
   selectedKey,
+  pickedRows = [],
+  onPickClick,
 }: {
   data: Dataset | undefined;
   view: ListView | undefined;
   selectedKey: string | null;
+  /** Units selected together (M7). */
+  pickedRows?: UnitRow[];
+  /** Any click on a unit card (with ⌘/Ctrl or Shift it selects instead of opening). */
+  onPickClick?: (e: MouseEvent, unitId: string) => void;
 }) {
+  const pickedIds = new Set(pickedRows.map((r) => r.unit.id));
   const {
     view,
     setView,
@@ -190,6 +200,7 @@ export function ListPanel({
         </p>
       </div>
 
+      {data && pickedRows.length > 0 && <SelectionBar rows={pickedRows} data={data} />}
       <div className={styles.scroller} ref={scroller}>
         {data && totalUnits === 0 && <EmptyNoData />}
         {data && totalUnits > 0 && shown === 0 && (
@@ -222,6 +233,8 @@ export function ListPanel({
                       row={row}
                       settings={data.settings}
                       selected={selectedKey === `unit:${row.unit.id}`}
+                      picked={pickedIds.has(row.unit.id)}
+                      onPickClick={onPickClick}
                       hovered={
                         hoverKey === `unit:${row.unit.id}` ||
                         hoverKey === `building:${row.unit.buildingId}`

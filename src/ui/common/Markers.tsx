@@ -67,15 +67,28 @@ export function FlagMark({
   return showNone ? <span className={styles.flag}>No flag</span> : null;
 }
 
-/** A small colored square with the label's name for screen readers and as a tooltip. */
-export function LabelSwatch({ color, name }: { color: LabelColor; name: string }) {
+/**
+ * A small colored square with the label's name for screen readers and as a tooltip. Your
+ * private label has a ring, so it can't be mistaken for the shared one (Q19).
+ */
+export function LabelSwatch({
+  color,
+  name,
+  mine = false,
+}: {
+  color: LabelColor;
+  name: string;
+  /** Your private label rather than the shared one. */
+  mine?: boolean;
+}) {
+  const kind = mine ? 'Your label' : 'Shared label';
   return (
     <span
-      className={styles.swatch}
+      className={mine ? styles.swatchMine : styles.swatch}
       style={{ background: `var(--lb-${color})` }}
       role="img"
-      aria-label={`Label: ${name}`}
-      title={name}
+      aria-label={`${kind}: ${name}`}
+      title={`${kind}: ${name}`}
     />
   );
 }

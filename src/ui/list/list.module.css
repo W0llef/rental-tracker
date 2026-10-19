@@ -157,8 +157,36 @@
   left: 4px;
   bottom: 4px;
   display: flex;
-  border-radius: 3px;
+  align-items: center;
+  gap: 5px;
+  padding: 2px;
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+/* Multi-select (M7): a check in the photo corner, and the card tinted. */
+.pickBox {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--river);
+  color: var(--on-river);
   box-shadow: 0 0 0 2px var(--surface);
+}
+
+.pickBox svg {
+  width: 12px;
+  height: 12px;
+}
+
+.card[data-picked] {
+  background: var(--frost);
+  box-shadow: inset 0 0 0 2px var(--lake);
 }
 
 .body {

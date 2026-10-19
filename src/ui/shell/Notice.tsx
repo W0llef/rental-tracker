@@ -1,38 +1,53 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUi } from '../../state/ui';
 import styles from './AppShell.module.css';
 
 /**
- * A short confirmation after an action ("Unit 1504 at Riverlight added."), with a link to
- * what it's about, or an Undo button for a delete. It goes away by itself after a while (a
- * notice with Undo stays longer). Toasts with Undo after every action arrive in M7.
+ * The toast at the bottom left: what an action did, with Undo (or Redo after an undo), or a
+ * short confirmation with a link to what it's about (PLAN.md §5.6). It goes away by itself
+ * after a while; one with a button stays longer, and pointing at it keeps it.
  */
 export function Notice() {
   const notice = useUi((s) => s.notice);
   const clear = useUi((s) => s.clearNotice);
 
+  const [held, setHeld] = useState(false);
+  // A new toast starts its own timer, even if the pointer rested on the last one.
+  const [seen, setSeen] = useState(notice?.id);
+  if (seen !== notice?.id) {
+    setSeen(notice?.id);
+    setHeld(false);
+  }
   useEffect(() => {
-    if (!notice) return;
-    const t = setTimeout(clear, notice.undo ? 20000 : 9000);
+    if (!notice || held) return;
+    const t = setTimeout(clear, notice.button ? 12000 : 8000);
     return () => clearTimeout(t);
-  }, [notice, clear]);
+  }, [notice, clear, held]);
 
   return (
     <div className={styles.notice} role="status" aria-live="polite">
       {notice && (
-        <p className={styles.noticeBody} key={notice.id}>
+        <p
+          className={styles.noticeBody}
+          key={notice.id}
+          onMouseEnter={() => setHeld(true)}
+          onMouseLeave={() => setHeld(false)}
+          onFocus={() => setHeld(true)}
+          onBlur={() => setHeld(false)}
+        >
           <span>{notice.text}</span>
-          {notice.undo && (
+          {notice.button && (
             <button
               type="button"
               className={styles.noticeAction}
               onClick={() => {
-                notice.undo?.();
+                notice.button?.run();
                 clear();
+                setHeld(false);
               }}
             >
-              Undo
+              {notice.button.label}
             </button>
           )}
           {notice.to && (

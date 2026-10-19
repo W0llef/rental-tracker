@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from './fixtures';
 import type { Page } from '@playwright/test';
 
-/** M1: the data check page, sample data, undo and redo, in a real browser database. */
+/** Settings → Data (the M1 data check page, moved in the M7 review), sample data, undo. */
 
 const unitsStored = (page: Page) =>
   page
@@ -11,51 +11,45 @@ const unitsStored = (page: Page) =>
     .locator('td')
     .first();
 
-test.describe('data check page (preview/dev build)', () => {
-  test('is reachable from the app shell', async ({ page }, info) => {
+test.describe('Settings → Data (preview/dev build)', () => {
+  test('is reachable from Settings, and old #/debug links land there', async ({ page }) => {
     await page.goto('/');
-    if (info.project.name.includes('phone')) {
-      // The build info sits at the bottom of the list tab on phones.
-      await page
-        .getByRole('navigation', { name: 'Views' })
-        .getByRole('button', { name: 'List' })
-        .click();
-    }
-    await page.getByRole('link', { name: 'Data check' }).click();
-    await expect(page).toHaveURL(/#\/debug$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Data check' })).toBeVisible();
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await page
+      .getByRole('navigation', { name: 'Settings' })
+      .getByRole('link', { name: 'Data' })
+      .click();
+    await expect(page).toHaveURL(/#\/settings\/data$/);
     await expect(page.getByText('rental-tracker-preview')).toBeVisible();
+    await page.goto('/#/debug');
+    await expect(page).toHaveURL(/#\/settings\/data$/);
   });
 
-  test('loads sample data, undoes, redoes, and keeps it after a reload', async ({ page }) => {
-    await page.goto('/#/debug');
+  test('loads sample data, undoes and redoes from the keyboard, and keeps it after a reload', async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name.includes('phone'), 'Undo keys are for laptops');
+    await page.goto('/#/settings/data');
     await expect(unitsStored(page)).toHaveText('0');
-
     await page.getByRole('button', { name: 'Load sample data' }).click();
     await expect(page.getByTestId('debug-message')).toContainText('Loaded');
     await expect(unitsStored(page)).not.toHaveText('0'); // the counts follow the database
     const loaded = Number(await unitsStored(page).textContent());
     expect(loaded).toBeGreaterThan(20);
 
-    await page.getByRole('button', { name: 'Raise a rent by $25' }).click();
-    await expect(page.getByRole('button', { name: 'Undo: Change rent' })).toBeVisible();
-
-    // History and undo stack survive a reload: they live in the database, not in memory.
+    // History and undo survive a reload: they live in the database, not in memory.
     await page.reload();
     await expect(unitsStored(page)).toHaveText(String(loaded));
-    await page.getByRole('button', { name: 'Undo: Change rent' }).click();
-    await page.getByRole('button', { name: 'Undo: Load sample data' }).click();
-    await expect(unitsStored(page)).toHaveText('0');
-
-    await page.getByRole('button', { name: 'Redo: Load sample data' }).click();
-    await expect(unitsStored(page)).toHaveText(String(loaded));
-    await expect(page.getByTestId('history').getByRole('listitem').first()).toContainText(
-      'Redo: Load sample data',
-    );
+    await page.goto('/#/');
+    await expect(page.getByTestId('list-count')).toContainText(`${loaded} units`);
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(page.getByTestId('list-count')).toContainText('0 units');
+    await page.keyboard.press('ControlOrMeta+Shift+z');
+    await expect(page.getByTestId('list-count')).toContainText(`${loaded} units`);
   });
 
   test('has no horizontal scrolling', async ({ page }) => {
-    await page.goto('/#/debug');
+    await page.goto('/#/settings/data');
     await page.getByRole('button', { name: 'Load sample data' }).click();
     await expect(page.getByTestId('debug-message')).toContainText('Loaded');
     const overflow = await page.evaluate(
@@ -67,7 +61,7 @@ test.describe('data check page (preview/dev build)', () => {
   for (const scheme of ['light', 'dark'] as const) {
     test(`has no accessibility violations (${scheme})`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
-      await page.goto('/#/debug');
+      await page.goto('/#/settings/data');
       await page.getByRole('button', { name: 'Load sample data' }).click();
       await expect(page.getByTestId('debug-message')).toContainText('Loaded');
       const results = await new AxeBuilder({ page }).analyze();

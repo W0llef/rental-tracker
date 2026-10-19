@@ -588,3 +588,59 @@
     grid-column: 2;
   }
 }
+
+/* Ratings: notes and reasons per person (M7) */
+.personActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  margin: 2px 0 0;
+  font-size: 12.5px;
+}
+
+.personEdit {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--s2);
+  padding-top: var(--s2);
+}
+
+.noteField {
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--slate);
+}
+
+.noteField input {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--ice);
+  border-radius: var(--r-sm);
+  padding: 5px 8px 3px;
+  min-height: 32px;
+}
+
+.noteField input:focus-visible {
+  outline: 2px solid var(--lake);
+  outline-offset: 1px;
+}
+
+.smallSave {
+  min-height: 30px;
+  padding: 2px 12px 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--river);
+  color: var(--on-river);
+  font-weight: 700;
+  font-size: 12.5px;
+}
+
+.smallSave:disabled {
+  opacity: 0.6;
+}
