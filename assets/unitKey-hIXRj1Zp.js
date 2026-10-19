@@ -1,0 +1,2 @@
+function e(e){if(!e)return null;let t=e.toLowerCase().trim().replace(/^(?:(?:apartment|apt|unit|suite|ste|no|number)(?=[\s.#\d])\.?\s*#?|#)\s*/u,``).replace(/[^\p{L}\p{N}]/gu,``);return t===``?null:t}export{e as t};
+//# sourceMappingURL=unitKey-hIXRj1Zp.js.map
