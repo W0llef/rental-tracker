@@ -79,6 +79,7 @@ test.describe('cost profile and lease length', () => {
     await expect(page.getByRole('checkbox', { name: /Spread one-time fees/ })).toBeChecked();
     await page.getByRole('link', { name: 'Back to the app' }).click();
     // Find a unit with one-time fees to spread
+    await expect(page.getByTestId('list-count')).toContainText('34 units in 10 buildings');
     const count = await cards(page).count();
     let found = false;
     for (let i = 0; i < count && !found; i++) {
