@@ -99,9 +99,9 @@ test.describe('backup and restore (preview/dev build)', () => {
     );
 
     // Change something, then restore the earlier file over it.
-    await page.goto('/#/debug');
+    await page.goto('/#/settings/data');
     await page.getByRole('button', { name: 'Raise a rent by $25' }).click();
-    await expect(page.getByRole('button', { name: 'Undo: Change rent' })).toBeVisible();
+    await expect(page.getByTestId('debug-message')).toContainText('Rent changed');
     await page.goto('/#/settings/backup');
     await page.getByLabel('Backup file to restore').setInputFiles(sample.path);
     await page.getByRole('button', { name: 'Replace with this backup' }).click();
@@ -112,8 +112,8 @@ test.describe('backup and restore (preview/dev build)', () => {
     await expect(copies).toContainText('Before restoring a backup');
 
     // Undo history was cleared by the restore.
-    await page.goto('/#/debug');
-    await expect(page.getByRole('button', { name: 'Nothing to undo' })).toBeDisabled();
+    await page.goto('/#/history');
+    await expect(page.getByRole('article', { name: 'History' })).toContainText('No changes yet.');
 
     // The safety copy downloads and restores like a backup.
     await page.goto('/#/settings/backup');

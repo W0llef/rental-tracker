@@ -147,6 +147,8 @@ test.describe('unit list and detail (preview/dev build)', () => {
       await expect(
         page.getByRole('region', { name: 'Details' }).getByRole('heading', { level: 2 }),
       ).toBeVisible();
+      // Pointing at a card fades the others on the map (M7); check the resting state.
+      await page.mouse.move(1, 1);
       const unitResults = await new AxeBuilder({ page }).analyze();
       expect(unitResults.violations).toEqual([]);
 
@@ -156,6 +158,7 @@ test.describe('unit list and detail (preview/dev build)', () => {
       await expect(
         page.getByRole('region', { name: 'Details' }).getByRole('heading', { level: 2 }),
       ).toBeVisible();
+      await page.mouse.move(1, 1);
       const buildingResults = await new AxeBuilder({ page }).analyze();
       expect(buildingResults.violations).toEqual([]);
     });

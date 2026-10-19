@@ -244,9 +244,14 @@ test.describe('triage', () => {
     test(`passes axe checks: panel, Reject, Edit together, History (${scheme})`, async ({
       page,
     }, info) => {
+      test.slow(); // five full-page axe runs
       await page.emulateMedia({ colorScheme: scheme });
       await openFirst(page);
-      const axe = () => new AxeBuilder({ page }).exclude('.maplibregl-canvas').analyze();
+      // Pointing at a card fades the others on the map (M7 review); check the resting state.
+      const axe = async () => {
+        await page.mouse.move(1, 1);
+        return new AxeBuilder({ page }).exclude('.maplibregl-canvas').analyze();
+      };
       expect((await axe()).violations).toEqual([]);
       await panel(page)
         .getByRole('group', { name: 'Your flag' })
