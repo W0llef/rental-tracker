@@ -1,6 +1,7 @@
 import type { ChangeEntry } from '../db/changeLog';
 import { defaultSettings, LABEL_COLORS } from '../model';
 import type {
+  BuildingType,
   Building,
   ID,
   LabelColor,
@@ -14,6 +15,7 @@ import type {
 } from '../model';
 import { emptyOpinionFields } from '../model/factories';
 import {
+  BUILDING_TYPE_LABELS,
   buildingName,
   enumLabel,
   leaseTermsLabel,
@@ -226,6 +228,70 @@ const UNIT_FIELDS: Record<string, string> = {
   placement3d: '3D placement',
 };
 
+/** Building fields' names (M8): what History says for building form saves. */
+const BUILDING_FIELDS: Record<string, string> = {
+  name: 'Name',
+  complexName: 'Complex',
+  address: 'Address',
+  website: 'Website',
+  managementCompany: 'Management company',
+  phone: 'Phone',
+  email: 'Email',
+  yearBuilt: 'Year built',
+  yearRenovated: 'Year renovated',
+  floors: 'Floors',
+  totalUnits: 'Total units',
+  buildingType: 'Building type',
+  elevator: 'Elevator',
+  amenitiesNotes: 'Amenity notes',
+  'pets.cats': 'Cats',
+  'pets.dogs': 'Dogs',
+  'pets.limits': 'Pet limits',
+  'pets.deposit': 'Pet deposit',
+  'pets.oneTimeFee': 'One-time pet fee',
+  'pets.monthlyRent': 'Pet rent',
+  smoking: 'Smoking',
+  guestParking: 'Guest parking',
+  subletPolicy: 'Subletting',
+  policyNotes: 'Policy notes',
+  neighborhood: 'Neighborhood',
+  links: 'Links',
+  notes: 'Building notes',
+  availabilityUrl: 'Availability page',
+  floorHeightFt: 'Floor height',
+};
+
+const BUILDING_MONEY = new Set(['pets.deposit', 'pets.oneTimeFee', 'pets.monthlyRent']);
+
+/**
+ * Where a change is described as a whole rather than key by key: a utility's terms
+ * ("Heat included → billed extra, $40/mo"), a move-in special, an address, a neighborhood.
+ */
+const WHOLE = new Set([
+  'utilities',
+  'moveInSpecial',
+  'costOverrides',
+  'placement3d',
+  'address',
+  'neighborhood',
+  'crime',
+]);
+
+/** The changed paths of two records, with the WHOLE parts kept together. */
+function describedPaths(a: unknown, b: unknown): string[][] {
+  const seen = new Set<string>();
+  const out: string[][] = [];
+  for (const p of diffPaths(a, b)) {
+    const depth = p[0] === 'utilities' ? 2 : WHOLE.has(p[0]!) ? 1 : p.length;
+    const cut = p.slice(0, depth);
+    const key = cut.join('.');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(cut);
+  }
+  return out;
+}
+
 const MONEY_FIELDS = new Set([
   'rent',
   'deposit',
@@ -244,8 +310,41 @@ function fieldLabel(path: Path, table: 'units' | 'buildings'): string {
     if (UNIT_FIELDS[key]) return UNIT_FIELDS[key];
     if (UNIT_FIELDS[path[0]!]) return UNIT_FIELDS[path[0]!]!;
   }
+  if (table === 'buildings') {
+    if (path[0] === 'amenities' && path[1]) return AMENITY_NAMES[path[1]] ?? capitalize(path[1]);
+    if (BUILDING_FIELDS[key]) return BUILDING_FIELDS[key];
+    if (BUILDING_FIELDS[path[0]!]) return BUILDING_FIELDS[path[0]!]!;
+  }
   const last = path[path.length - 1] ?? key;
   return capitalize(last.replace(/([A-Z])/g, ' $1').toLowerCase());
+}
+
+const AMENITY_NAMES: Record<string, string> = {
+  fitness: 'Fitness',
+  pool: 'Pool',
+  studyRooms: 'Study rooms',
+  outdoorDeck: 'Outdoor deck',
+  packageRoom: 'Package room',
+  bikeStorage: 'Bike storage',
+  evCharging: 'EV charging',
+  guestSuites: 'Guest suites',
+  petArea: 'Pet area',
+  frontDesk: 'Front desk',
+  skywayConnected: 'Skyway connected',
+};
+
+/** A building field's value in words ("$35", "mid-rise", "Downtown East"). */
+function buildingValue(path: Path, v: unknown): string {
+  const key = path.join('.');
+  if (v === null || v === undefined) return 'unknown';
+  if (BUILDING_MONEY.has(key) && typeof v === 'number') return money(v);
+  if (key === 'yearBuilt' || key === 'yearRenovated') return String(v);
+  if (key === 'buildingType')
+    return (BUILDING_TYPE_LABELS[v as BuildingType] ?? String(v)).toLowerCase();
+  if (key === 'neighborhood' && typeof v === 'object') return short((v as { name: string }).name);
+  if (key === 'address' && typeof v === 'object') return short((v as { line1: string }).line1);
+  if (typeof v === 'string' && /^[a-z]+(-[a-z]+)*$/.test(v)) return enumLabel(v).toLowerCase();
+  return valueText(v);
 }
 
 /** A unit field's value in words ("$1,650", "Included", "12 or 15 months"). */
@@ -257,6 +356,7 @@ function unitValue(path: Path, v: unknown): string {
   if (key === 'leaseTermsMonths') return leaseTermsLabel(v as number[]) ?? 'unknown';
   if (key === 'squareFeet' && typeof v === 'number') return `${num(v)} ft²`;
   if (key === 'bedrooms' && v === 0) return 'studio';
+  if (key === 'moveInSpecial' && typeof v === 'object') return short((v as { text: string }).text);
   if (typeof v === 'string' && /^[a-z]+(-[a-z]+)*$/.test(v)) return enumLabel(v).toLowerCase();
   return valueText(v);
 }
@@ -349,9 +449,21 @@ function unitItems(c: RecordChange, lookup: HistoryLookup, ctx: Context): Item[]
     ];
   }
   const items: Item[] = [];
-  for (const path of diffPaths(before, after)) {
+  for (const path of describedPaths(before, after)) {
     if (IGNORED.has(path[0]!)) continue;
     const key = path.join('.');
+    if (key === 'fieldSources') {
+      // Sources follow the values they're for: a form save that drops them says so only
+      // in the details.
+      items.push({
+        ...base,
+        group: 'unit:fieldSources',
+        text: (s) => `Changed sources on ${s}`,
+        detail: `Changed sources on ${name}`,
+        quiet: true,
+      });
+      continue;
+    }
     const was = getPath(before, path);
     const now = getPath(after, path);
     if (key === 'status') {
@@ -382,7 +494,12 @@ function unitItems(c: RecordChange, lookup: HistoryLookup, ctx: Context): Item[]
     const field = fieldLabel(path, 'units');
     const nowText = unitValue(path, now);
     const wasText = unitValue(path, was);
-    const simple = typeof now !== 'object' || now === null || path[0] === 'utilities';
+    const simple =
+      typeof now !== 'object' ||
+      now === null ||
+      path[0] === 'utilities' ||
+      key === 'moveInSpecial' ||
+      Array.isArray(now);
     items.push({
       ...base,
       group: simple ? `unit:${key}:${JSON.stringify(now)}` : `unit:${key}`,
@@ -440,7 +557,7 @@ function buildingItems(c: RecordChange, ctx: Context): Item[] {
     ];
   }
   const items: Item[] = [];
-  for (const path of diffPaths(before, after)) {
+  for (const path of describedPaths(before, after)) {
     if (IGNORED.has(path[0]!)) continue;
     if (path[0] === 'location') {
       if (items.some((i) => i.group === 'building-place')) continue;
@@ -452,14 +569,19 @@ function buildingItems(c: RecordChange, ctx: Context): Item[] {
       });
       continue;
     }
-    const field = fieldLabel(path, 'buildings').toLowerCase();
-    const was = valueText(getPath(before, path));
-    const now = valueText(getPath(after, path));
+    const field = fieldLabel(path, 'buildings');
+    const was = buildingValue(path, getPath(before, path));
+    const now = buildingValue(path, getPath(after, path));
+    const long = ['notes', 'amenitiesNotes', 'policyNotes', 'links'].includes(path[0]!);
     items.push({
       ...base,
-      group: `building:${path.join('.')}`,
-      text: (s) => `Changed ${field} on ${s}`,
-      detail: `${capitalize(field)} ${was} → ${now} on ${name}`,
+      group: `building:${path.join('.')}:${long ? '' : now}`,
+      text: long
+        ? (s) => `Changed ${field.toLowerCase()} on ${s}`
+        : (s) => `${field} ${was} → ${now} on ${s}`,
+      detail: long
+        ? `Changed ${field.toLowerCase()} on ${name}`
+        : `${field} ${was} → ${now} on ${name}`,
     });
   }
   return items;
@@ -562,7 +684,13 @@ function listingItems(c: RecordChange, lookup: HistoryLookup, ctx: Context): Ite
   const l = (after ?? before)!;
   const name = unitNameById(l.unitId, lookup);
   const site = SITE_LABELS[l.site] ?? 'listing';
-  const base = { subject: name, noun: 'unit', quiet: ctx.addedUnits.has(l.unitId) };
+  // A unit added with its listing, or a rent typed in the form that went into the price
+  // history, says it once: "Added Unit 1504", "Rent $1,650 → $1,600 on Unit 1504".
+  const base = {
+    subject: name,
+    noun: 'unit',
+    quiet: ctx.addedUnits.has(l.unitId) || ctx.rentChanged.has(l.unitId),
+  };
   const life = lifeOf(before, after);
   if (life === 'added')
     return [
@@ -754,6 +882,8 @@ function settingsItems(c: RecordChange): Item[] {
 
 interface Context {
   addedUnits: Set<ID>;
+  /** Units whose rent this action changed. */
+  rentChanged: Set<ID>;
   addedUnitBuildings: Set<ID>;
   deletedBuildings: Set<ID>;
   restoredBuildings: Set<ID>;
@@ -765,6 +895,7 @@ interface Context {
 function contextOf(changes: readonly RecordChange[]): Context {
   const ctx: Context = {
     addedUnits: new Set(),
+    rentChanged: new Set(),
     addedUnitBuildings: new Set(),
     deletedBuildings: new Set(),
     restoredBuildings: new Set(),
@@ -785,6 +916,8 @@ function contextOf(changes: readonly RecordChange[]): Context {
     if (c.table !== 'units') continue;
     const u = (c.after ?? c.before) as Unit;
     const life = lifeOf(c.before as Rec | null, c.after as Rec | null);
+    if (life === 'changed' && (c.before as Unit).rent !== (c.after as Unit).rent)
+      ctx.rentChanged.add(u.id);
     if (life === 'added') {
       ctx.addedUnits.add(u.id);
       ctx.addedUnitBuildings.add(u.buildingId);
@@ -897,7 +1030,9 @@ export function describeChanges(
     const subjects = new Set([...groups.values()].flat().map((i) => i.subject));
     title =
       subjects.size === 1 &&
-      [...groups.keys()].every((g) => g.startsWith('unit:') || g.startsWith('building:'))
+      [...groups.keys()].every(
+        (g) => g.startsWith('unit:') || g.startsWith('building:') || g.startsWith('listing-'),
+      )
         ? `Changed ${plural(parts.length, 'detail')} on ${[...subjects][0]}`
         : `${parts.slice(0, TITLE_PARTS).join('; ')} and ${plural(parts.length - TITLE_PARTS, 'more change')}`;
   }

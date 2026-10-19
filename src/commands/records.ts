@@ -64,7 +64,7 @@ export async function deleteBuilding(db: RentalDB, id: ID): Promise<string> {
 // ── Units ──────────────────────────────────────────────────────────────────
 
 /** Keeps the derived identity fields in step with the unit number (§3.3, floor plan only). */
-function withIdentity(u: Unit): Unit {
+export function withIdentity(u: Unit): Unit {
   const unitKey = unitKeyOf(u.unitNumber);
   return { ...u, unitKey, isFloorPlanOnly: unitKey ? false : u.isFloorPlanOnly };
 }
