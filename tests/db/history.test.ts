@@ -305,6 +305,9 @@ describe('recently deleted', () => {
   it('lists deleted units and buildings and brings them back', async () => {
     const { db, b, u1, u2 } = await setup();
     await deleteUnit(db, u1.id);
+    // Deletes in the same millisecond look like one (units go with their building by time);
+    // a person can't click that fast, a test can.
+    await new Promise((r) => setTimeout(r, 5));
     await deleteBuilding(db, b.id); // takes u2 with it
     const list = await listDeleted(db);
     expect(list.map((i) => [i.kind, i.id, i.unitCount])).toEqual([
