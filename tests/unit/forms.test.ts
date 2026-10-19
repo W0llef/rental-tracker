@@ -23,6 +23,7 @@ import {
   normalizeListing,
   reconcileRent,
 } from '../../src/domain/unitForm';
+import { isStandalone, standaloneDefault } from '../../src/domain/standalone';
 import { DEFAULT_ESSENTIAL_FIELDS } from '../../src/model';
 import type { Listing, Unit } from '../../src/model';
 import { makeAddress, newBuilding, newListing, newUnit } from '../../src/model/factories';
@@ -374,5 +375,33 @@ describe('sources after hand edits', () => {
       'unit',
     );
     expect(kept.map((s) => s.field)).toEqual(['unit.bedrooms', 'building.floors']);
+  });
+});
+
+describe('standalone homes (Q30)', () => {
+  const b = (patch: Record<string, unknown> = {}) => ({
+    complexName: null,
+    buildingType: null,
+    standalone: null,
+    ...patch,
+  });
+  it('defaults by the unit’s type', () => {
+    expect(isStandalone(b(), [{ type: 'house' }])).toBe(true);
+    expect(isStandalone(b(), [{ type: 'townhome' }])).toBe(true);
+    expect(isStandalone(b(), [{ type: 'apartment' }])).toBe(false);
+    expect(isStandalone(b(), [{ type: 'room' }])).toBe(false);
+    expect(isStandalone(b({ buildingType: 'house' }), [{ type: null }])).toBe(true);
+    expect(isStandalone(b(), [{ type: null }])).toBe(false);
+    expect(isStandalone(b({ buildingType: 'house' }), [])).toBe(true);
+  });
+  it('is shared with a complex name or several units, and follows a choice', () => {
+    expect(isStandalone(b({ complexName: 'Cedar Mill' }), [{ type: 'townhome' }])).toBe(false);
+    expect(isStandalone(b(), [{ type: 'house' }, { type: 'house' }])).toBe(false);
+    expect(isStandalone(b({ standalone: false }), [{ type: 'house' }])).toBe(false);
+    expect(isStandalone(b({ standalone: true }), [{ type: 'apartment' }])).toBe(true);
+    expect(isStandalone(b({ standalone: true }), [{ type: 'house' }, { type: 'house' }])).toBe(
+      false,
+    );
+    expect(standaloneDefault(b({ standalone: true }), [{ type: 'apartment' }])).toBe(false);
   });
 });

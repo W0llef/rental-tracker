@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { useBlocker } from 'react-router-dom';
 import type { SectionStatus } from '../../domain/completeness';
 import { Notice } from '../shell/Notice';
@@ -42,6 +42,8 @@ export function FormFrame({
   focusField,
   saveLabel = 'Save',
   message,
+  marked,
+  onMarkedChange,
 }: {
   title: string;
   subtitle?: ReactNode;
@@ -58,9 +60,14 @@ export function FormFrame({
   saveLabel?: string;
   /** A line under the header: what the last save or copy did, or why it couldn't. */
   message?: ReactNode;
+  /**
+   * Fields marked unknown: the record's remembered ones (Q29) plus this session's. The form
+   * owns them, so its completeness and its save can use them.
+   */
+  marked: ReadonlySet<string>;
+  onMarkedChange: Dispatch<SetStateAction<ReadonlySet<string>>>;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  const [marked, setMarkedState] = useState<Set<string>>(() => new Set());
   const [errors, setErrors] = useState<Map<string, string>>(() => new Map());
   const [nothingLeft, setNothingLeft] = useState(false);
 
@@ -69,7 +76,7 @@ export function FormFrame({
       marked,
       errors,
       setMarked: (path, on) =>
-        setMarkedState((m) => {
+        onMarkedChange((m) => {
           if (m.has(path) === on) return m;
           const next = new Set(m);
           if (on) next.add(path);
@@ -93,7 +100,7 @@ export function FormFrame({
         return true;
       },
     }),
-    [marked, errors],
+    [marked, errors, onMarkedChange],
   );
 
   // Leaving with unsaved changes asks first (Back, links, Cancel); closing the tab too.

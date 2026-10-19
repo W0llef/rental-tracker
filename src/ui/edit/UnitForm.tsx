@@ -3,7 +3,16 @@ import type { CSSProperties } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { saveUnitForm } from '../../commands/forms';
 import { db } from '../../db/db';
-import { completeness, CHECK_BY_KEY, essentials, UNIT_SECTIONS } from '../../domain/completeness';
+import {
+  CHECK_BY_KEY,
+  checkStates,
+  essentials,
+  fieldKnown,
+  nextCheckedUnknown,
+  summarize,
+  UNIT_SECTIONS,
+} from '../../domain/completeness';
+import { HOME_FIELDS, isStandalone } from '../../domain/standalone';
 import { copyDetails, unitFromSource } from '../../domain/copyFrom';
 import { profileEstimate } from '../../domain/cost';
 import {
@@ -50,6 +59,8 @@ import {
   TriField,
 } from './fields';
 import type { Option } from './fields';
+import { HomeFields } from './BuildingFields';
+import { withSchemes } from './buildingDraft';
 import { FormFrame } from './FormFrame';
 import { focusRow, rowOf } from './formState';
 import { ListingsEditor } from './ListingsEditor';
@@ -205,6 +216,17 @@ function UnitForm({
   focusField?: string | null;
 }) {
   const [draft, setDraft] = useState<Unit>(initial);
+  // The unit's building as this form edits it: a standalone home's facts and the choice of
+  // being part of a larger building (Q30). Follows the building the unit is in.
+  const [bDraft, setBDraft] = useState<Building>(storedBuilding);
+  const initialMarks = useMemo(
+    () =>
+      [...(initial.checkedUnknown ?? []), ...(storedBuilding.checkedUnknown ?? [])]
+        .map((c) => c.field)
+        .sort(),
+    [initial, storedBuilding],
+  );
+  const [marked, setMarked] = useState<ReadonlySet<string>>(() => new Set(initialMarks));
   const [listings, setListings] = useState<Listing[]>(initialListings);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(
@@ -220,20 +242,44 @@ function UnitForm({
     (v: Unit[K]) =>
       setDraft((d) => ({ ...d, [k]: v }));
 
-  const building = data.buildingById.get(draft.buildingId)?.building ?? storedBuilding;
+  const movedTo =
+    draft.buildingId !== bDraft.id ? data.buildingById.get(draft.buildingId)?.building : undefined;
+  const building = movedTo ?? bDraft;
+  const storedB = data.buildingById.get(building.id)?.building ?? storedBuilding;
+  const othersHere = data.units.filter(
+    (r) => r.unit.buildingId === building.id && r.unit.id !== draft.id,
+  );
+  const standalone = isStandalone(building, [...othersHere.map((r) => r.unit), draft]);
   const dirty =
     JSON.stringify(draft) !== JSON.stringify(initial) ||
-    JSON.stringify(listings) !== JSON.stringify(initialListings);
+    JSON.stringify(listings) !== JSON.stringify(initialListings) ||
+    JSON.stringify(bDraft) !== JSON.stringify(storedBuilding) ||
+    JSON.stringify([...marked].sort()) !== JSON.stringify(initialMarks);
 
   const target = { unit: draft, building };
-  const unitDone = completeness(target, 'unit');
-  const ess = essentials(target, settings.essentialFields);
+  // A standalone home's form also counts the home's own facts it shows.
+  const states = checkStates(target, undefined, marked).filter(
+    (st) => st.check.owner === 'unit' || (standalone && HOME_FIELDS.has(st.check.field)),
+  );
+  const unitDone = summarize(
+    states.map((st) =>
+      st.check.owner === 'building'
+        ? { ...st, check: { ...st.check, section: 'home' as never } }
+        : st,
+    ),
+  );
+  const ess = essentials(target, settings.essentialFields, marked);
+  const onPage = (c: { owner: string; field: string }) =>
+    c.owner === 'unit' || (standalone && HOME_FIELDS.has(c.field));
   const essSplit = {
     ...ess,
-    onPage: ess.missing.filter((c) => c.owner === 'unit'),
-    elsewhere: ess.missing.filter((c) => c.owner === 'building'),
+    onPage: ess.missing.filter(onPage),
+    elsewhere: ess.missing.filter((c) => !onPage(c)),
   };
-  const sections = UNIT_SECTIONS.map((s) => ({
+  const sectionList = standalone
+    ? [UNIT_SECTIONS[0], { id: 'home', label: 'The home' } as const, ...UNIT_SECTIONS.slice(1)]
+    : UNIT_SECTIONS;
+  const sections = sectionList.map((s) => ({
     id: s.id,
     label: s.label,
     status: unitDone.sections.get(s.id)?.status,
@@ -261,9 +307,14 @@ function UnitForm({
         ? `Saving sets the rent to ${money(preview.rent)}, the newest price in the listings.`
         : 'The rent follows the newest price you’ve seen; change either one.';
 
-  const others = data.units
-    .filter((r) => r.unit.buildingId === draft.buildingId && r.unit.id !== draft.id)
-    .sort((a, b) => Number(b.unit.isFloorPlanOnly) - Number(a.unit.isFloorPlanOnly));
+  const others = [...othersHere].sort(
+    (a, b) => Number(b.unit.isFloorPlanOnly) - Number(a.unit.isFloorPlanOnly),
+  );
+  // The Building menu offers buildings that hold several units, not other people's houses.
+  const buildingChoices = data.buildings
+    .filter((r) => !r.standalone || r.building.id === draft.buildingId)
+    .map((r) => r.building)
+    .sort((a, b) => buildingName(a).localeCompare(buildingName(b)));
   const planOnly = draft.isFloorPlanOnly;
   const notForPlans = planOnly ? 'Depends on the unit (floor plan only).' : undefined;
   const paidParking = draft.parking.type === 'garage' || draft.parking.type === 'surface';
@@ -290,7 +341,35 @@ function UnitForm({
     }
     setSaving(true);
     try {
-      const r = await saveUnitForm(db, { unit: draft, listings, today, isNew });
+      const unitCU = nextCheckedUnknown(
+        marked,
+        initial.checkedUnknown ?? [],
+        'unit',
+        (f) => fieldKnown({ unit: draft }, f),
+        today,
+      );
+      // The building is saved with the unit when the form changed it (a standalone home's
+      // facts, or the "part of a larger building" choice), and only if the unit stays in it.
+      let building: Building | undefined;
+      if (!movedTo) {
+        const b = withSchemes(bDraft);
+        const bCU = nextCheckedUnknown(
+          marked,
+          storedB.checkedUnknown ?? [],
+          'building',
+          (f) => fieldKnown({ building: b }, f),
+          today,
+        );
+        const next = { ...b, checkedUnknown: bCU };
+        if (JSON.stringify(next) !== JSON.stringify(storedB)) building = next;
+      }
+      const r = await saveUnitForm(db, {
+        unit: { ...draft, checkedUnknown: unitCU },
+        listings,
+        today,
+        isNew,
+        ...(building ? { building } : {}),
+      });
       if (!r.changed) useUi.getState().showNotice('Nothing changed.');
       leave(isNew ? `/unit/${r.unit.id}` : undefined);
     } catch (e) {
@@ -299,9 +378,15 @@ function UnitForm({
     }
   }
 
+  const bName = buildingName(building);
+  const uTitle = unitTitle(draft, building);
   const title = isNew
-    ? `New unit at ${buildingName(building)}`
-    : `${buildingName(building)} · ${unitTitle(draft, building)}`;
+    ? standalone
+      ? `New home at ${building.address.line1}`
+      : `New unit at ${bName}`
+    : uTitle === bName
+      ? bName
+      : `${bName} · ${uTitle}`;
 
   return (
     <FormFrame
@@ -315,54 +400,73 @@ function UnitForm({
       focusField={focusField}
       saveLabel={isNew ? 'Add unit' : 'Save'}
       message={message}
+      marked={marked}
+      onMarkedChange={setMarked}
       aside={
         <>
-          <section className={styles.card} aria-labelledby="bldg-title">
-            <h2 className={styles.cardTitle} id="bldg-title">
-              Building
-            </h2>
-            <p className={styles.cardMain}>{buildingName(building)}</p>
-            <p className={styles.small}>
-              {[
-                building.buildingType && BUILDING_TYPE_LABELS[building.buildingType],
-                building.floors !== null && `${num(building.floors)} floors`,
-                building.yearBuilt !== null && `built ${building.yearBuilt}`,
-              ]
-                .filter(Boolean)
-                .join(', ') || 'Not much known yet.'}
-            </p>
-            <Link to={`/building/${building.id}/edit`} state={{ inApp: true }}>
-              Edit building
-            </Link>
-          </section>
+          {!standalone && (
+            <section className={styles.card} aria-labelledby="bldg-title">
+              <h2 className={styles.cardTitle} id="bldg-title">
+                Building
+              </h2>
+              <p className={styles.cardMain}>{buildingName(building)}</p>
+              <p className={styles.small}>
+                {[
+                  building.buildingType && BUILDING_TYPE_LABELS[building.buildingType],
+                  building.floors !== null && `${num(building.floors)} floors`,
+                  building.yearBuilt !== null && `built ${building.yearBuilt}`,
+                ]
+                  .filter(Boolean)
+                  .join(', ') || 'Not much known yet.'}
+              </p>
+              <Link to={`/building/${building.id}/edit`} state={{ inApp: true }}>
+                Edit building
+              </Link>
+            </section>
+          )}
           <CompletenessCard c={unitDone} essentials={essSplit} />
         </>
       }
     >
       <FormSection id="identity" title="Identity">
-        <FieldRow
-          path="unit.buildingId"
-          label="Building"
-          empty={false}
-          controlId="unit-building"
-          noUnknown
-        >
-          <select
-            id="unit-building"
-            className={styles.select}
-            value={draft.buildingId}
-            onChange={(e) => set('buildingId')(e.target.value)}
+        <CheckField
+          label="Part of a larger building or complex"
+          checked={!standalone}
+          disabled={othersHere.length > 0}
+          onChange={(on) => {
+            if (movedTo) return;
+            setBDraft((b) => ({ ...b, standalone: !on }));
+          }}
+          hint={
+            othersHere.length > 0
+              ? 'Other units of yours are in this building.'
+              : standalone
+                ? 'A house or townhome on its own: its address, pets and other facts are right here in the unit’s form.'
+                : 'Apartments and condos are in a building; so are townhomes in a complex with shared amenities.'
+          }
+        />
+        {!standalone && (
+          <FieldRow
+            path="unit.buildingId"
+            label="Building"
+            empty={false}
+            controlId="unit-building"
+            noUnknown
           >
-            {data.buildings
-              .map((b) => b.building)
-              .sort((a, b) => buildingName(a).localeCompare(buildingName(b)))
-              .map((b) => (
+            <select
+              id="unit-building"
+              className={styles.select}
+              value={draft.buildingId}
+              onChange={(e) => set('buildingId')(e.target.value)}
+            >
+              {buildingChoices.map((b) => (
                 <option key={b.id} value={b.id}>
                   {buildingName(b)} ({b.address.line1})
                 </option>
               ))}
-          </select>
-        </FieldRow>
+            </select>
+          </FieldRow>
+        )}
         <TextField
           path="unit.unitNumber"
           label="Unit number"
@@ -374,14 +478,14 @@ function UnitForm({
               isFloorPlanOnly: v ? false : d.isFloorPlanOnly,
             }))
           }
-          placeholder="1504"
+          placeholder="e.g. 1504"
         />
         <TextField
           path="unit.floorPlanName"
           label="Floor plan"
           value={draft.floorPlanName}
           onChange={set('floorPlanName')}
-          placeholder="Plan C"
+          placeholder="e.g. Plan C"
         />
         <CheckField
           label="Floor plan only (no specific unit yet)"
@@ -443,6 +547,22 @@ function UnitForm({
           </div>
         )}
       </FormSection>
+
+      {standalone && (
+        <FormSection
+          id="home"
+          title="The home"
+          lead="Where it is and the facts that come with the house itself."
+        >
+          <HomeFields building={bDraft} onChange={setBDraft} />
+          <p className={styles.small}>
+            <Link to={`/building/${bDraft.id}/edit`} state={{ inApp: true }}>
+              More about the home
+            </Link>{' '}
+            (amenities, subletting, notes): saves separately.
+          </p>
+        </FormSection>
+      )}
 
       <FormSection id="specs" title="Specs">
         <SelectField
@@ -509,7 +629,7 @@ function UnitForm({
           value={draft.layoutNotes}
           onChange={set('layoutNotes')}
           multiline
-          placeholder="Open kitchen, den, walk-in closet…"
+          placeholder="e.g. open kitchen, den, walk-in closet"
         />
       </FormSection>
 
@@ -567,7 +687,7 @@ function UnitForm({
           label="Flooring"
           value={draft.flooring}
           onChange={set('flooring')}
-          placeholder="Hardwood, carpet in bedrooms"
+          placeholder="e.g. hardwood, carpet in bedrooms"
         />
         <SelectField
           path="unit.furnished"

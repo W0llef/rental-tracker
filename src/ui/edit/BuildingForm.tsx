@@ -2,16 +2,21 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { saveBuildingForm } from '../../commands/forms';
 import { db } from '../../db/db';
-import { makeAddress } from '../../domain/address';
-import { BUILDING_SECTIONS, completeness } from '../../domain/completeness';
+import {
+  BUILDING_SECTIONS,
+  completeness,
+  fieldKnown,
+  nextCheckedUnknown,
+} from '../../domain/completeness';
 import {
   BUILDING_TYPE_LABELS,
   buildingName,
   enumLabel,
+  localDate,
   rentLabel,
   unitTitle,
 } from '../../domain/format';
-import { parseMoney, parseUrl, parseWhole, parseYear } from '../../domain/input';
+import { parseMoney, parseWhole, parseYear } from '../../domain/input';
 import { AMENITY_KEYS, BUILDING_TYPES } from '../../model';
 import type { Building } from '../../model';
 import type { BuildingRow } from '../../state/derive';
@@ -19,10 +24,12 @@ import { useDataset } from '../../state/useDataset';
 import { useUi } from '../../state/ui';
 import { AMENITY_LABELS } from '../detail/text';
 import { LinksEditor } from './editors';
-import { FieldRow, FormSection, NumberField, SelectField, TextField, TriField } from './fields';
+import { FormSection, NumberField, SelectField, TextField, TriField } from './fields';
 import type { Option } from './fields';
+import { AddressFields, NameFields, UrlField } from './BuildingFields';
+import { SMOKING, withSchemes } from './buildingDraft';
 import { FormFrame } from './FormFrame';
-import { focusRow, rowOf, useFormApi } from './formState';
+import { focusRow, rowOf } from './formState';
 import { CompletenessCard } from './Summary';
 import styles from './edit.module.css';
 
@@ -35,10 +42,6 @@ import styles from './edit.module.css';
 const TYPES: Option<Building['buildingType'] & string>[] = BUILDING_TYPES.map((t) => ({
   value: t,
   label: BUILDING_TYPE_LABELS[t],
-}));
-const SMOKING = (['not-allowed', 'designated-areas', 'allowed'] as const).map((v) => ({
-  value: v,
-  label: v === 'not-allowed' ? 'Not allowed' : v === 'allowed' ? 'Allowed' : 'Designated areas',
 }));
 const SUBLET = (['allowed', 'with-approval', 'not-allowed'] as const).map((v) => ({
   value: v,
@@ -65,17 +68,30 @@ export function BuildingFormPage() {
         <Link to="/">Back to the app</Link>
       </div>
     );
-  return <BuildingForm key={row.building.id} row={row} focusField={params.get('field')} />;
+  return (
+    <BuildingForm
+      key={row.building.id}
+      row={row}
+      allBuildings={data.buildings.map((b) => b.building)}
+      focusField={params.get('field')}
+    />
+  );
 }
 
-function BuildingForm({ row, focusField }: { row: BuildingRow; focusField: string | null }) {
+function BuildingForm({
+  row,
+  allBuildings,
+  focusField,
+}: {
+  row: BuildingRow;
+  allBuildings: Building[];
+  focusField: string | null;
+}) {
   const initial = row.building;
   const [draft, setDraft] = useState<Building>(initial);
-  const [address, setAddress] = useState({
-    line1: initial.address.line1,
-    city: initial.address.city ?? '',
-    zip: initial.address.zip ?? '',
-  });
+  const [marked, setMarked] = useState<ReadonlySet<string>>(
+    () => new Set((initial.checkedUnknown ?? []).map((c) => c.field)),
+  );
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -93,31 +109,27 @@ function BuildingForm({ row, focusField }: { row: BuildingRow; focusField: strin
     (v: Building['pets'][K]) =>
       setDraft((d) => ({ ...d, pets: { ...d.pets, [k]: v } }));
 
-  const done = completeness({ building: draft }, 'building');
+  const done = completeness({ building: draft }, 'building', marked);
   const sections = BUILDING_SECTIONS.map((s) => ({
     id: s.id,
     label: s.label,
     status: done.sections.get(s.id)?.status,
   }));
-  const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
+  const dirty =
+    JSON.stringify(draft) !== JSON.stringify(initial) ||
+    JSON.stringify([...marked].sort()) !==
+      JSON.stringify((initial.checkedUnknown ?? []).map((c) => c.field).sort());
   const petsAllowed = draft.pets.cats === true || draft.pets.dogs === true;
-
-  const setAddressPart = (part: keyof typeof address, value: string) => {
-    const next = { ...address, [part]: value };
-    setAddress(next);
-    if (!next.line1.trim()) return; // the street address can't be empty; saving says so
-    const made = makeAddress(
-      next.line1,
-      next.city.trim() || null,
-      initial.address.state,
-      next.zip.trim() || null,
-    );
-    setDraft((d) => ({ ...d, address: made }));
-  };
+  const complexNames = [
+    ...new Set(
+      allBuildings
+        .filter((b) => b.id !== initial.id && b.complexName)
+        .map((b) => b.complexName as string),
+    ),
+  ].sort((a, b) => a.localeCompare(b));
 
   async function onSave(errors: ReadonlyMap<string, string>, root: HTMLElement) {
     const problems = new Map(errors);
-    if (!address.line1.trim()) problems.set('building.address', 'Enter the street address.');
     if (problems.size) {
       setMessage(
         `Fix ${problems.size === 1 ? 'one field' : `${problems.size} fields`} first: ${[...problems.values()][0]}`,
@@ -129,7 +141,15 @@ function BuildingForm({ row, focusField }: { row: BuildingRow; focusField: strin
     }
     setSaving(true);
     try {
-      const r = await saveBuildingForm(db, withSchemes(draft));
+      const next = withSchemes(draft);
+      const checkedUnknown = nextCheckedUnknown(
+        marked,
+        initial.checkedUnknown ?? [],
+        'building',
+        (f) => fieldKnown({ building: next }, f),
+        localDate(),
+      );
+      const r = await saveBuildingForm(db, { ...next, checkedUnknown });
       if (!r.changed) useUi.getState().showNotice('Nothing changed.');
       leave();
     } catch (e) {
@@ -149,6 +169,8 @@ function BuildingForm({ row, focusField }: { row: BuildingRow; focusField: strin
       onCancel={leave}
       focusField={focusField}
       message={message}
+      marked={marked}
+      onMarkedChange={setMarked}
       aside={
         <>
           <CompletenessCard c={done} />
@@ -175,61 +197,8 @@ function BuildingForm({ row, focusField }: { row: BuildingRow; focusField: strin
       }
     >
       <FormSection id="identity" title="Identity">
-        <TextField
-          path="building.name"
-          label="Name"
-          value={draft.name}
-          onChange={set('name')}
-          placeholder="Riverlight"
-        />
-        <TextField
-          path="building.complexName"
-          label="Complex"
-          value={draft.complexName}
-          onChange={set('complexName')}
-          hint="When several buildings share one name."
-        />
-        <FieldRow
-          path="building.address"
-          label="Street address"
-          empty={false}
-          controlId="b-line1"
-          noUnknown
-          hint="Moving the pin is separate: use Place on map from the building’s panel."
-        >
-          <input
-            id="b-line1"
-            className={`${styles.input} ${styles.grow}`}
-            value={address.line1}
-            autoComplete="off"
-            onChange={(e) => setAddressPart('line1', e.target.value)}
-          />
-        </FieldRow>
-        <FieldRow
-          path="building.address.city"
-          label="City and ZIP"
-          empty={false}
-          controlId="b-city"
-          noUnknown
-        >
-          <div className={styles.listRow}>
-            <input
-              id="b-city"
-              className={`${styles.input} ${styles.city}`}
-              value={address.city}
-              placeholder="Minneapolis"
-              onChange={(e) => setAddressPart('city', e.target.value)}
-            />
-            <input
-              className={styles.inputShort}
-              aria-label="ZIP code"
-              value={address.zip}
-              inputMode="numeric"
-              placeholder="55401"
-              onChange={(e) => setAddressPart('zip', e.target.value)}
-            />
-          </div>
-        </FieldRow>
+        <NameFields building={draft} onChange={setDraft} complexNames={complexNames} />
+        <AddressFields building={draft} onChange={setDraft} />
         <UrlField
           path="building.website"
           label="Website"
@@ -329,7 +298,7 @@ function BuildingForm({ row, focusField }: { row: BuildingRow; focusField: strin
           value={draft.amenitiesNotes}
           onChange={set('amenitiesNotes')}
           multiline
-          placeholder="Rooftop grills, dog wash…"
+          placeholder="e.g. rooftop grills, dog wash"
         />
       </FormSection>
 
@@ -353,7 +322,7 @@ function BuildingForm({ row, focusField }: { row: BuildingRow; focusField: strin
               label="Pet limits"
               value={draft.pets.limits}
               onChange={setPets('limits')}
-              placeholder="Max 2 pets, dogs under 50 lb"
+              placeholder="e.g. max 2 pets, dogs under 50 lb"
             />
             <NumberField
               path="building.pets.monthlyRent"
@@ -401,7 +370,7 @@ function BuildingForm({ row, focusField }: { row: BuildingRow; focusField: strin
           label="Guest parking"
           value={draft.guestParking}
           onChange={set('guestParking')}
-          placeholder="Street only; 2-hour visitor spots"
+          placeholder="e.g. street only, 2-hour visitor spots"
         />
         <TextField
           path="building.policyNotes"
@@ -460,46 +429,4 @@ function BuildingForm({ row, focusField }: { row: BuildingRow; focusField: strin
       </FormSection>
     </FormFrame>
   );
-}
-
-/** A web address, kept as typed; saving adds https:// when it's missing. */
-function UrlField({
-  path,
-  label,
-  value,
-  onChange,
-  hint,
-}: {
-  path: string;
-  label: string;
-  value: string | null;
-  onChange: (v: string | null) => void;
-  hint?: string;
-}) {
-  const form = useFormApi();
-  return (
-    <TextField
-      path={path}
-      label={label}
-      type="url"
-      value={value}
-      placeholder="example.com"
-      hint={hint}
-      onChange={(v) => {
-        onChange(v);
-        const r = v === null ? null : parseUrl(v);
-        form.setError(path, r && !r.ok ? `${label}: ${r.error}` : null);
-      }}
-    />
-  );
-}
-
-/** Web addresses as saved: https:// added where it was left off. */
-function withSchemes(b: Building): Building {
-  const fix = (v: string | null) => {
-    if (v === null) return null;
-    const r = parseUrl(v);
-    return r.ok ? r.value : v;
-  };
-  return { ...b, website: fix(b.website), availabilityUrl: fix(b.availabilityUrl) };
 }

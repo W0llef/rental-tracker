@@ -188,12 +188,24 @@ function BuildingSection({ row }: { row: UnitRow }) {
   if (!b) return null;
   const pets = petsText(b.pets);
   const structure = structureText(b, b.buildingType && BUILDING_TYPE_LABELS[b.buildingType]);
+  const text = (structure || pets) && (
+    <p className={styles.para}>{[structure, pets].filter(Boolean).join('. ')}.</p>
+  );
+  if (row.standalone) {
+    // A standalone home (Q30): no separate building; amenities only when some are known.
+    const anyAmenity = Object.values(b.amenities).some((v) => v !== null);
+    return (
+      <Section title="The home">
+        {text ?? <p className={styles.muted}>Year built, pets and the rest: Edit (E).</p>}
+        {b.managementCompany && <p className={styles.para}>Rented by {b.managementCompany}.</p>}
+        {anyAmenity && <Amenities building={b} />}
+      </Section>
+    );
+  }
   return (
     <Section title={buildingName(b)} action={<Link to={`/building/${b.id}`}>Open building</Link>}>
       <Amenities building={b} />
-      {(structure || pets) && (
-        <p className={styles.para}>{[structure, pets].filter(Boolean).join('. ')}.</p>
-      )}
+      {text}
     </Section>
   );
 }
@@ -329,7 +341,9 @@ export function UnitPanel({
       </header>
 
       <MarkerControls rows={[row]} me={me} settings={settings} />
-      {b && <EssentialsSection unit={u} building={b} settings={settings} />}
+      {b && (
+        <EssentialsSection unit={u} building={b} settings={settings} standalone={row.standalone} />
+      )}
       <RatingsSection unitId={u.id} rows={row.opinions} settings={settings} />
       <LeaseSection u={u} today={today} />
       <UnitFacts u={u} floors={b?.floors ?? null} />
@@ -370,7 +384,7 @@ export function UnitPanel({
         >
           Edit <kbd aria-hidden="true">E</kbd>
         </Link>
-        {b && (
+        {b && !row.standalone && (
           <Link
             to={`/new-unit?from=${u.id}`}
             state={{ inApp: true }}

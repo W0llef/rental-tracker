@@ -27,6 +27,11 @@ export interface UnitFormInput {
   today: ISODate;
   /** True for a unit that isn't stored yet ("New unit from Plan C"). */
   isNew?: boolean;
+  /**
+   * Its building as the form left it, when the form edits it too: a standalone home's
+   * facts (Q30), or the choice of being part of a larger building. Saved in the same step.
+   */
+  building?: Building;
 }
 
 export interface UnitFormResult {
@@ -80,7 +85,7 @@ export async function saveUnitForm(db: RentalDB, input: UnitFormInput): Promise<
     if (!stored) {
       await db.units.add({ ...next, createdAt: at, updatedAt: at });
       changed = true;
-    } else if (!same(strip(stored), strip(next))) {
+    } else if (!same(strip(unitSchema.parse(stored)), strip(next))) {
       await db.units.put({ ...next, updatedAt: at });
       changed = true;
     }
@@ -98,36 +103,47 @@ export async function saveUnitForm(db: RentalDB, input: UnitFormInput): Promise<
       await db.listings.put({ ...old, deletedAt: at, updatedAt: at });
       changed = true;
     }
+    if (input.building) {
+      if (input.building.id !== next.buildingId)
+        throw new Error('The form’s building isn’t the unit’s building.');
+      if (await writeBuilding(db, input.building)) changed = true;
+    }
     result = { unit: next, changed, effect: r.effect };
   });
   return { ...result, actionId: result.changed ? actionId : null };
 }
 
 /**
- * Saves the building form. Sources recorded on its units for building facts that were
- * typed here by hand go, as for units (pasted building facts keep their sources on the
- * unit they were pasted into, §5.7).
+ * Writes an edited building inside the running action. Sources recorded on its units for
+ * building facts typed here by hand go, as for units (pasted building facts keep their
+ * sources on the unit they were pasted into, §5.7). Returns whether anything changed.
  */
+async function writeBuilding(db: RentalDB, draft: Building): Promise<Building | null> {
+  const stored = await db.buildings.get(draft.id);
+  if (!stored || stored.deletedAt) throw new NotFoundError('Building', draft.id);
+  const next = buildingSchema.parse({ ...draft, updatedAt: stored.updatedAt });
+  if (same(strip(buildingSchema.parse(stored)), strip(next))) return null;
+  const at = nowIso();
+  await db.buildings.put({ ...next, updatedAt: at });
+  const changed = diffPaths(stored, next).map((p) => p.join('.'));
+  const units = await db.units.where('buildingId').equals(draft.id).toArray();
+  for (const u of units) {
+    const sources = dropStaleSources(u.fieldSources, changed, 'building');
+    if (sources.length !== u.fieldSources.length)
+      await db.units.put({ ...u, fieldSources: sources, updatedAt: at });
+  }
+  return next;
+}
+
+/** Saves the building form (one undo step). */
 export async function saveBuildingForm(
   db: RentalDB,
   draft: Building,
 ): Promise<{ building: Building; changed: boolean }> {
   let out = { building: draft, changed: false };
   await action(db, 'Edit building', async () => {
-    const stored = await db.buildings.get(draft.id);
-    if (!stored || stored.deletedAt) throw new NotFoundError('Building', draft.id);
-    const next = buildingSchema.parse({ ...draft, updatedAt: stored.updatedAt });
-    if (same(strip(stored), strip(next))) return;
-    const at = nowIso();
-    await db.buildings.put({ ...next, updatedAt: at });
-    const changed = diffPaths(stored, next).map((p) => p.join('.'));
-    const units = await db.units.where('buildingId').equals(draft.id).toArray();
-    for (const u of units) {
-      const sources = dropStaleSources(u.fieldSources, changed, 'building');
-      if (sources.length !== u.fieldSources.length)
-        await db.units.put({ ...u, fieldSources: sources, updatedAt: at });
-    }
-    out = { building: next, changed: true };
+    const next = await writeBuilding(db, draft);
+    if (next) out = { building: next, changed: true };
   });
   return out;
 }

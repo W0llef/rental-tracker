@@ -33,10 +33,12 @@ export function BuildingCard({
       ? `${row.unitCount} of your units`
       : `${row.matching.length} of ${row.unitCount} of your units match`;
   const range = rangeLabel(row.minRent, row.maxRent);
+  // A standalone home (Q30) opens as its unit: there's no building to look at.
+  const home = row.standalone && row.units.length === 1 ? row.units[0] : undefined;
 
   return (
     <Link
-      to={`/building/${b.id}`}
+      to={home ? `/unit/${home.unit.id}` : `/building/${b.id}`}
       className={styles.card}
       aria-current={selected ? 'true' : undefined}
       data-hover={hovered || undefined}
@@ -80,7 +82,8 @@ export function BuildingCard({
           )}
         </span>
         <span className={styles.foot}>
-          <span>{count}</span>
+          {!home && <span>{count}</span>}
+          {home && <Tag>Home</Tag>}
           {b.location === null && <Tag>Needs location</Tag>}
         </span>
       </span>

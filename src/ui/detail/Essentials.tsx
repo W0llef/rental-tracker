@@ -13,10 +13,13 @@ export function EssentialsSection({
   unit,
   building,
   settings,
+  standalone = false,
 }: {
   unit: Unit;
   building: Building;
   settings: Settings;
+  /** A standalone home (Q30): its own facts are edited in the unit's form. */
+  standalone?: boolean;
 }) {
   const e = essentials({ unit, building }, settings.essentialFields);
   if (e.total === 0) return null;
@@ -33,23 +36,28 @@ export function EssentialsSection({
       </h3>
       {e.ready ? (
         <p className={styles.muted}>All {e.total} essentials are known.</p>
-      ) : (
+      ) : e.missing.length === 0 ? null : (
         <ul className={styles.prompts} aria-label="Missing essentials">
           {e.missing.map((c) => (
             <li key={c.key}>
               <Link
-                to={checkHref(c, { unitId: unit.id, buildingId: building.id })}
+                to={checkHref(c, { unitId: unit.id, buildingId: building.id, standalone })}
                 state={{ inApp: true }}
                 className={styles.prompt}
               >
                 Add {c.label.charAt(0).toLowerCase() + c.label.slice(1)}
-                {c.owner === 'building' && (
+                {c.owner === 'building' && !standalone && (
                   <span className={styles.visuallyHidden}> (building)</span>
                 )}
               </Link>
             </li>
           ))}
         </ul>
+      )}
+      {e.unknown.length > 0 && (
+        <p className={styles.muted}>
+          Checked and unknown: {e.unknown.map((c) => c.label.toLowerCase()).join(', ')}.
+        </p>
       )}
     </section>
   );

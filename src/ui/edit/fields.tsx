@@ -77,9 +77,17 @@ export function FieldRow({
             className={styles.unknownBtn}
             tabIndex={-1}
             aria-pressed={empty && marked}
-            title={`Mark ${label.toLowerCase()} unknown (?)`}
+            title={
+              empty && marked
+                ? `Checked and unknown. Press again to research ${label.toLowerCase()} again.`
+                : `Mark ${label.toLowerCase()} unknown (?)`
+            }
             aria-label={`Mark ${label} unknown`}
-            onClick={onUnknown}
+            onClick={() => {
+              // Pressed again: back to "still to research".
+              if (empty && marked) form.setMarked(path, false);
+              else onUnknown();
+            }}
           >
             ?
           </button>
@@ -134,6 +142,7 @@ export function TextField({
   wide,
   autoComplete = 'off',
   type = 'text',
+  list,
 }: {
   path: string;
   label: string;
@@ -145,6 +154,8 @@ export function TextField({
   wide?: boolean;
   autoComplete?: string;
   type?: 'text' | 'email' | 'tel' | 'url';
+  /** A datalist of suggestions (e.g. complex names already used). */
+  list?: string;
 }) {
   const id = useId();
   const form = useFormApi();
@@ -178,7 +189,7 @@ export function TextField({
       wide={wide || multiline}
       onUnknown={() => unknown()}
     >
-      {multiline ? <textarea rows={3} {...props} /> : <input type={type} {...props} />}
+      {multiline ? <textarea rows={3} {...props} /> : <input type={type} list={list} {...props} />}
     </FieldRow>
   );
 }

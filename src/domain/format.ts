@@ -156,8 +156,12 @@ export function utilityLabel(term: UtilityTerm | null): string | null {
   }
 }
 
-/** Building's display name: its name, else the complex, else the street address. */
+/**
+ * Building's display name: "North Tower · Cedar Mill" for a building with its own name in a
+ * complex of several (M8 review); else its name, else the complex's, else the street address.
+ */
 export function buildingName(b: Pick<Building, 'name' | 'complexName' | 'address'>): string {
+  if (b.name && b.complexName && b.name !== b.complexName) return `${b.name} · ${b.complexName}`;
   return b.name ?? b.complexName ?? b.address.line1;
 }
 

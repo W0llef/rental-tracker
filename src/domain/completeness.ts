@@ -1,6 +1,7 @@
 import { AMENITY_KEYS, UTILITY_KEYS } from '../model';
 import type { Building, Settings, Unit } from '../model';
 import { UTILITY_LABELS } from './format';
+import { HOME_FIELDS } from './standalone';
 
 /**
  * What's known and what's left to research (PLAN.md §5.7 "Essentials first", DESIGN.md §4.3).
@@ -212,11 +213,28 @@ export const RESEARCH_FIELDS: ReadonlySet<string> = new Set([
 
 export interface CheckState {
   check: Check;
+  /** Known. */
   filled: boolean;
+  /** Not known, but someone checked and found it unknown (Q29). */
+  checked: boolean;
 }
 
-/** The checks that apply, with whether each is filled. Building checks need the building. */
-export function checkStates(t: Target, owner?: Owner): CheckState[] {
+/** The fields checked and found unknown, from the records (Q29; missing before v3). */
+export function checkedFields(t: Target): Set<string> {
+  return new Set(
+    [...(t.unit?.checkedUnknown ?? []), ...(t.building?.checkedUnknown ?? [])].map((c) => c.field),
+  );
+}
+
+/**
+ * The checks that apply, with whether each is known or checked unknown. Building checks
+ * need the building. `checked` defaults to what the records say; the forms pass their draft.
+ */
+export function checkStates(
+  t: Target,
+  owner?: Owner,
+  checked: ReadonlySet<string> = checkedFields(t),
+): CheckState[] {
   const out: CheckState[] = [];
   for (const check of CHECKS) {
     if (owner && check.owner !== owner) continue;
@@ -225,7 +243,8 @@ export function checkStates(t: Target, owner?: Owner): CheckState[] {
     // A unit check can read the building and the reverse, so give both (or stand-ins).
     const full = t as Required<Target>;
     if (check.applies && !check.applies(full)) continue;
-    out.push({ check, filled: check.filled(full) });
+    const filled = check.filled(full);
+    out.push({ check, filled, checked: !filled && checked.has(check.field) });
   }
   return out;
 }
@@ -233,14 +252,19 @@ export function checkStates(t: Target, owner?: Owner): CheckState[] {
 export type SectionStatus = 'complete' | 'partly' | 'empty';
 
 export interface Completeness {
-  /** Filled checks out of those that apply. */
+  /** Known checks. */
   filled: number;
+  /** Checked and found unknown: researched, so they count as done (Q29). */
+  checked: number;
   total: number;
-  /** 0–100, rounded down so 100 means truly complete. */
+  /** Known or checked, 0–100, rounded down so 100 means nothing is left to research. */
   percent: number;
   /** Per section with at least one check. */
   sections: Map<string, { filled: number; total: number; status: SectionStatus }>;
+  /** Still to research. */
   missing: Check[];
+  /** Checked and unknown. */
+  unknown: Check[];
 }
 
 export function summarize(states: readonly CheckState[]): Completeness {
@@ -248,26 +272,29 @@ export function summarize(states: readonly CheckState[]): Completeness {
   for (const s of states) {
     const sec = sections.get(s.check.section) ?? { filled: 0, total: 0, status: 'empty' };
     sec.total++;
-    if (s.filled) sec.filled++;
+    if (s.filled || s.checked) sec.filled++;
     sections.set(s.check.section, sec);
   }
   for (const sec of sections.values()) {
     sec.status = sec.filled === sec.total ? 'complete' : sec.filled === 0 ? 'empty' : 'partly';
   }
   const filled = states.filter((s) => s.filled).length;
+  const checked = states.filter((s) => s.checked).length;
   const total = states.length;
   return {
     filled,
+    checked,
     total,
-    percent: total ? Math.floor((filled / total) * 100) : 100,
+    percent: total ? Math.floor(((filled + checked) / total) * 100) : 100,
     sections,
-    missing: states.filter((s) => !s.filled).map((s) => s.check),
+    missing: states.filter((s) => !s.filled && !s.checked).map((s) => s.check),
+    unknown: states.filter((s) => s.checked).map((s) => s.check),
   };
 }
 
 /** The unit's own completeness (its form's meter), or the building's (its form's). */
-export function completeness(t: Target, owner: Owner): Completeness {
-  return summarize(checkStates(t, owner));
+export function completeness(t: Target, owner: Owner, checked?: ReadonlySet<string>): Completeness {
+  return summarize(checkStates(t, owner, checked));
 }
 
 /** Essentials that are known checks, in form order; stored keys nothing knows are ignored. */
@@ -279,7 +306,10 @@ export function essentialChecks(essentialFields: Settings['essentialFields']): C
 export interface Essentials {
   filled: number;
   total: number;
+  /** Still to research. */
   missing: Check[];
+  /** Checked and found unknown: no prompt to research, but not known either. */
+  unknown: Check[];
   /** Every essential that applies is known: "ready to compare". */
   ready: boolean;
 }
@@ -288,23 +318,61 @@ export interface Essentials {
 export function essentials(
   t: Required<Target>,
   essentialFields: Settings['essentialFields'],
+  checked: ReadonlySet<string> = checkedFields(t),
 ): Essentials {
   const states = essentialChecks(essentialFields)
     .filter((c) => !c.applies || c.applies(t))
-    .map((check) => ({ check, filled: check.filled(t) }));
-  const missing = states.filter((s) => !s.filled).map((s) => s.check);
+    .map((check) => {
+      const filled = check.filled(t);
+      return { check, filled, checked: !filled && checked.has(check.field) };
+    });
+  const missing = states.filter((s) => !s.filled && !s.checked).map((s) => s.check);
+  const unknown = states.filter((s) => s.checked).map((s) => s.check);
   return {
-    filled: states.length - missing.length,
+    filled: states.filter((s) => s.filled).length,
     total: states.length,
     missing,
-    ready: missing.length === 0,
+    unknown,
+    ready: missing.length === 0 && unknown.length === 0,
   };
 }
 
-/** Where a check's field is edited: the unit's form, or its building's. */
-export function checkHref(check: Check, t: { unitId: string; buildingId: string }): string {
+/**
+ * Remembered unknowns after a save (Q29): the marks on research fields that are still
+ * unknown, keeping when each was first checked. Fields that now have a value lose theirs.
+ */
+export function nextCheckedUnknown(
+  marks: ReadonlySet<string>,
+  previous: readonly { field: string; at: string }[],
+  root: Owner,
+  isKnown: (field: string) => boolean,
+  today: string,
+): { field: string; at: string }[] {
+  const was = new Map(previous.map((c) => [c.field, c.at]));
+  return [...marks]
+    .filter((f) => f.startsWith(`${root}.`) && RESEARCH_FIELDS.has(f) && !isKnown(f))
+    .sort()
+    .map((field) => ({ field, at: was.get(field) ?? today }));
+}
+
+/**
+ * Where a check's field is edited: the unit's form, or its building's. A standalone home's
+ * own facts are in its unit form (Q30).
+ */
+export function checkHref(
+  check: Check,
+  t: { unitId: string; buildingId: string; standalone?: boolean },
+): string {
   const field = encodeURIComponent(check.field);
-  return check.owner === 'unit'
+  return check.owner === 'unit' || (t.standalone && HOME_FIELDS.has(check.field))
     ? `/unit/${t.unitId}/edit?field=${field}`
     : `/building/${t.buildingId}/edit?field=${field}&unit=${t.unitId}`;
+}
+
+/** Whether a form field ('unit.rent', 'building.pets.dogs') has a value in these records. */
+export function fieldKnown(t: Target, field: string): boolean {
+  const [root, ...path] = field.split('.');
+  const start = root === 'unit' ? t.unit : root === 'building' ? t.building : undefined;
+  const v = path.reduce<unknown>((o, k) => (o as Record<string, unknown> | null)?.[k], start);
+  return v !== null && v !== undefined;
 }

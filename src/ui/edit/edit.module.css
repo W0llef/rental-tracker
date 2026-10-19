@@ -1002,3 +1002,11 @@
     border-top: 1px solid var(--ice);
   }
 }
+
+/* Example text in an empty box reads as a hint, never as a value (M8 review) */
+.input::placeholder,
+.textarea::placeholder,
+.inputShort::placeholder {
+  color: var(--slate);
+  opacity: 0.75;
+}

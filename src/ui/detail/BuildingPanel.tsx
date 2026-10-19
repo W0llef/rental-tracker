@@ -74,6 +74,12 @@ export function BuildingPanel({
             {row.unitCount} of your unit{row.unitCount === 1 ? '' : 's'}
           </div>
         </div>
+        {row.standalone && row.units[0] && (
+          <p className={styles.plateNote}>
+            A standalone home: its facts are in{' '}
+            <Link to={`/unit/${row.units[0].unit.id}`}>its unit</Link>.
+          </p>
+        )}
         {b.location === null && (
           <p className={styles.plateNote}>
             Needs location: not on the map yet. <PlaceOnMapButton building={b} />

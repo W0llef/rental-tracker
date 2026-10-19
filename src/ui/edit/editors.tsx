@@ -289,7 +289,7 @@ export function WindowsEditor({
                       className={styles.input}
                       aria-label={`Window ${i + 1} room`}
                       value={w.room ?? ''}
-                      placeholder="Living"
+                      placeholder="e.g. Living"
                       onChange={(e) => set(w.id, { room: e.target.value || null })}
                     />
                   </td>
@@ -332,7 +332,7 @@ export function WindowsEditor({
                       className={styles.input}
                       aria-label={`Window ${i + 1} obstruction`}
                       value={w.obstruction ?? ''}
-                      placeholder="None"
+                      placeholder="e.g. trees"
                       onChange={(e) => set(w.id, { obstruction: e.target.value || null })}
                     />
                   </td>
@@ -498,7 +498,7 @@ export function FeesEditor({
             <input
               className={styles.input}
               aria-label={`Fee ${i + 1} name`}
-              placeholder="Amenity fee"
+              placeholder="e.g. Amenity fee"
               value={f.label}
               onChange={(e) =>
                 onChange(list.map((x) => (x.id === f.id ? { ...x, label: e.target.value } : x)))
@@ -807,7 +807,7 @@ export function LinksEditor({
             <input
               className={styles.input}
               aria-label={`Link ${i + 1} name`}
-              placeholder="Virtual tour"
+              placeholder="e.g. Virtual tour"
               value={l.label}
               onChange={(e) =>
                 onChange(value.map((x) => (x.id === l.id ? { ...x, label: e.target.value } : x)))
