@@ -118,11 +118,11 @@ Badges are 16 px on cards, 24 px in the detail panel and Settings. You see your 
 
 | Style | Look | Size |
 | --- | --- | --- |
-| Sign plate (default) | The fields in order, each a segment divided by a 1 px `--ice` hairline: type icon · **rent** (13/800, `--ink`) · beds and size · unit number (building name for a building) · rating (12.5/600, `--slate`). Example: `$1,650 │ 1 bd · 720 ft² │ 1504 │ ★4` | 26 px tall |
+| Sign plate (default) | The fields in order, each a segment divided by a 1 px `--ice` hairline: type icon · **total cost** (13/800, `--ink`) · rent · cost per ft² · beds and size · unit number (building name for a building) · rating (12.5/600, `--slate`). Example: `$1,932 │ 1 bd · 720 ft² │ 1504 │ ★4` | 26 px tall |
 | Dot | 16 px dot filled with the edge color(s) as a pie ring, white ring; a building = 24 px with its count. No text | 16–24 px |
 | Photo | 46 px photo in a 3 px white frame, a 5 px stripe bar under it, and the fields as a caption below; the unit-type icon until photos arrive (M12) | 52 px wide |
 
-Pending fields: total cost and cost per ft² (M9), travel time (Phase 2). Until M9 the rent field stands in.
+Total cost is the default field (M9); travel time waits for Phase 2.
 
 **A building with several units** (collapsed, or any Buildings-view pin) shows only what's true of all of them: rent as a range (`$1,090–$1,815`) or lowest with `+` (a setting), ranges for beds, size and rating (`★1–4`), the building's name for "unit number", the type icon only if the units share a type, a navy count badge, one stripe per unit (grouped by color), and the New badge if any unit is new.
 
@@ -138,7 +138,7 @@ Pending fields: total cost and cost per ft² (M9), travel time (Phase 2). Until 
 | Low zoom (10 and below) | Neighborhood bubbles (if on): navy circle with the number of units; click to zoom in |
 | Hovered | A plate gets a 2 px `--lake` outline; a dot shows a full preview above it (doesn't catch the pointer); its card(s) in the list get the `--frost` hover background |
 
-**Pin color** options: *Status* (§2.2), *Label* (§2.3, unlabeled = `--ice`), or *Total cost* (*Rent* until M9), a five-step blue scale from your cheapest to your priciest unit:
+**Pin color** options: *Status* (§2.2), *Label* (§2.3, unlabeled = `--ice`), or *Total cost*, a five-step blue scale from your cheapest to your priciest unit:
 
 | Step | 1 (cheapest) | 2 | 3 | 4 | 5 (priciest) |
 | --- | --- | --- | --- | --- | --- |
@@ -263,6 +263,8 @@ Phone gestures: swipe the unit's photo strip; tap a star to rate; long-press a c
 │ [Edit E] [Research R] [Compare C] [History]│  sticky footer
 └────────────────────────────────────────────┘
 ```
+
+**Monthly cost (M9).** One line per cost: name and amount, with where it came from underneath in slate (*listed*, *your estimate for 720 ft²*, *your estimate here*, *building*, *$350 over 12 months*); an amber **assumed** tag where the unit doesn't say. A pencil at the end of a line that uses a cost-profile estimate opens *Your estimate for this unit* inline (blank goes back to the profile). The total (15/800) closes the list with how many lines are assumed. **Lease length** (a menu: your default, the unit's terms with their rents, Other…) sits above the lines when it changes something. Under them: *Effective rent* (when there's a special), *Move-in cost* with its parts, *Per square foot*. The plate's headline is the total, with "rent, N assumed" beneath.
 
 **Markers row (M7).** Flag as three buttons (Pick P · Reject… X · No flag U), your stars, then **Your label** and **Shared label** as five swatches each (pressed one ringed; click again to clear) and the status menu. With several units selected the same controls sit in the selection bar and say "Mixed" where the units differ.
 
@@ -401,13 +403,13 @@ The paste box is collapsed to one line until you paste; anything it recognizes a
 ┌ Map layers ──────────────────────── × ┐   ┌ Pins ─────────────────────────────── × ┐
 │ Base map                              │   │ For the Units view. (band)              │
 │ [Wayfinding] [Detailed streets]       │   │ Pin style   [Sign plate | Dot | Photo]  │
-│ [OpenStreetMap] [Cycle map] [Aerial]  │   │ On the pin  ☐ Unit type icon  ☑ Rent    │
-├───────────────────────────────────────┤   │   ☐ Total cost M9  ☐ Cost per ft² M9    │
+│ [OpenStreetMap] [Cycle map] [Aerial]  │   │ On the pin  ☐ Unit type icon            │
+├───────────────────────────────────────┤   │   ☑ Total cost  ☐ Rent  ☐ Cost per ft²  │
 │ Key: Wayfinding                       │   │   ☐ Beds and size  ☐ Unit number        │
 │ ▭ Water  ▭ Parks  ▭ Buildings …       │   │   ☐ Rating  ☐ Travel time Phase 2       │
-│ (other maps: link to their key)       │   │   Rent for a building: (•) Range ( ) Low│
+│ (other maps: link to their key)       │   │   Prices for a building: (•) Range …    │
 ├───────────────────────────────────────┤   │ New units   [Off | Dot | “New” tag]      │
-│ Overlays                     Phase 2  │   │ Pin color   [Status | Label | Rent]     │
+│ Overlays                     Phase 2  │   │ Pin color   [Status | Label | Total]    │
 │ ☐ Skyway routes  ☐ Transit …          │   │   (legend)                              │
 └───────────────────────────────────────┘   │ Rejected units [Show | Fade | Hide]     │
                                             │ When crowded ☑ Group nearby buildings   │

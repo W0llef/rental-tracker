@@ -16,6 +16,8 @@ async function loadSample(page: Page) {
   await expect(page.getByTestId('debug-message')).toContainText('Loaded');
   await page.goto('/#/');
   await expect(page.getByTestId('list-count')).toContainText('34 units in 10 buildings');
+  // These tests go by rent order (cheapest rent first), as before totals existed (M9).
+  await page.getByRole('combobox', { name: 'Sort by' }).selectOption('rent');
 }
 
 const cards = (page: Page) => page.getByRole('list', { name: 'Units' }).getByRole('link');

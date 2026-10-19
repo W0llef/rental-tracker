@@ -100,7 +100,7 @@ test('pasted Zillow text fills the boxes and chips; a second add of the same uni
   await expect(dialog(page)).toHaveCount(0);
   await expect(page.getByTestId('list-count')).toHaveText('1 unit in 1 building');
   await expect(page.getByRole('heading', { level: 2, name: 'Unit 1504' })).toBeVisible();
-  await expect(page.locator('[class*="bigNum"]')).toContainText('$1,600');
+  await expect(page.locator('[class*="bigSub"]')).toContainText('$1,600 rent');
 });
 
 test('⇧⏎ adds several units to one building', async ({ page }) => {

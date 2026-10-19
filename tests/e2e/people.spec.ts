@@ -159,6 +159,7 @@ for (const scheme of ['light', 'dark'] as const) {
       .filter({ has: page.getByRole('img', { name: /^Others: Alex: / }) });
     await rated.first().click();
     await expect(page.getByRole('region', { name: 'Ratings' })).toBeVisible();
+    await page.mouse.move(1, 1); // pointing at a card fades the other pins (checked at rest)
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
     await page.goto('/#/settings/people');

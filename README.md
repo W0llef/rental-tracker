@@ -187,14 +187,36 @@ below.
   after that change. Both are new steps you can undo too.
 - **History → Deleted** lists deleted units and buildings with **Restore**.
 
+### What a unit really costs
+
+- Every unit shows its **total monthly cost** first: rent plus monthly fees, utilities you pay,
+  parking for the spaces you need, storage if you need it, renters insurance and pet rent if you
+  have pets. Cards say how many of those numbers are **assumed** (the unit doesn't say, so your
+  estimate stands in); point at the total for the breakdown.
+- **Settings → Cost profile** holds your estimates (electric, heat, internet…, optionally scaled
+  by size or bedrooms: "$55 at 750 ft²" is $53 for 720 ft²), the parking spaces you need,
+  storage, pets, the lease length you expect, and two switches to spread one-time fees and
+  move-in specials over the lease. Changes update every total at once and can be undone.
+- A unit's **Monthly cost** section lists every line with where it came from, the total, the
+  **move-in cost** (first month, deposit and fees) and the **cost per ft²**. The pencil on a line
+  sets your own estimate for that unit instead of the profile's. **Lease length** shows when it
+  matters (the listing prices lease lengths differently, or spreading is on): pick one of the
+  unit's terms or Other…; the rent for that term and the spread follow.
+- A unit's own numbers always win over the profile: an amount billed extra, a listed estimate,
+  a parking price.
+
 ### Browsing your units
 
-- The list shows every unit with its rent, size, status and markers. **Units / Buildings** switches
-  to one card per building.
+- The list shows every unit with its total monthly cost, rent, size, status and markers.
+  **Units / Buildings** switches to one card per building (with its range of totals).
 - **Search** (top bar, or press `/`) matches unit numbers, floor plans, building names, addresses,
   neighborhoods and notes.
-- **Sort** by rent, available date, size, bedrooms, your rating, listing age and more; the arrow flips
-  the direction. Units with an unknown value always sort last. The app remembers your sort.
+- **Sort** by total cost (the default), rent, cost per ft², available date, size, bedrooms, your
+  rating, listing age and more; the arrow flips the direction. Units with an unknown value always
+  sort last. The app remembers your sort.
+- **Cost limits** (under the sort) keeps units up to a total a month and/or a cost per ft², with or
+  without the ones whose cost is unknown. It narrows the map too and lasts until you clear it or
+  reload. (The full filter panel comes later and takes it over.)
 - Click a card to open its details; **Back**, `Esc` or the × closes them. On a phone the details
   open in the **Unit** tab.
 - Keys: `↓`/`J` and `↑`/`K` move through the list, `B` switches Units / Buildings, `⏎` jumps to
@@ -203,13 +225,13 @@ below.
 ### The map
 
 - Each building with units in the list gets a pin; the map follows your search and the
-  **Units / Buildings** switch. Pins show rent until total cost arrives (M9).
+  **Units / Buildings** switch. Pins show the total monthly cost by default.
 - **Pins** (button on the map) sets how pins look for the view the list is showing (Units and
   Buildings keep separate settings):
-  a sign plate, a dot or a photo; which details to print (rent, beds and size, unit number,
-  rating, unit type icon); the New badge; the colors; and whether rejected units show, fade or
+  a sign plate, a dot or a photo; which details to print (total cost, rent, cost per ft², beds and
+  size, unit number, rating, unit type icon); the New badge; the colors; and whether rejected units show, fade or
   hide. The color legend is in this panel too.
-- A building with several units shows one pin with what's true of all of them: rent range, a
+- A building with several units shows one pin with what's true of all of them: price ranges, a
   count, a stripe per unit, and New if any unit is new. Click it to **open its card**: one row
   per unit with the same details, joined to the building's marker by a short line. Cards stay
   open, and you can open several; they never cover each other, other pins or dots (they move

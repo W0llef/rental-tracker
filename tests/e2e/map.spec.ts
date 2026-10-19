@@ -466,11 +466,11 @@ test.describe('map (preview/dev build)', () => {
     await panel.getByRole('button', { name: 'Close pins' }).click();
     await expect(panel).toHaveCount(0);
 
-    // No dots, no bubbles; a building shows its rent range and name as separate segments
+    // No dots, no bubbles; a building shows its total cost range and name as separate segments
     await expect(pins(page).locator('xpath=self::*[@data-shape="dot"]')).toHaveCount(0);
     await expect(map(page).locator('[data-bubble]')).toHaveCount(0);
     const lowertown = map(page).getByRole('button', { name: /4 units at Lowertown Flats/ });
-    await expect(lowertown).toHaveAccessibleName(/^\$1,090–\$1,815 Lowertown Flats 4 New, /);
+    await expect(lowertown).toHaveAccessibleName(/^\$1,516–\$2,222 Lowertown Flats 4 New, /);
 
     // Zoomed far out, still no dots or bubbles
     await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
@@ -495,7 +495,7 @@ test.describe('map (preview/dev build)', () => {
     await showMap(page, phone);
     await expect(
       map(page).getByRole('button', { name: /Lowertown Flats, 4 of your units/ }),
-    ).toHaveAccessibleName(/4 of your units, \$1,090 to \$1,815$/);
+    ).toHaveAccessibleName(/4 of your units, \$1,516 to \$2,222 a month$/);
   });
 
   test('dots carry no text, and rejected units can be hidden', async ({ page }, info) => {
@@ -570,20 +570,19 @@ test.describe('map (preview/dev build)', () => {
       .toBeGreaterThan(1);
   });
 
-  test('pins color by label or rent, with a matching legend', async ({ page }, info) => {
+  test('pins color by label or total cost, with a matching legend', async ({ page }, info) => {
     const phone = isPhone(info.project.name);
     await showMap(page, phone);
     await map(page).getByRole('button', { name: 'Pins', exact: true }).click();
     const panel = map(page).getByRole('region', { name: 'Pins' });
     await panel
       .getByRole('group', { name: 'Pin color' })
-      .getByRole('button', { name: 'Rent' })
+      .getByRole('button', { name: 'Total cost' })
       .click();
     // The panel carries the legend too (phones have no corner legend)
-    await expect(panel).toContainText('$1,090');
-    await expect(panel).toContainText('$2,680');
+    await expect(panel).toContainText(/Lightest \$1,435\s*to darkest \$[\d,]+/);
     if (!phone)
-      await expect(map(page).getByRole('region', { name: 'Pin color: rent' })).toBeVisible();
+      await expect(map(page).getByRole('region', { name: 'Pin color: total cost' })).toBeVisible();
     await panel
       .getByRole('group', { name: 'Pin color' })
       .getByRole('button', { name: 'Shared label' })

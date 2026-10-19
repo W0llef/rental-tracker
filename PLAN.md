@@ -740,6 +740,19 @@ rent         = rentByTerm[lease months] when the listing gives one, else rent
 
 Unknown rent → unknown total. An unknown utility is treated as tenant-paid at your profile estimate and marked "assumed" so it's visible in the breakdown (Q5). Cost per sq ft = total ÷ sq ft. Move-in cost (deposit + application + admin + first month) is shown separately.
 
+*As built in M9* (`domain/cost.ts` `unitCost`, every `UnitRow` carries its `cost`):
+
+- **Lines and sources.** Each line is whole dollars and says where it came from: *listed* (the unit's own rent, fees, utility amounts, parking and storage prices), the *building* (pet rent), *your estimate* (the cost profile, scaled by size or bedrooms), *your estimate here* (`unit.costOverrides`, set with the pencil on a line in the unit's Monthly cost), or *spread* (one-time amounts over the lease). The total is the sum of the lines, so the breakdown always adds up (fast-check property test). A unit's own numbers win over an override, and an override over the profile.
+- **Assumed** (amber) means the unit doesn't say: an unknown utility (assumed you pay), a utility billed extra with no amount, parking with unknown spaces included or price, storage with unknown terms, pet rent the building doesn't list. A utility marked *You pay* without an amount uses your estimate and isn't "assumed" (you know you pay; only the amount is yours).
+- **Parking**: spaces you need beyond those included × the extra-space price (your estimate if unknown); none needed → no line; "No parking" or street parking without a price → $0 with that note.
+- **Pets** (owner to confirm): with cats or dogs in the profile, the building's pet rent counts **per pet**, else your estimate per pet (assumed); a monthly fee named like "Pet rent" is the pet rent instead (counted as given, only if you have pets). Move-in cost adds the building's pet deposit and pet fee.
+- **Renters insurance** (your profile) is added to every unit; at $0 the line disappears.
+- **Spreading** (both off by default, Q5): application, admin and pet fees ÷ lease months; the move-in special's value ÷ lease months, subtracted. Off, the special shows as *Effective rent* under the total and one-time fees stay in the move-in cost.
+- **Lease length selector** in the unit's Monthly cost: *Your default (12 months)*, the unit's offered terms and priced terms (with their rent), *Other…*; shown when spreading is on or the unit has rents by term (§5.3). Picking one sets `plannedLeaseMonths` (one undo step, `commands/cost.ts` `setLeaseLength`).
+- **Move-in cost** = first month (the rent for your lease length) + deposit + application + admin (+ pet deposit and fee), naming the parts still unknown. **Cost per ft²** = total ÷ ft², to the cent.
+- **Everywhere**: the unit plate and cards lead with the total ("$1,932/mo · $1,650 rent · 2 assumed", breakdown in the tooltip); building cards and panels show the range of totals; sorts *Total cost* (new default), *Cost per ft²*, *Lowest total cost* (buildings, new default); pins get the *Total cost* (new default for anyone who never changed their pin fields) and *Cost per ft²* fields, and the price color uses the total. History and toasts say each cost-profile change ("Electric estimate $55 → $60/mo", "Parking spaces you need 1 → 2") and each per-unit choice ("Lease length your default → 15 months on Unit 1504", "Your electric estimate $80/mo on …").
+- **Cost limits** above the list (Q32): total up to $X/mo, per ft² up to $Y, keep or drop unknowns. UI state only (Zustand, for the visit); narrows list and map together.
+
 ### 5.4 Photo archive
 
 One interface, three stores, chosen automatically and shown in Settings:
@@ -1023,7 +1036,10 @@ Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 15
 
 ### 11.2 Open
 
-None. New questions will be added here as they come up.
+| # | Question | Proposed (M9) |
+| --- | --- | --- |
+| Q32 | §9 M9 says "sort/filter by them", but the filter panel is M10 | **Cost limits** under the sort: total up to $X/mo, per ft² up to $Y, keep or drop units whose cost is unknown; for this visit only (not saved, not undoable, like search). M10's filter panel takes them over as its `totalMonthly` and `pricePerSqft` ranges. |
+| Q33 | How pet rent counts (M9) | The building's pet rent **per pet** (cats + dogs in your profile); unknown → your estimate per pet, assumed. A monthly fee named "Pet rent" counts as given instead. Renters insurance is on every unit. Owner to confirm or change. |
 
 **Assumptions I'll proceed with unless you object**
 
@@ -1042,6 +1058,7 @@ None. New questions will be added here as they come up.
 
 | Date | Change |
 | --- | --- |
+| 2026-10-19 | M9: **total monthly cost** with a sourced breakdown, move-in cost and cost per ft² (§5.3 "As built"); **Settings → Cost profile** (`#/settings/cost`); the unit's **Monthly cost** section with the **lease length selector** and per-unit estimates (`costOverrides`' editor); totals on cards, plates, building cards and pins; sorts by total and $/ft² (total is the new default); pins' Total cost and Cost per ft² fields and price color by total; **cost limits** (Q32 proposed); pet rent per pet (Q33 proposed). No data-format change. |
 | 2026-10-19 | M8, owner review: going between a unit's form and its building's no longer stacks forms; Save or Cancel goes back to where the first was opened. |
 | 2026-10-19 | M8, owner review: **data format v3**: standalone homes (**Q30**), remembered unknowns (**Q29**); complex names behind "This complex has several buildings" (**Q31**); building names shown as "North Tower · Cedar Mill"; example text reads "e.g. …"; a multi-step update takes one safety copy. **Q28 decided** (prompts on every unit). |
 | 2026-10-18 | M8: **full unit and building forms**, research mode, essentials and completeness, copy from unit / new unit from plan, listings and price-history editing, Edit together for buildings (Q23), Settings → Essential fields, `E` to edit (§5.7 "As built (M8)", §6). Q28 (missing-essentials prompts on every unit until Shortlist mode) and Q29 ("checked, still unknown" not remembered) proposed for the owner. New route `#/new-unit`. No data-format change. |
@@ -1115,7 +1132,7 @@ The full working agreement for every session is in `CLAUDE.md`; this is the summ
 | M6 People and per-person ratings | Approved | v0.6.0 | 2026-10-18 |
 | M7 Triage and bulk edit | Approved | v0.7.0 | 2026-10-18 |
 | M8 Forms and research mode | Approved | v0.8.0 | 2026-10-19 |
-| M9 Cost profile and lease length | Not started | — | — |
+| M9 Cost profile and lease length | In review | 0.9.0 (preview) | — |
 | M10 Collections, filters, compare | Not started | — | — |
 | M11 Batch add and AI import | Not started | — | — |
 | M12 Photo archive | Not started | — | — |
