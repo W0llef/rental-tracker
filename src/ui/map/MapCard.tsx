@@ -38,8 +38,9 @@ export interface MapCardProps {
   photo: boolean;
   /** Another card is under the pointer: this one steps back. */
   dim?: boolean;
-  onSelect?: (key: string) => void;
-  onOpenBuilding?: () => void;
+  /** `additive`: ⌘/Ctrl- or Shift-click, which adds to the selection (M7). */
+  onSelect?: (key: string, additive: boolean) => void;
+  onOpenBuilding?: (additive: boolean) => void;
   onClose?: () => void;
   onHover?: (key: string | null) => void;
   /** Show a unit's larger photo beside `card`, level with `row`; null hides it. */
@@ -103,7 +104,7 @@ export function MapCard(p: MapCardProps) {
           title="Building details"
           onClick={(e) => {
             e.stopPropagation();
-            p.onOpenBuilding?.();
+            p.onOpenBuilding?.(e.metaKey || e.ctrlKey || e.shiftKey);
           }}
         >
           {p.name}
@@ -147,7 +148,7 @@ export function MapCard(p: MapCardProps) {
                 data-pin={r.key}
                 onClick={(e) => {
                   e.stopPropagation();
-                  p.onSelect?.(r.key);
+                  p.onSelect?.(r.key, e.metaKey || e.ctrlKey || e.shiftKey);
                 }}
                 onMouseEnter={() => hover(r.key)}
                 onMouseLeave={() => {

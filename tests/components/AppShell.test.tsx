@@ -43,8 +43,10 @@ describe('AppShell', () => {
     expect(container.firstElementChild).toHaveAttribute('data-tab', 'map');
   });
 
-  it('links to the data check page', () => {
+  it('links to History and Settings (Data check moved to Settings → Data)', () => {
     render(<AppShell />);
-    expect(screen.getByRole('link', { name: 'Data check' })).toHaveAttribute('href', '/debug');
+    expect(screen.getByRole('link', { name: 'History' })).toHaveAttribute('href', '/history');
+    expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Data check' })).toBeNull();
   });
 });

@@ -64,9 +64,9 @@ test('live build adds a unit and keeps it after a reload', async ({ page, geoNet
   expect(geoNet.queries.some((q) => q.startsWith('photon:'))).toBe(true);
 });
 
-test('live data check page uses the real database and offers no sample data', async ({ page }) => {
-  await page.goto('/#/debug');
-  await expect(page.getByRole('heading', { level: 1, name: 'Data check' })).toBeVisible();
+test('live Settings → Data uses the real database and offers no sample data', async ({ page }) => {
+  await page.goto('/#/debug'); // old link
+  await expect(page.getByRole('heading', { level: 2, name: 'Data' })).toBeVisible();
   await expect(page.locator('main code').first()).toHaveText('rental-tracker');
   await expect(page.getByRole('button', { name: 'Load sample data' })).toHaveCount(0);
   await expect(
@@ -77,7 +77,6 @@ test('live data check page uses the real database and offers no sample data', as
   await expect(
     page.getByTestId('record-counts').getByRole('row', { name: /^Units/ }),
   ).toContainText('0');
-  await expect(page.getByRole('button', { name: 'Nothing to undo' })).toBeDisabled();
 });
 
 test('live map starts on downtown with no pins and working controls', async ({

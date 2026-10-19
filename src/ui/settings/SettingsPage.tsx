@@ -2,6 +2,7 @@ import { Link, NavLink, Navigate, useParams } from 'react-router-dom';
 import { Notice } from '../shell/Notice';
 import { PreviewBanner } from '../shell/PreviewBanner';
 import { BackupSection } from './BackupSection';
+import { DataSection } from './DataSection';
 import { LabelsSection } from './LabelsSection';
 import { PeopleSection } from './PeopleSection';
 import { StorageSection } from './StorageSection';
@@ -17,6 +18,7 @@ const SECTIONS = [
   { id: 'labels', label: 'Labels and reasons', Component: LabelsSection },
   { id: 'backup', label: 'Backup and restore', Component: BackupSection },
   { id: 'storage', label: 'Storage', Component: StorageSection },
+  { id: 'data', label: 'Data', Component: DataSection },
 ] as const;
 
 export function SettingsPage() {

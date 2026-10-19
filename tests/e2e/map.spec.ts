@@ -106,6 +106,47 @@ test.describe('map (preview/dev build)', () => {
     await expect(pin).toHaveAttribute('aria-pressed', 'true');
   });
 
+  test('⌘/Ctrl-click on the map selects units; others fade while pointing (M7 review)', async ({
+    page,
+  }, info) => {
+    test.skip(isPhone(info.project.name), 'laptop layout: list and map side by side');
+    await showMap(page, false);
+    await page.getByRole('link', { name: /Unit 603.*Lowertown Flats/ }).click();
+    const card = map(page).getByRole('group', { name: 'Units at Lowertown Flats' });
+    const rows = card.locator('[data-pin]');
+    await expect(rows).toHaveCount(4);
+    // A second row joins the open unit in the selection, and both are marked
+    // The card can sit under the detail panel at this width: click it as the pointer would.
+    await rows.nth(1).dispatchEvent('click', { ctrlKey: true });
+    const bar = page.getByRole('region', { name: 'Selected units' });
+    await expect(bar).toContainText('2 units selected');
+    await expect(card.locator('[data-pin][aria-pressed="true"]')).toHaveCount(2);
+    // The building's name selects all its units
+    await card
+      .getByRole('button', { name: 'Lowertown Flats', exact: true })
+      .dispatchEvent('click', { ctrlKey: true });
+    await expect(bar).toContainText('4 units selected');
+    await expect(card.locator('[data-pin][aria-pressed="true"]')).toHaveCount(4);
+    // Pointing at a row fades every other pin on the map
+    await rows.first().dispatchEvent('mouseover');
+    await expect(map(page).locator('[class*="dimPin"]').first()).toBeAttached();
+    await page.keyboard.press('Escape');
+    await expect(bar).toHaveCount(0);
+
+    // Buildings view: ⌘/Ctrl-click a building card says when that arrives, and stays here
+    await page.getByRole('button', { name: 'Buildings', exact: true }).click();
+    const pagesBefore = page.context().pages().length;
+    await page
+      .getByRole('list', { name: 'Buildings' })
+      .getByRole('link')
+      .first()
+      .click({ modifiers: ['ControlOrMeta'] });
+    await expect(
+      page.getByRole('status').filter({ hasText: 'arrives with the building form' }),
+    ).toBeVisible();
+    expect(page.context().pages().length).toBe(pagesBefore);
+  });
+
   test('pointing at a dot previews its pin without moving anything', async ({ page }, info) => {
     test.skip(isPhone(info.project.name), 'hover needs a pointer');
     await showMap(page, false);

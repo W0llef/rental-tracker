@@ -89,6 +89,11 @@ interface TriageUi {
   editingTogether: boolean;
   shortcutsOpen: boolean;
   setPicked: (ids: string[], anchor?: string | null) => void;
+  /**
+   * ⌘/Ctrl-click on the map (M7 review): adds these units to the selection, or takes them
+   * out if they're all in it. The open unit joins a selection that starts here.
+   */
+  togglePicked: (ids: string[], openUnitId: string | null) => void;
   clearPicked: () => void;
   setRejecting: (r: Rejecting | null) => void;
   setEditingTogether: (open: boolean) => void;
@@ -244,6 +249,15 @@ export const useUi = create<UiState>()((set, get) => {
     editingTogether: false,
     shortcutsOpen: false,
     setPicked: (picked, anchor) => set({ picked, ...(anchor !== undefined ? { anchor } : {}) }),
+    togglePicked: (ids, openUnitId) => {
+      const current = get().picked;
+      const start = current.length ? current : openUnitId ? [openUnitId] : [];
+      const all = ids.length > 0 && ids.every((id) => start.includes(id));
+      const next = all
+        ? start.filter((id) => !ids.includes(id))
+        : [...start, ...ids.filter((id) => !start.includes(id))];
+      set({ picked: next, anchor: ids.at(-1) ?? null });
+    },
     clearPicked: () => set({ picked: [], anchor: null, editingTogether: false }),
     setRejecting: (rejecting) => set({ rejecting }),
     setEditingTogether: (editingTogether) => set({ editingTogether }),

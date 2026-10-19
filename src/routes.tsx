@@ -18,11 +18,8 @@ export const routes: RouteObject[] = [
       { path: 'history' }, // M7: History in the detail column
     ],
   },
-  {
-    path: '/debug',
-    // Loaded on demand: the Data check page isn't part of everyday use.
-    lazy: () => import('./ui/debug/DebugPage').then((m) => ({ Component: m.DebugPage })),
-  },
+  // The Data check page became Settings → Data (M7 review); old links still arrive there.
+  { path: '/debug', element: <Navigate to="/settings/data" replace /> },
   { path: '/settings', element: <Navigate to="/settings/backup" replace /> },
   {
     path: '/settings/:section',

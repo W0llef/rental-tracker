@@ -117,7 +117,7 @@ describe('main screen without data', () => {
     expect(await screen.findByText('No units yet')).toBeVisible();
     expect(screen.getByRole('link', { name: 'load sample data' })).toHaveAttribute(
       'href',
-      '/debug',
+      '/settings/data',
     );
   });
 });

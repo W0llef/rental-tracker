@@ -692,9 +692,15 @@
   opacity: 0.4;
 }
 
+/* Another pin, card or list card is pointed at (M7 review) */
+.dimPin {
+  opacity: 0.4;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .card,
-  .cardLine {
+  .cardLine,
+  .pin {
     transition: opacity 120ms;
   }
 

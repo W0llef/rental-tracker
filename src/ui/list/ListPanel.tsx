@@ -95,7 +95,8 @@ function EmptyNoData() {
       </Link>
       {appInfo.channel !== 'live' && (
         <p className={styles.emptyText}>
-          Or, to try things out, <Link to="/debug">load sample data</Link> on the Data check page.
+          Or, to try things out, <Link to="/settings/data">load sample data</Link> in Settings →
+          Data.
         </p>
       )}
     </div>

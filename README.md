@@ -115,7 +115,9 @@ below.
   label, `⇧6`–`⇧9` the shared one (press again to take it off). Purple is in the menus. `?`
   shows every key.
 - **Several units at once:** `⌘`/`Ctrl`-click cards to add or remove them, `Shift`-click to
-  select a range. A bar above the list shows how many and has the same markers; the keys act on
+  select a range (sort by building to select one building's units in a row). On the map,
+  `⌘`/`Ctrl`-click a pin or a row of a building's card; `⌘`/`Ctrl`-click a building's name on its
+  card (or its pin) to select all its units. Selected units are highlighted on the map too. A bar above the list shows how many and has the same markers; the keys act on
   all of them. **Edit together…** sets flags, stars, labels, status, utilities, laundry,
   dishwasher, AC, heating, parking, storage, lease terms and the available date for all of them
   ("Mixed" where they differ). `Esc` clears the selection.
@@ -131,6 +133,7 @@ below.
 - Every change shows a message at the bottom left saying exactly what happened ("Rent $1,650 →
   $1,600 on Unit 908 at Riverlight") with **Undo**; after an undo it offers **Redo**.
 - `⌘Z` / `Ctrl+Z` undoes, `⇧⌘Z` / `Ctrl+Shift+Z` redoes (not while you're typing in a field).
+- Pointing at a card in the list, a pin, or a row on the map fades every other pin and card.
 - **History** (the clock in the top bar, or **Open history** at the end of a unit's panel) lists
   every change for 90 days, newest first. **Undo this** reverses one change on its own, even an
   old one; if something it touched was changed again later, it shows what would be overwritten
@@ -215,9 +218,10 @@ the shape of real sites).
 
 ### Checking the data
 
-**Data check** (link at the bottom of the list, or `#/debug`) shows what the build has stored, the
-undo history, and Undo/Redo buttons. On preview and development builds it can also load made-up
-sample data and make test changes; the live app never offers that.
+**Settings → Data** (it was the "Data check" page; old `#/debug` links still land there) shows
+what the build has stored and which database it uses. On preview and development builds it can
+also load made-up sample data and make test changes; the live app never offers that. Every change
+is in **History** (the clock in the top bar).
 
 ## How it gets published
 

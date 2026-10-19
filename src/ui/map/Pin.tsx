@@ -46,8 +46,11 @@ export interface PinProps {
   /** Spoken description after the visible text. */
   label: string;
   expanded?: boolean;
-  onClick: () => void;
+  /** `additive`: ⌘/Ctrl- or Shift-click, which adds to the selection (M7). */
+  onClick: (additive: boolean) => void;
   onHover: (on: boolean) => void;
+  /** Something else on the map or list is pointed at: this pin steps back (M7 review). */
+  dimmed?: boolean;
   /** Photo pins: show the larger photo beside this pin (its box), or hide it (null). */
   onPreview?: (anchor: DOMRect | null) => void;
 }
@@ -126,6 +129,7 @@ export function Pin(p: PinProps) {
   if (p.rejected) cls.push(styles.rej);
   if (p.faded) cls.push(styles.faded);
   if (p.hot) cls.push(styles.hot);
+  if (p.dimmed) cls.push(styles.dimPin);
   const empty = !p.content.typeIcon && !p.content.segments.length;
 
   let inner;
@@ -194,7 +198,7 @@ export function Pin(p: PinProps) {
       data-shape={asDot ? 'dot' : p.style}
       onClick={(e) => {
         e.stopPropagation();
-        p.onClick();
+        p.onClick(e.metaKey || e.ctrlKey || e.shiftKey);
       }}
       onMouseEnter={() => hover(true)}
       onMouseLeave={() => {
