@@ -204,6 +204,16 @@ below.
   unit's terms or Other…; the rent for that term and the spread follow.
 - A unit's own numbers always win over the profile: an amount billed extra, a listed estimate,
   a parking price.
+- **Charges by lease length:** when a listing gives rents for two or more lease lengths, the
+  form's Lease section shows **Other charges by lease length**. Everything is the same for every
+  length until you click a charge under _Differs by lease length_ (deposit, application fee,
+  admin fee, a monthly fee, the move-in special); it then gets one box per length. **Same for all
+  lengths** puts it back.
+- **When a unit doesn't list your lease length** (you compare at 15 months, it offers 12 and
+  18), its costs use the nearest length it lists, and it's marked: **No 15-month lease** on its
+  card, a small calendar-with-a-slash icon on its row in the map's building cards (point at it
+  for why), and a note in its Monthly cost. Units whose lease terms are unknown say so in their
+  Monthly cost. **Cost limits → Only units that list your lease length** leaves both out.
 
 ### Browsing your units
 
@@ -215,7 +225,8 @@ below.
   rating, listing age and more; the arrow flips the direction. Units with an unknown value always
   sort last. The app remembers your sort.
 - **Cost limits** (under the sort) keeps units up to a total a month and/or a cost per ft², with or
-  without the ones whose cost is unknown. It narrows the map too and lasts until you clear it or
+  without the ones whose cost is unknown, and optionally only the units that list your lease
+  length. It narrows the map too and lasts until you clear it or
   reload. (The full filter panel comes later and takes it over.)
 - Click a card to open its details; **Back**, `Esc` or the × closes them. On a phone the details
   open in the **Unit** tab.

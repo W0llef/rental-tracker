@@ -1,5 +1,10 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
+import type { Dexie as DexieClass } from 'dexie';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { STORES_V1, STORES_V2 } from '../../src/db/versions';
 import { expect, test } from './fixtures';
 
 /**
@@ -82,7 +87,10 @@ test.describe('cost profile and lease length', () => {
     await cost(page).getByRole('combobox', { name: 'Lease length' }).selectOption('other');
     await cost(page).getByRole('textbox', { name: 'Months' }).fill('24');
     await cost(page).getByRole('textbox', { name: 'Months' }).press('Enter');
-    await expect(spread).toContainText('over 24 months');
+    // A unit that lists other lengths (12 and 15) is priced at the nearest one it lists.
+    await expect(spread).toContainText(/over (24|15) months/);
+    const listsOthers = (await cost(page).getByText('No 24-month lease').count()) > 0;
+    await expect(spread).toContainText(listsOthers ? 'over 15 months' : 'over 24 months');
   });
 
   test('sorts by cost per ft² and limits the list by total', async ({ page }) => {
@@ -134,6 +142,130 @@ test.describe('cost profile and lease length', () => {
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       );
       expect(overflow).toBeLessThanOrEqual(0);
+    }
+  });
+});
+
+// ── M9 review: charges by lease length (data format 4), and units without your length ──
+
+const fixtureV3 = JSON.parse(
+  readFileSync(fileURLToPath(new URL('../fixtures/backup-v3.json', import.meta.url)), 'utf8'),
+) as { data: Record<string, unknown[]> };
+const dexieScript = createRequire(import.meta.url).resolve('dexie/dist/dexie.js');
+
+/** A database as v0.8 left it (data format 3), made before the app opens it. */
+async function makeV3Database(page: Page) {
+  await page.route('**/__empty.html', (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>empty</title>' }),
+  );
+  await page.goto('/__empty.html');
+  await page.addScriptTag({ path: dexieScript });
+  await page.evaluate(
+    async ({ v1, v2, data }) => {
+      const { Dexie } = window as unknown as { Dexie: typeof DexieClass };
+      const db = new Dexie('rental-tracker-preview');
+      db.version(1).stores(v1);
+      db.version(2).stores(v2);
+      db.version(3).stores({});
+      await db.open();
+      for (const [table, rows] of Object.entries(data)) await db.table(table).bulkAdd(rows);
+      await db.table('meta').put({ key: 'meId', value: 'p-me' });
+      db.close();
+    },
+    {
+      v1: STORES_V1 as Record<string, string>,
+      v2: STORES_V2 as Record<string, string>,
+      data: fixtureV3.data,
+    },
+  );
+}
+
+test('updates a v0.8 database to data format 4, offering a backup first', async ({ page }) => {
+  await makeV3Database(page);
+  await page.goto('/');
+  await expect(
+    page.getByRole('heading', { name: 'This update changes how your data is stored' }),
+  ).toBeVisible();
+  const [file] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Download backup' }).click(),
+  ]);
+  const backup = JSON.parse(readFileSync(await file.path(), 'utf8')) as { schemaVersion: number };
+  expect(backup.schemaVersion).toBe(3); // the old format, which v0.8 can open
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('link', { name: /Unit 1504 Example Tower/ })).toBeVisible();
+  await page.goto('/#/settings/backup');
+  await expect(page.getByText('Before the update to data format 4')).toHaveCount(1);
+});
+
+test.describe('lease lengths', () => {
+  test.beforeEach(async ({ page }) => loadSample(page));
+
+  test('a smaller deposit on the longer lease shows in the move-in cost', async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name.includes('phone'), 'looks through the list beside the details');
+    // Sample units with 12- and 15-month rents have half the deposit on 15 months.
+    const count = await cards(page).count();
+    for (let i = 0; i < count; i++) {
+      await cards(page).nth(i).click();
+      if (await cost(page).getByRole('combobox', { name: 'Lease length' }).count()) break;
+    }
+    const moveIn = cost(page)
+      .locator('div')
+      .filter({ has: page.getByText('Move-in cost', { exact: true }) })
+      .last();
+    const at12 = await moveIn.textContent();
+    await cost(page).getByRole('combobox', { name: 'Lease length' }).selectOption('15');
+    await expect(
+      cost(page)
+        .getByRole('listitem')
+        .filter({ hasText: /^Rent\$/ }),
+    ).toContainText('for a 15-month lease');
+    await expect(moveIn).not.toHaveText(at12 ?? '');
+    await expect(moveIn).toContainText('Deposit');
+
+    // The form shows the deposit priced by length, and can make it the same again.
+    await panel(page)
+      .getByRole('link', { name: /^Edit$/ })
+      .click();
+    const group = page.getByRole('group', { name: 'Other charges by lease length' });
+    await expect(group.getByRole('textbox', { name: 'Deposit on a 15-month lease' })).toBeVisible();
+    await group.getByRole('button', { name: 'Same for all lengths' }).click();
+    await expect(
+      group.getByRole('button', { name: 'Deposit differs by lease length' }),
+    ).toBeVisible();
+  });
+
+  test('units without your lease length are marked on cards and the map, and can be left out', async ({
+    page,
+  }, info) => {
+    await page.goto('/#/settings/cost');
+    const box = page.getByRole('textbox', { name: 'Lease length you expect to sign' });
+    await box.fill('18');
+    await box.press('Enter');
+    await page.getByRole('link', { name: 'Back to the app' }).click();
+    const marked = cards(page).filter({ hasText: 'No 18-month lease' });
+    await expect(marked.first()).toBeVisible();
+    await expect(marked.first().getByTitle(/so its costs use the 15-month lease/)).toBeVisible();
+
+    if (!info.project.name.includes('phone')) {
+      // On the map, an open building's card marks the row and says why in its name.
+      await page.getByRole('link', { name: /Unit 603.*Lowertown Flats/ }).click();
+      const card = page
+        .getByRole('region', { name: 'Map', exact: true })
+        .getByRole('group', { name: 'Units at Lowertown Flats' });
+      await expect(
+        card.getByRole('button', { name: /Doesn’t list an 18-month lease/ }).first(),
+      ).toBeAttached();
+      await expect(card.locator('[title*="18-month lease"]').first()).toBeAttached();
+      await page.keyboard.press('Escape');
+
+      await page.getByRole('button', { name: 'Cost limits' }).click();
+      await page.getByRole('checkbox', { name: /Only units that list your lease length/ }).check();
+      await page.getByRole('button', { name: 'Apply' }).click();
+      // No sample unit lists 18 months
+      await expect(page.getByText('No units within your cost limits')).toBeVisible();
     }
   });
 });

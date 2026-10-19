@@ -224,6 +224,7 @@ Phone gestures: swipe the unit's photo strip; tap a star to rate; long-press a c
 - Floor plan only: "Plan C" plus a "floor plan" tag; specs say "units vary"; prices say "from".
 - New: the status pill reads "New" with its amber edge; no separate badge on the card (it repeated the pill). The amber New dot stays an option on map pins (§2.4), which show no status text.
 - Needs location: a "Needs location" chip with "Place on map".
+- Doesn't list your lease length (M9 review): a **No 15-month lease** tag in the foot, amber outline and `--assumed-ink` text with a small calendar-with-a-slash icon; its tooltip says which length the costs use instead. On the map, the same icon alone ends the unit's row in an open building's card (tooltip and spoken name explain).
 - Multi-select: ⌘/Ctrl-click or Shift-click; a check appears in the photo corner and the card gets a lake outline. A **selection bar** above the list (M7) shows the count, the markers for all selected units, **Edit together…** and **Clear**.
 - The **Building card** (Buildings view) shows name, neighborhood, building type, "3 of your units", and the range "$1,857–$2,560".
 
@@ -264,7 +265,7 @@ Phone gestures: swipe the unit's photo strip; tap a star to rate; long-press a c
 └────────────────────────────────────────────┘
 ```
 
-**Monthly cost (M9).** One line per cost: name and amount, with where it came from underneath in slate (*listed*, *your estimate for 720 ft²*, *your estimate here*, *building*, *$350 over 12 months*); an amber **assumed** tag where the unit doesn't say. A pencil at the end of a line that uses a cost-profile estimate opens *Your estimate for this unit* inline (blank goes back to the profile). The total (15/800) closes the list with how many lines are assumed. **Lease length** (a menu: your default, the unit's terms with their rents, Other…) sits above the lines when it changes something. Under them: *Effective rent* (when there's a special), *Move-in cost* with its parts, *Per square foot*. The plate's headline is the total, with "rent, N assumed" beneath.
+**Monthly cost (M9).** One line per cost: name and amount, with where it came from underneath in slate (*listed*, *your estimate for 720 ft²*, *your estimate here*, *building*, *$350 over 12 months*); an amber **assumed** tag where the unit doesn't say. A pencil at the end of a line that uses a cost-profile estimate opens *Your estimate for this unit* inline (blank goes back to the profile). The total (15/800) closes the list with how many lines are assumed. **Lease length** (a menu: your default, the unit's terms with their rents, Other…) sits above the lines when it changes something. Under them: *Effective rent* (when there's a special), *Move-in cost* with its parts, *Per square foot*. The plate's headline is the total, with "rent, N assumed" beneath. When the unit doesn't list your lease length, a frost-amber note with the same tag opens the section ("This unit doesn't list a 15-month lease (it lists 12 and 18 months), so its costs use the 12-month lease."); unknown lease terms get one slate line instead.
 
 **Markers row (M7).** Flag as three buttons (Pick P · Reject… X · No flag U), your stars, then **Your label** and **Shared label** as five swatches each (pressed one ringed; click again to clear) and the status menu. With several units selected the same controls sit in the selection bar and say "Mixed" where the units differ.
 
@@ -300,6 +301,7 @@ In **Shortlist mode** each section header shows a completeness count ("Unit 7 of
 - Every field has three visible states: filled, unknown (`?` pressed, italic "Unknown"), and empty-not-yet-asked (same as unknown in data; shown with a faint dashed border so you can see what's left).
 - Yes/no fields are three-way toggles: **Yes · No · ?**.
 - Utilities: one row per item with **Included · Extra $ · Tenant-paid (est. $)**; the estimate placeholder shows your cost-profile number.
+- **Other charges by lease length** (M9 review) appears under *Rent by lease length* once it has two or more lengths: a "Differs by lease length:" line of *+ Deposit*, *+ Application fee*, … links; a charge that differs becomes a row with its name, a box per length ("12 mo $[1,395]  15 mo $[698]") and *Same for all lengths*. Nothing else changes until a link is clicked.
 - Edits are a draft; Save commits once (one undo step). Leaving with unsaved changes asks first.
 - The building form uses the same frame with its own sections.
 

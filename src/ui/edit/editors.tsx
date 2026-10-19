@@ -767,7 +767,7 @@ export function SpecialField({
       controlId={id}
       noUnknown
       wide
-      hint="Like “6 weeks free on a 13-month lease”. Its value counts in M9’s effective rent."
+      hint="Like “6 weeks free on a 13-month lease”. Its value shows as an effective rent (or comes off the total, if you spread specials)."
     >
       <div className={styles.listRow}>
         <input

@@ -327,6 +327,25 @@ export function makeSampleData(
         },
         at,
       );
+      // A building's first unit with 12- and 15-month leases prices them differently, with a
+      // smaller deposit on the longer lease (M9 review). No random draws, so everything else
+      // stays as it was; the 12-month price is the listed rent, so totals don't change.
+      if (
+        i === 0 &&
+        !floorPlanOnly &&
+        (seed.type === 'high-rise' || seed.type === 'mid-rise') &&
+        u.leaseTermsMonths?.length === 2
+      ) {
+        u.rentByTerm = [
+          { months: 12, rent },
+          { months: 15, rent: rent - 50 },
+        ];
+        if (u.deposit !== null)
+          u.termCharges = [
+            { charge: 'deposit', months: 12, amount: u.deposit },
+            { charge: 'deposit', months: 15, amount: Math.round(u.deposit / 2) },
+          ];
+      }
       // Same draws, in the same order, as before people existed (M6).
       const myRating = status === 'declined' ? 1 : (Math.floor(rand() * 6) as Rating);
       const myFlag: Flag =

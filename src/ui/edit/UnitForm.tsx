@@ -920,7 +920,7 @@ function PlannedLease({
       parse={monthsParse}
       suffix="months"
       size="medium"
-      hint={`Blank uses your default, ${settings.costProfile.defaultLeaseMonths} months. Used for the cost spread in M9.`}
+      hint={`Blank uses your default, ${settings.costProfile.defaultLeaseMonths} months. The costs use this lease length’s prices.`}
     />
   );
 }

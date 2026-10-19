@@ -65,7 +65,8 @@ test('updates a v0.7 database: offers a backup first, then everything is there',
   await expect(card.getByRole('img', { name: '4 of 5 stars' })).toBeVisible();
   // One safety copy of the data as it was
   await page.goto('/#/settings/backup');
-  await expect(page.getByText('Before the update to data format 3')).toHaveCount(1);
+  // (v0.9 took data format 4: one copy covers the whole update)
+  await expect(page.getByText(/Before the update to data format \d/)).toHaveCount(1);
 });
 
 test.describe('standalone homes and complexes', () => {
