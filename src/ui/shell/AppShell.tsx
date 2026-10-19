@@ -175,6 +175,11 @@ export function AppShell() {
           if (!done) showNotice('Nothing to redo.');
         })
         .catch((e: unknown) => showNotice(`Couldn’t redo. ${(e as Error).message}`)),
+    edit: () => {
+      if (unitId) navigate(`/unit/${unitId}/edit`, { state: { inApp: true } });
+      else if (buildingId) navigate(`/building/${buildingId}/edit`, { state: { inApp: true } });
+      else nothingSelected();
+    },
     later: (key) => {
       const text = LATER_KEYS[key];
       if (text) showNotice(text);

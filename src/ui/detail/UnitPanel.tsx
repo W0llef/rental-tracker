@@ -23,6 +23,7 @@ import type { UnitRow } from '../../state/derive';
 import { PasteIntoUnit } from '../add/PasteIntoUnit';
 import { PlaceOnMapButton } from '../add/PlaceOnMap';
 import { DeleteSection } from '../edit/DeleteSection';
+import { EssentialsSection } from './Essentials';
 import { Tag, Value } from '../common/Markers';
 import { MarkerControls } from '../triage/MarkerControls';
 import { NotesLog } from '../triage/NotesLog';
@@ -259,7 +260,7 @@ function ListingsSection({ row, today }: { row: UnitRow; today: ISODate }) {
   );
 }
 
-/** The unit detail panel (DESIGN.md §4.2): triage here (M7); full editing arrives in M8. */
+/** The unit detail panel (DESIGN.md §4.2): triage here (M7); Edit opens the full form (M8). */
 export function UnitPanel({
   row,
   settings,
@@ -328,6 +329,7 @@ export function UnitPanel({
       </header>
 
       <MarkerControls rows={[row]} me={me} settings={settings} />
+      {b && <EssentialsSection unit={u} building={b} settings={settings} />}
       <RatingsSection unitId={u.id} rows={row.opinions} settings={settings} />
       <LeaseSection u={u} today={today} />
       <UnitFacts u={u} floors={b?.floors ?? null} />
@@ -359,6 +361,29 @@ export function UnitPanel({
         id={u.id}
         name={b && buildingName(b) !== title ? `${title} at ${buildingName(b)}` : title}
       />
+      <footer className={styles.actions}>
+        <Link
+          to={`/unit/${u.id}/edit`}
+          state={{ inApp: true }}
+          className={styles.actionPrimary}
+          aria-keyshortcuts="e"
+        >
+          Edit <kbd aria-hidden="true">E</kbd>
+        </Link>
+        {b && (
+          <Link
+            to={`/new-unit?from=${u.id}`}
+            state={{ inApp: true }}
+            className={styles.action}
+            title="A new unit in this building with the same specs, features, fees and utilities"
+          >
+            {u.floorPlanName ? `New unit from ${u.floorPlanName}` : 'New unit like this'}
+          </Link>
+        )}
+        <Link to={`/history?unit=${u.id}`} className={styles.action}>
+          History
+        </Link>
+      </footer>
     </article>
   );
 }

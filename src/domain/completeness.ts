@@ -180,7 +180,7 @@ export const CHECKS: readonly Check[] = [
   ...AMENITY_KEYS.map((k) => buildingCheck(`amenities.${k}`, AMENITY_CHECK_LABELS[k], 'amenities')),
   {
     key: 'building.pets',
-    label: 'Pets allowed',
+    label: 'Pet policy',
     owner: 'building',
     section: 'policies',
     field: 'building.pets.cats',

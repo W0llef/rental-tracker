@@ -165,3 +165,8 @@ export function dropStaleSources(
       ),
   );
 }
+
+/** Monthly fees need a name; an unnamed one can't be saved. */
+export function feeProblem(fees: readonly { label: string }[] | null): string | null {
+  return fees?.some((f) => !f.label.trim()) ? 'Give every monthly fee a name.' : null;
+}

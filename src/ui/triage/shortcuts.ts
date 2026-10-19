@@ -25,7 +25,17 @@ export const SHORTCUTS: { group: string; rows: [keys: string, what: string, late
         ['B', 'Switch Units / Buildings'],
         ['L', 'Map layers'],
         ['N', 'Add a unit'],
+        ['E', 'Edit the open unit or building'],
         ['?', 'This sheet'],
+      ],
+    },
+    {
+      group: 'In a form',
+      rows: [
+        ['⌘S / Ctrl+S', 'Save'],
+        ['⌘↓ / Ctrl+↓', 'Next empty field (⌘↑ / Ctrl+↑ the one before)'],
+        ['?', 'Mark the field unknown and move on'],
+        ['Y N', 'Yes or no, on a yes/no field'],
       ],
     },
     {
@@ -38,7 +48,6 @@ export const SHORTCUTS: { group: string; rows: [keys: string, what: string, late
     {
       group: 'Coming later',
       rows: [
-        ['E', 'Edit the unit', 'M8'],
         ['C', 'Add to compare', 'M10'],
         ['F', 'Filters', 'M10'],
         ['M', 'Explore / Shortlist', 'M10'],
@@ -50,7 +59,6 @@ export const SHORTCUTS: { group: string; rows: [keys: string, what: string, late
 
 /** Keys that will do something in a later milestone: pressing one says when. */
 export const LATER_KEYS: Record<string, string> = {
-  e: 'Editing every detail arrives in M8.',
   c: 'Compare arrives in M10.',
   f: 'Filters arrive in M10.',
   m: 'Explore and Shortlist arrive in M10.',

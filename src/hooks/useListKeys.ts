@@ -14,7 +14,8 @@ import type { LabelColor, Rating } from '../model';
  *   0–5        stars;  6–9 your label;  ⇧6–9 the shared label (M7, Q22)
  *   ⏎          go to the open unit's details;  ?  the shortcut sheet
  *   ⌘/Ctrl+Z   undo;  ⇧⌘Z / Ctrl+Shift+Z  redo
- *   E C F M R  keys of later milestones: say when they arrive
+ *   E          edit the open unit or building (M8)
+ *   C F M R    keys of later milestones: say when they arrive
  * Ignored while typing in a field (except Esc), when a modifier key is held (except undo
  * and redo), and inside a dialog (it handles its own keys, Esc included).
  */
@@ -35,7 +36,9 @@ export interface ListKeyHandlers {
   help?: () => void;
   undo?: () => void;
   redo?: () => void;
-  /** A key of a later milestone (E, C, F, M, R). */
+  /** E: open the full form of the open unit or building (M8). */
+  edit?: () => void;
+  /** A key of a later milestone (C, F, M, R). */
   later?: (key: string) => void;
 }
 
@@ -123,6 +126,10 @@ export function useListKeys(handlers: ListKeyHandlers) {
           return;
         case 'e':
         case 'E':
+          if (!h.edit) return;
+          e.preventDefault();
+          h.edit();
+          return;
         case 'c':
         case 'C':
         case 'f':

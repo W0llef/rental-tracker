@@ -21,8 +21,8 @@ import { fromLinkRecords, isWebUrl, petsText, tri } from './text';
 import styles from './detail.module.css';
 
 /**
- * The read-only building panel (#/building/:id, PLAN.md §4.1): building facts, amenities,
- * policies and your units in it, with "Add unit here" and "Place on map" (M4).
+ * The building panel (#/building/:id, PLAN.md §4.1): building facts, amenities, policies and
+ * your units in it, with "Add unit here" and "Place on map" (M4) and Edit building (M8).
  */
 export function BuildingPanel({
   row,
@@ -157,6 +157,19 @@ export function BuildingPanel({
         <Links links={links} />
       </Section>
       <DeleteSection kind="building" id={b.id} name={name} unitCount={row.unitCount} />
+      <footer className={styles.actions}>
+        <Link
+          to={`/building/${b.id}/edit`}
+          state={{ inApp: true }}
+          className={styles.actionPrimary}
+          aria-keyshortcuts="e"
+        >
+          Edit building <kbd aria-hidden="true">E</kbd>
+        </Link>
+        <Link to={`/new-unit?building=${b.id}`} state={{ inApp: true }} className={styles.action}>
+          New unit with the full form
+        </Link>
+      </footer>
     </article>
   );
 }
