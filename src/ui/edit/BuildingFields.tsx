@@ -110,38 +110,26 @@ export function NameFields({
   const listId = useId();
   const [several, setSeveral] = useState(b.complexName !== null);
   const [dropped, setDropped] = useState<string | null>(null);
-  return (
-    <>
-      {several ? (
-        <>
-          <TextField
-            path="building.complexName"
-            label="Complex name"
-            value={b.complexName}
-            onChange={(v) => onChange({ ...b, complexName: v })}
-            placeholder="e.g. Cedar Mill"
-            list={listId}
-            hint={
-              complexNames.length
-                ? 'Use the same name for every building in the complex; names you’ve used are offered.'
-                : 'Use the same name for every building in the complex.'
-            }
-          />
-          <datalist id={listId}>
-            {complexNames.map((n) => (
-              <option key={n} value={n} />
-            ))}
-          </datalist>
-          <TextField
-            path="building.name"
-            label="This building’s name"
-            value={b.name}
-            onChange={(v) => onChange({ ...b, name: v })}
-            placeholder="e.g. North Tower"
-            hint="Optional: how this building is told apart within the complex."
-          />
-        </>
-      ) : (
+  const checkbox = (
+    <CheckField
+      label="This complex has several buildings"
+      checked={several}
+      onChange={(on) => {
+        setSeveral(on);
+        if (on) {
+          setDropped(null);
+          // A name typed first is almost always the complex's.
+          if (b.complexName === null) onChange({ ...b, complexName: b.name, name: null });
+        } else {
+          setDropped(b.complexName && b.name ? b.name : null);
+          onChange({ ...b, name: b.complexName ?? b.name, complexName: null });
+        }
+      }}
+    />
+  );
+  if (!several)
+    return (
+      <>
         <TextField
           path="building.name"
           label="Name"
@@ -154,21 +142,37 @@ export function NameFields({
               : undefined
           }
         />
-      )}
-      <CheckField
-        label="This complex has several buildings"
-        checked={several}
-        onChange={(on) => {
-          setSeveral(on);
-          if (on) {
-            setDropped(null);
-            // A name typed first is almost always the complex's.
-            if (b.complexName === null) onChange({ ...b, complexName: b.name, name: null });
-          } else {
-            setDropped(b.complexName && b.name ? b.name : null);
-            onChange({ ...b, name: b.complexName ?? b.name, complexName: null });
-          }
-        }}
+        {checkbox}
+      </>
+    );
+  return (
+    <>
+      <TextField
+        path="building.complexName"
+        label="Complex name"
+        value={b.complexName}
+        onChange={(v) => onChange({ ...b, complexName: v })}
+        placeholder="e.g. Cedar Mill"
+        list={listId}
+        hint={
+          complexNames.length
+            ? 'Use the same name for every building in the complex; names you’ve used are offered.'
+            : 'Use the same name for every building in the complex.'
+        }
+      />
+      <datalist id={listId}>
+        {complexNames.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
+      {checkbox}
+      <TextField
+        path="building.name"
+        label="This building’s name"
+        value={b.name}
+        onChange={(v) => onChange({ ...b, name: v })}
+        placeholder="e.g. North Tower"
+        hint="Optional: how this building is told apart within the complex."
       />
     </>
   );

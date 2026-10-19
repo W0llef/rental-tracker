@@ -293,3 +293,121 @@ describe('building form and editing buildings together', () => {
     expect((await db.buildings.get(ids.riverlight))?.amenities.fitness).toBe(true);
   });
 });
+
+describe('standalone homes, remembered unknowns and complex names (M8 review)', () => {
+  async function seedHouse() {
+    const house = await createBuilding(db, {
+      address: makeAddress('3624 15th Ave S', 'Minneapolis', 'MN', '55407'),
+      buildingType: 'house',
+    });
+    const unit = await createUnit(db, { buildingId: house.id, type: 'house', rent: 2260 });
+    return { house, unit };
+  }
+
+  it('edits a standalone home’s own facts in its unit form, saved in one step', async () => {
+    const user = userEvent.setup();
+    const { house, unit } = await seedHouse();
+    renderAt(`/unit/${unit.id}/edit`);
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('3624 15th Ave S');
+    expect(
+      screen.getByRole('checkbox', { name: 'Part of a larger building or complex' }),
+    ).not.toBeChecked();
+    expect(screen.queryByRole('combobox', { name: 'Building' })).toBeNull();
+    await user.type(screen.getByRole('textbox', { name: 'Year built' }), '1915');
+    await user.click(within(row('Cats allowed')).getByRole('radio', { name: 'Yes' }));
+    await user.type(screen.getByRole('textbox', { name: 'Bedrooms' }), '3');
+    await user.click(screen.getByRole('button', { name: /^Save/ }));
+    await waitFor(() => expect(path()).toBe(`/unit/${unit.id}`));
+    expect(await db.buildings.get(house.id)).toMatchObject({
+      yearBuilt: 1915,
+      pets: expect.objectContaining({ cats: true }),
+    });
+    expect((await db.units.get(unit.id))?.bedrooms).toBe(3);
+    await undo(db); // one step takes back both
+    expect((await db.buildings.get(house.id))?.yearBuilt).toBeNull();
+    expect((await db.units.get(unit.id))?.bedrooms).toBeNull();
+  });
+
+  it('keeps standalone homes out of the Building menu, and can join one to a building', async () => {
+    const user = userEvent.setup();
+    const { house, unit } = await seedHouse();
+    renderAt(`/unit/${ids.u1504}/edit`);
+    const menu = await screen.findByRole('combobox', { name: 'Building' });
+    const options = within(menu)
+      .getAllByRole('option')
+      .map((o) => o.textContent);
+    expect(options.some((o) => o?.includes('3624 15th Ave S'))).toBe(false);
+    expect(options.some((o) => o?.includes('Riverlight'))).toBe(true);
+
+    await router.navigate(`/unit/${unit.id}/edit`);
+    await screen.findByRole('heading', { level: 1, name: '3624 15th Ave S' });
+    await user.click(
+      screen.getByRole('checkbox', { name: 'Part of a larger building or complex' }),
+    );
+    expect(screen.getByRole('combobox', { name: 'Building' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: /^Save/ }));
+    await waitFor(() => expect(path()).toBe(`/unit/${unit.id}`));
+    expect((await db.buildings.get(house.id))?.standalone).toBe(false);
+  });
+
+  it('a standalone home’s panel sends building essentials to its unit form', async () => {
+    const { unit } = await seedHouse();
+    renderAt(`/unit/${unit.id}`);
+    const prompts = await screen.findByRole('list', { name: 'Missing essentials' });
+    expect(within(prompts).getByRole('link', { name: 'Add pet policy' })).toHaveAttribute(
+      'href',
+      `/unit/${unit.id}/edit?field=building.pets.cats`,
+    );
+    expect(screen.getByRole('heading', { name: 'The home' })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Open building' })).toBeNull();
+  });
+
+  it('remembers a field checked and found unknown, and forgets it once known', async () => {
+    const user = userEvent.setup();
+    renderAt(`/unit/${ids.u1504}/edit`);
+    await user.click(await screen.findByRole('button', { name: 'Mark Balcony unknown' }));
+    await user.click(screen.getByRole('button', { name: /^Save/ }));
+    await waitFor(() => expect(path()).toBe(`/unit/${ids.u1504}`));
+    expect((await db.units.get(ids.u1504))?.checkedUnknown).toEqual([
+      { field: 'unit.balcony', at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) },
+    ]);
+
+    await router.navigate(`/unit/${ids.u1504}/edit`);
+    expect(await screen.findByRole('button', { name: 'Mark Balcony unknown' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(row('Balcony')).not.toHaveAttribute('data-empty');
+    await user.click(within(row('Balcony')).getByRole('radio', { name: 'No' }));
+    await user.click(screen.getByRole('button', { name: /^Save/ }));
+    await waitFor(() => expect(path()).toBe(`/unit/${ids.u1504}`));
+    const saved = await db.units.get(ids.u1504);
+    expect(saved?.balcony).toBe(false);
+    expect(saved?.checkedUnknown).toEqual([]);
+  });
+
+  it('names a building in a complex of several, shown together', async () => {
+    const user = userEvent.setup();
+    renderAt(`/building/${ids.riverlight}/edit`);
+    expect(await screen.findByRole('textbox', { name: 'Name' })).toHaveValue('Riverlight');
+    await user.click(screen.getByRole('checkbox', { name: 'This complex has several buildings' }));
+    // A box with suggestions (names used before) reads as a combobox.
+    expect(screen.getByRole('combobox', { name: 'Complex name' })).toHaveValue('Riverlight');
+    await user.type(screen.getByRole('textbox', { name: 'This building’s name' }), 'North Tower');
+    await user.click(screen.getByRole('button', { name: /^Save/ }));
+    await waitFor(() => expect(path()).toBe(`/building/${ids.riverlight}`));
+    expect(await db.buildings.get(ids.riverlight)).toMatchObject({
+      name: 'North Tower',
+      complexName: 'Riverlight',
+    });
+    expect(await screen.findByRole('heading', { name: 'North Tower · Riverlight' })).toBeVisible();
+
+    // Unticking keeps the complex's name as the name and says the building's own goes
+    await router.navigate(`/building/${ids.riverlight}/edit`);
+    await user.click(
+      await screen.findByRole('checkbox', { name: 'This complex has several buildings' }),
+    );
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Riverlight');
+    expect(screen.getByText(/“North Tower” was this building’s own name/)).toBeVisible();
+  });
+});

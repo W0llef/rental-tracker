@@ -310,7 +310,11 @@ export function UnitPanel({
             {b && buildingName(b) !== title && buildingName(b) !== b.address.line1 && (
               <b>{buildingName(b)}, </b>
             )}
-            {b ? b.address.line1 : 'Building missing'}
+            {!b
+              ? 'Building missing'
+              : title === b.address.line1
+                ? [b.address.city, b.address.state].filter(Boolean).join(', ')
+                : b.address.line1}
             {b?.neighborhood && (
               <>
                 <br />

@@ -5,6 +5,8 @@ import {
   completeness,
   essentialChecks,
   essentials,
+  fieldKnown,
+  nextCheckedUnknown,
 } from '../../src/domain/completeness';
 import { COPY_PATHS, copyDetails, unitFromSource } from '../../src/domain/copyFrom';
 import {
@@ -403,5 +405,38 @@ describe('standalone homes (Q30)', () => {
       false,
     );
     expect(standaloneDefault(b({ standalone: true }), [{ type: 'apartment' }])).toBe(false);
+  });
+});
+
+describe('remembered unknowns (Q29)', () => {
+  it('count as done in completeness, but not as known essentials', () => {
+    const b = building();
+    const u = {
+      ...unitIn(b),
+      checkedUnknown: [{ field: 'unit.balcony', at: '2026-10-19' }],
+    };
+    const c = completeness({ unit: u, building: b }, 'unit');
+    expect(c.checked).toBe(1);
+    expect(c.unknown.map((k) => k.key)).toEqual(['unit.balcony']);
+    expect(c.missing.map((k) => k.key)).not.toContain('unit.balcony');
+
+    const withRent = { ...u, checkedUnknown: [{ field: 'unit.rent', at: '2026-10-19' }] };
+    const e = essentials({ unit: withRent, building: b }, ['unit.rent', 'unit.bedrooms']);
+    expect(e.unknown.map((k) => k.key)).toEqual(['unit.rent']);
+    expect(e.missing.map((k) => k.key)).toEqual(['unit.bedrooms']);
+    expect(e.ready).toBe(false);
+  });
+
+  it('keep the first date, drop fields that became known, ignore other records and notes', () => {
+    const next = nextCheckedUnknown(
+      new Set(['unit.balcony', 'unit.rent', 'unit.viewNotes', 'building.pets.dogs']),
+      [{ field: 'unit.balcony', at: '2026-10-01' }],
+      'unit',
+      (f) => f === 'unit.rent',
+      '2026-10-19',
+    );
+    expect(next).toEqual([{ field: 'unit.balcony', at: '2026-10-01' }]);
+    expect(fieldKnown({ unit: unitIn(building(), { rent: 1 }) }, 'unit.rent')).toBe(true);
+    expect(fieldKnown({ building: building() }, 'building.pets.dogs')).toBe(false);
   });
 });

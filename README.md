@@ -45,7 +45,9 @@ Open **Settings** (the gear in the top bar), then **Backup and restore**.
 - If an update ever changes how data is stored, the app stops before updating and offers
   **Download backup** first. That file is what lets you go back to the previous version.
   Version 0.6 is the first such update (people and per-person ratings): your ratings and flags
-  become yours, and the undo history starts fresh (the safety copy keeps everything).
+  become yours, and the undo history starts fresh (the safety copy keeps everything). Version
+  0.8 is the second (standalone homes and remembered unknowns); it only adds fields, so the undo
+  history stays.
 - A backup remembers whose copy made it, so restoring your own backup on a new computer makes
   you "you" again.
 
@@ -112,8 +114,9 @@ below.
   building's panel has **Edit building** (also `E`): name, address, contact, structure,
   amenities, pets and policies, neighborhood, notes and links.
 - Every field can be **unknown**. Fields still to research have a faint dashed border; the `?`
-  button (or the `?` key in an empty field) marks one unknown for now. Yes/no fields are
-  **Yes · No**, chosen with the mouse or `Y` / `N`.
+  button (or the `?` key in an empty field) marks one as checked and unknown, and the app
+  remembers that, so research doesn't keep asking (press `?` again to undo the mark). Yes/no
+  fields are **Yes · No**, chosen with the mouse or `Y` / `N`.
 - **Research by keyboard:** `⌘↓` / `Ctrl+↓` jumps to the next field still to research (`⌘↑`
   the one before), `?` marks it unknown and moves on, `⌘S` / `Ctrl+S` saves. Notes and
   preferences are skipped, so the jumps follow what counts toward completeness.
@@ -132,6 +135,15 @@ below.
   compare** once they're all known. Choose the essentials in **Settings → Essential fields**
   (default: rent, beds, baths, size, available date, laundry, parking, heat, electric, lease
   terms and the building's pet policy).
+- **Houses and townhomes on their own:** a unit's form has **Part of a larger building or
+  complex**, ticked or not to begin with by the unit type (a house or townhome isn't; an
+  apartment or condo is). Untick it and the unit's form shows **The home** (address, landlord,
+  year built, pets, smoking) instead of a Building menu, the panel shows the home rather than a
+  building, and the Buildings view shows it as a **Home** card. The Building menu only offers
+  real buildings, not other houses.
+- **Buildings in a complex:** a building has one **Name** box. Tick **This complex has several
+  buildings** to name the complex and, optionally, this building ("North Tower · Cedar Mill").
+  Use the same complex name for each of its buildings; names you've used are offered.
 - **Several buildings at once:** in the **Buildings** view, `⌘`/`Ctrl`-click or `Shift`-click
   building cards (or `⌘`/`Ctrl`-click their pins), then **Edit together…** to set type, elevator,
   management, amenities, pets, smoking and subletting for all of them.
