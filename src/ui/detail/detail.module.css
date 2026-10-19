@@ -741,9 +741,9 @@
 
 .action kbd,
 .actionPrimary kbd {
+  color: inherit;
   font: inherit;
   font-size: 11px;
-  opacity: 0.8;
 }
 
 @media (max-width: 759px) {

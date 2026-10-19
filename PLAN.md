@@ -4,7 +4,7 @@ Status: **Draft 3** · Oct 15, 2026 · covers spec Draft v1 (`SPEC.md`)
 
 This plan covers Phase 1 only (spec §12: "track and compare"). The data model, however, contains every field from spec §3 now, plus the few supporting fields later phases need, so Phases 2–4 add screens and services without reshaping stored data.
 
-**Status:** approved in principle; Q11 answered (fast data entry is in Phase 1). M0–M4 done. M5 next. Workflow, versions and progress: §13–§14 and `CLAUDE.md`.
+**Status:** approved in principle; Q11 answered (fast data entry is in Phase 1). Progress is in §14. Workflow, versions and progress: §13–§14 and `CLAUDE.md`.
 
 **Draft 2 changes:** design direction C (Wayfinding) chosen; your answers to Q1–Q10 applied (§11); lease length for spreading one-time costs (§5.3); switchable base maps and customizable pins (§4.3); a fast data-entry and AI-import section (§5.7) with revised milestones (§9). One new scope question, Q11, is in §11.
 
@@ -572,6 +572,7 @@ There are two places old data can come from — the browser's own database and o
 | dialog | **AI research prompt** | Scope (unit, building, selection), which fields, copy button, tips |
 | `#/import/:id` | **Import review** | Field-by-field diff for pasted AI JSON or listing text; accept/reject, source links, one undo step |
 | `#/unit/:id/edit` | **Full unit form** | Section nav (Identity, Specs, Windows, Features, Lease, Costs, Parking & storage, Review, Photos, Listings, Sources), UnknownInput fields, completeness meter, building summary with "Edit building" |
+| `#/new-unit?from=<id>` or `?building=<id>` (M8) | **New unit in the full form** | "New unit from Plan C": the same form, starting from the plan's copied details; nothing is stored until **Add unit** |
 | `#/building/:id/edit` | **Building form** | Identity, Structure, Amenities, Policies, Neighborhood, Links, Photos |
 | `#/compare?ids=…` | **Compare table** | 2–6 unit columns, grouped field rows, differences highlighted, "hide identical rows" |
 | `#/duplicates` | **Duplicate review** | candidate pairs with reason, MergeDialog (pick value per conflicting field) |
@@ -817,6 +818,18 @@ Goal: nothing is typed twice, and each field can be filled from wherever you're 
 | Bulk edit | Select several units, then "Edit together" to set any field for all of them (e.g. heat included for every Riverlight unit). Fields that differ show "Mixed". |
 | Research mode | In Shortlist mode the detail panel lists missing essentials as one-click prompts. In the edit form, ⌘↓ / Ctrl+↓ jumps to the next empty field and `?` marks it unknown, so a unit can be completed without the mouse. |
 
+*As built (M8):*
+
+- **Forms** (`ui/edit/`; `#/unit/:id/edit`, `#/new-unit`, `#/building/:id/edit`, loaded on demand): one scrolling page per record with a sticky section nav whose dots (● ◐ ○, drawn in CSS) come from the completeness checks, the fields, and a side column (building summary, completeness, essentials; the building form lists its units). Every §3 field is there except `costOverrides` (M9's cost breakdown), `placement3d` (Phase 4), `collectionIds` (M10) and photos (M12, a placeholder section). Fields: text, numbers read leniently (`domain/input.ts`: "$1,650", "720 sq ft", "1 1/2"), dates, menus, **Yes · No** groups (Y and N), exposure (eight direction buttons, first pressed is the main one, *Add the windows' directions*), windows (room, direction, size, obstruction), utilities (**Included · Extra $ · You pay** with an amount; the estimate's hint shows the cost profile's number, `domain/cost.ts` `profileEstimate`), monthly fees (or *No monthly fees*), rent by lease length, move-in special, lease terms ("12, 15", "none"), the lease you'd sign, status and shared label, links, and **listings with their price history** (site, link, first/last seen, off market, every price with its date and note; add, correct, delete). The building form edits the address text (the pin stays; *Place on map* moves it) and the neighborhood (becomes `manual`).
+- **Draft and save**: edits are a draft; **Save** (⌘/Ctrl+S) runs one action (`commands/forms.ts` `saveUnitForm`, `saveBuildingForm`), validated with zod before anything is written, so Undo and History take a save back in one step and describe it field by field ("Changed 7 details on Unit 1504 at Riverlight"; `domain/history.ts` now names building fields, says utilities and the move-in special as a whole, and keeps sources quiet). Saving an untouched form writes nothing. Typing errors are shown under the field and block saving; leaving with unsaved changes asks first (`useBlocker`, and the browser's own prompt on closing the tab).
+- **Rent and price history** (`domain/unitForm.ts` `reconcileRent`): a typed rent becomes today's price on the most recent listing (same day replaces) or on a new listing without a link, as in Quick-add; editing the price history so its newest price changes moves the rent to it. The form says which will happen ("Saving records $1,600 as today's price on the Zillow listing"). A rent change and its price point read as one line in History.
+- **Sources**: a value changed by hand loses its `fieldSources` entry when saved (it no longer came from there); the Sources section lists the rest with a remove button. Building facts typed in the building form drop the matching `building.*` sources on its units.
+- **Unknown and research mode**: unknown and not-asked-yet are the same in the data (DESIGN §4.3); the `?` button or key marks a field unknown for the editing session (italic "Unknown", no dashed border) and moves to the next empty field. Only fields that count toward completeness (`RESEARCH_FIELDS`) show the dashed border and stop ⌘/Ctrl+↓ (⌘/Ctrl+↑ goes back); notes and preferences don't. "Nothing left empty" shows when there's none. Remembering "checked, still unknown" across sessions is Q29.
+- **Completeness and essentials** (`domain/completeness.ts`): one list of *checks* (≈ 60: unit specs, features, lease, utilities, parking and storage; building structure, amenities, policies, neighborhood, website, management) with "applies" rules (a floor plan has no floor, exposure or windows; street parking has no space price; storage cost only when it isn't included; pet rent only when pets are allowed). Group checks: *Parking* (type, plus spaces included for garage or lot) and *Pet policy* (cats and dogs). `Settings.essentialFields` stores check keys (the defaults were already stored since M1); **Settings → Essential fields** chooses them (undoable). The unit panel shows **Essentials N of M** with each missing one as a prompt (*Add laundry*) linking to the form at that field (`?field=`), building ones to the building form, and **Ready to compare** when none are missing (Q28: on every unit until Shortlist mode).
+- **Copy from** (`domain/copyFrom.ts`): *Copy details from* (units and plans in the same building) fills only what the unit doesn't know and says what it kept; **New unit from Plan C** / **New unit like this** opens the form for a new unit with the copied details. Copied: type, beds, baths, size, layout notes, features, lease terms, deposit and fees, monthly fees (new ids), move-in special, utilities, parking, storage. Not copied: number, floor, rent, rent by term, available date, exposure, windows, view, status, labels, opinions, notes, listings, links, the lease you'd sign.
+- **Edit together for buildings** (Q23): ⌘/Ctrl- and Shift-click building cards in the Buildings view (and ⌘/Ctrl-click pins there) select buildings; a bar offers **Edit together…** for type, elevator, management company, amenities, cats, dogs, pet rent and deposit, smoking and subletting (`updateBuildings`, one undo step; amenities and pets change only the parts set). Esc clears it.
+- **Keys**: `E` opens the open unit's or building's form; in a form ⌘/Ctrl+S, ⌘/Ctrl+↓/↑, `?`, Y/N; the shortcut sheet lists them.
+
 **AI-assisted path**
 
 Works with any AI assistant that can browse the web (for example Claude with web search). The app itself never calls an AI, so it costs nothing.
@@ -869,6 +882,8 @@ A draft for the M6 chat to confirm with the owner before building:
 Shortcuts act on the selected unit (or all selected units). Full table in DESIGN.md.
 
 *As built (M7, `hooks/useListKeys.ts`, Q22):* labels by physical key (`e.code`), so ⇧6–9 set the shared label on any keyboard; `⏎` moves focus to the open unit's details; keys of later milestones (E, C, F, M, R) say which milestone brings them; `?` opens the sheet (`ui/triage/shortcuts.ts`). Targets are the multi-selection (⌘/Ctrl-click toggles, Shift-click selects the range from the last ⌘/Ctrl-clicked unit; plain click or Esc clears it), else the open unit.
+
+*As built (M8):* `E` opens the full form of the open unit or building; in a form `⌘/Ctrl+S` saves, `⌘/Ctrl+↓` / `⌘/Ctrl+↑` move to the next / previous field still to research, `?` marks a field unknown and moves on (in a text box only while it's empty), `Y` / `N` answer a yes/no field, and the arrow keys move within a choice. Form keys work while typing.
 
 `P` pick · `X` reject (opens reason dialog) · `U` unflag · `0`–`5` stars · `6` red · `7` yellow · `8` green · `9` blue · `↑/↓` or `J/K` previous/next unit · `Enter` open detail · `E` edit · `N` quick-add · `C` add to compare · `/` search · `F` filters · `L` map layers · `M` toggle Explore/Shortlist · `B` toggle units/buildings view · `R` copy research prompt · `⌘/Ctrl+Z` undo · `⇧⌘/Ctrl+Shift+Z` redo · `?` shortcut sheet · `Esc` close panel. In forms: `⌘/Ctrl+↓` next empty field, `?` mark unknown, `⌘/Ctrl+S` save. Disabled while typing in a field (except the form keys).
 
@@ -992,7 +1007,12 @@ Sizes are only for estimating time: S ≈ half an M, L ≈ twice an M, so the 15
 
 ### 11.2 Open
 
-None. New questions will be added here as they come up.
+Built with the proposed answer; confirm or change at the M8 review.
+
+| # | Question | Proposed (as built in M8) |
+| --- | --- | --- |
+| Q28 | §5.7 puts the missing-essentials prompts in **Shortlist mode**, which arrives in M10. Where should they show until then? | **On every unit's panel**, only when an essential is missing (a short "Essentials 7 of 11" line with *Add …* prompts; "Ready to compare" otherwise). M10 can keep them to Shortlist mode, or to picked units. |
+| Q29 | Should "I checked and it's still unknown" be **remembered** after the form closes? DESIGN §4.3 says unknown and not-asked-yet are the same in the data, so `?` only lasts for the editing session and the field comes back as "to research" next time. | **Not remembered** (no data-format change). Remembering it would be a small data-format change (a per-unit list of fields checked and unknown, with the date), letting completeness count them and ⌘↓ skip them. Could join any later milestone that changes the data format (M12 or M14). |
 
 
 **Assumptions I'll proceed with unless you object**
@@ -1012,6 +1032,7 @@ None. New questions will be added here as they come up.
 
 | Date | Change |
 | --- | --- |
+| 2026-10-18 | M8: **full unit and building forms**, research mode, essentials and completeness, copy from unit / new unit from plan, listings and price-history editing, Edit together for buildings (Q23), Settings → Essential fields, `E` to edit (§5.7 "As built (M8)", §6). Q28 (missing-essentials prompts on every unit until Shortlist mode) and Q29 ("checked, still unknown" not remembered) proposed for the owner. New route `#/new-unit`. No data-format change. |
 | 2026-10-18 | After M7 approval: **Q27** resizable and foldable panels, and the details panel left of, right of or under the map (preset layouts), planned for M14. |
 | 2026-10-18 | M7, owner review: ⌘/Ctrl-click on map pins, card rows and a card's building name (all its units) adds to the selection; selected units are highlighted on the map; pointing at any card, pin or row fades the other pins and cards; ⌘/Ctrl-click on building cards no longer opens a tab (building multi-select and Edit together for buildings move to **M8**, Q23); History search and filters planned for **M14** (Q24); the Data check page became **Settings → Data** (Q25). |
 | 2026-10-18 | M7: **triage and bulk edit**. Marker controls in the unit panel and a selection bar (flag, stars, your label, shared label, status), Reject dialog with reusable and new reasons and a note, flag/rating notes per person, notes log (add, edit, delete your own; units and buildings), multi-select, **Edit together** (Q20 fields), all Phase 1 keys with a `?` sheet, toasts with Undo/Redo after every action, **History** (`#/history`: specific descriptions, Undo this with clash check, Restore to here, Deleted with Restore), Settings → **Labels and reasons**, pins colored by shared or your label (pin color option `myLabel`, kept in the browser like other pin choices). `setOpinion` now records "last reviewed" and skips changes that change nothing. No data-format change. |
@@ -1081,7 +1102,7 @@ The full working agreement for every session is in `CLAUDE.md`; this is the summ
 | M5 Backup and restore | Approved | v0.5.0 | 2026-10-18 |
 | M6 People and per-person ratings | Approved | v0.6.0 | 2026-10-18 |
 | M7 Triage and bulk edit | Approved | v0.7.0 | 2026-10-18 |
-| M8 Forms and research mode | Not started | — | — |
+| M8 Forms and research mode | In review (preview) | 0.8.0 | — |
 | M9 Cost profile and lease length | Not started | — | — |
 | M10 Collections, filters, compare | Not started | — | — |
 | M11 Batch add and AI import | Not started | — | — |

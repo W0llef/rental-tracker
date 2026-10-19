@@ -233,11 +233,13 @@ test.describe('triage', () => {
     await page.keyboard.press('?');
     const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
     await expect(sheet).toContainText('Reject (asks why');
-    await expect(sheet).toContainText('arrives in M8');
+    await expect(sheet).toContainText('Edit the open unit or building');
+    await expect(sheet).toContainText('Next empty field');
+    await expect(sheet).toContainText('arrives in M10');
     await page.keyboard.press('Escape');
     await expect(sheet).toHaveCount(0);
-    await page.keyboard.press('e');
-    await expect(toast(page)).toContainText('arrives in M8');
+    await page.keyboard.press('c');
+    await expect(toast(page)).toContainText('Compare arrives in M10');
   });
 
   for (const scheme of ['light', 'dark'] as const) {

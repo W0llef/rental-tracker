@@ -99,11 +99,43 @@ note offers it too). Click the spot on the map, or pan the map's center onto it 
 
 **Deleting.** At the end of a unit's or building's panel, **Delete unit…** or **Delete
 building…** asks once, then deletes (a building takes its units with it). The confirmation that
-follows has **Undo**. Editing details by hand (a building's name, amenities and so on) arrives
-with the full forms in M8.
+follows has **Undo**.
 
 Each add, paste, placement or delete is one step in the undo history: see **Undo and History**
 below.
+
+### Editing every detail
+
+- **Edit** (or `E`) at the bottom of a unit's panel opens its full form: identity, specs,
+  exposure and windows, features, lease and fees, who pays each utility, parking and storage,
+  status and shared label, listings with their price history, other links and sources. A
+  building's panel has **Edit building** (also `E`): name, address, contact, structure,
+  amenities, pets and policies, neighborhood, notes and links.
+- Every field can be **unknown**. Fields still to research have a faint dashed border; the `?`
+  button (or the `?` key in an empty field) marks one unknown for now. Yes/no fields are
+  **Yes · No**, chosen with the mouse or `Y` / `N`.
+- **Research by keyboard:** `⌘↓` / `Ctrl+↓` jumps to the next field still to research (`⌘↑`
+  the one before), `?` marks it unknown and moves on, `⌘S` / `Ctrl+S` saves. Notes and
+  preferences are skipped, so the jumps follow what counts toward completeness.
+- Nothing is saved until **Save**, and the whole save is one step in the undo history, described
+  field by field. Leaving with unsaved changes asks first.
+- **Rent and price history:** typing a new rent records it as today's price on the unit's most
+  recent listing (or a new listing without a link). Adding or correcting prices in **Listings**
+  moves the rent to the newest price. The form says which will happen before you save.
+- **Copy details from** another unit or floor plan in the same building fills what this unit
+  doesn't know yet (specs, features, fees, utilities, parking), never its number, floor, rent,
+  windows, ratings or notes. **New unit from Plan C** (or **New unit like this**) at the bottom of
+  a unit's panel starts a new unit the same way.
+- **Complete and essentials:** the form's side column shows how much is known, what's still
+  unknown (click one to go there) and the **essentials**. A unit's panel lists missing
+  essentials as prompts like _Add laundry_ that open the form at that field, and says **Ready to
+  compare** once they're all known. Choose the essentials in **Settings → Essential fields**
+  (default: rent, beds, baths, size, available date, laundry, parking, heat, electric, lease
+  terms and the building's pet policy).
+- **Several buildings at once:** in the **Buildings** view, `⌘`/`Ctrl`-click or `Shift`-click
+  building cards (or `⌘`/`Ctrl`-click their pins), then **Edit together…** to set type, elevator,
+  management, amenities, pets, smoking and subletting for all of them.
+- Forms are laid out for a laptop but work on a phone.
 
 ### Triage: flags, stars, labels and status
 
@@ -117,8 +149,8 @@ below.
 - **Several units at once:** `⌘`/`Ctrl`-click cards to add or remove them, `Shift`-click to
   select a range (sort by building to select one building's units in a row). On the map,
   `⌘`/`Ctrl`-click a pin or a row of a building's card; `⌘`/`Ctrl`-click a building's name on its
-  card (or its pin) to select all its units. Selected units are highlighted on the map too. A bar above the list shows how many and has the same markers; the keys act on
-  all of them. **Edit together…** sets flags, stars, labels, status, utilities, laundry,
+  card (or its pin) to select all its units. Selected units are highlighted on the map too. A
+  bar above the list shows how many and has the same markers; the keys act on all of them. **Edit together…** sets flags, stars, labels, status, utilities, laundry,
   dishwasher, AC, heating, parking, storage, lease terms and the available date for all of them
   ("Mixed" where they differ). `Esc` clears the selection.
 - In a unit's **Ratings** section, **Add notes** / **Edit notes** keeps a flag note and a rating
@@ -152,7 +184,7 @@ below.
 - Click a card to open its details; **Back**, `Esc` or the × closes them. On a phone the details
   open in the **Unit** tab.
 - Keys: `↓`/`J` and `↑`/`K` move through the list, `B` switches Units / Buildings, `⏎` jumps to
-  the open unit's details, `?` lists every key.
+  the open unit's details, `E` edits it, `?` lists every key.
 
 ### The map
 

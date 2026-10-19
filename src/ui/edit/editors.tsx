@@ -156,7 +156,7 @@ export function ExposureField({
               type="button"
               className={styles.direction}
               aria-pressed={list.includes(d)}
-              aria-label={`${DIRECTION_NAMES[d]}${list[0] === d ? ' (main)' : ''}`}
+              aria-label={`${d} (${DIRECTION_NAMES[d]}${list[0] === d ? ', main' : ''})`}
               tabIndex={i === focusAt ? 0 : -1}
               data-main={list[0] === d || undefined}
               onFocus={() => setFocusAt(i)}
