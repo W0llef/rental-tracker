@@ -113,7 +113,7 @@ function LeaseLength({
     const parts = [monthsLabel(m)];
     if (rent !== undefined) parts.push(`${money(rent)} rent`);
     else if (offered.size && !offered.has(m)) parts.push('not listed');
-    return parts.join(' · ');
+    return parts.join(', ');
   };
   const saveOther = async () => {
     const parsed = parseWhole(text, { min: 1, max: 60, what: 'a number of months' });
@@ -140,7 +140,7 @@ function LeaseLength({
           void setLeaseLength(db, unit.id, v === 'default' ? null : Number(v));
         }}
       >
-        <option value="default">Your default · {optionText(profile.defaultLeaseMonths)}</option>
+        <option value="default">Your default ({optionText(profile.defaultLeaseMonths)})</option>
         {cost.leaseOptions.map((m) => (
           <option key={m} value={String(m)}>
             {optionText(m)}
@@ -215,101 +215,103 @@ export function CostSection({
       action={<Link to="/settings/cost">Edit cost profile</Link>}
     >
       {cost.leaseMatters && <LeaseLength unit={unit} cost={cost} profile={profile} />}
-      <table className={styles.costTable}>
-        <caption className={styles.visuallyHidden}>
-          Monthly cost: each line, where it came from, and the amount
-        </caption>
-        <tbody>
-          {cost.rent === null && (
-            <tr>
-              <th scope="row">Rent</th>
-              <td className={styles.costNote}>unknown</td>
-              <td className={styles.costAmount}>
-                <i className={styles.muted}>?</i>
-              </td>
-            </tr>
-          )}
-          {cost.lines.map((l) => (
-            <tr key={l.key} data-assumed={l.assumed || undefined}>
-              <th scope="row">{l.label}</th>
-              <td className={styles.costNote}>
-                {l.assumed && <span className={styles.assumedTag}>assumed</span>}
-                {l.note}
-                {l.overrideKey && editing !== l.key && (
-                  <>
-                    {' '}
-                    <button
-                      type="button"
-                      className={styles.linkButton}
-                      onClick={() => setEditing(l.key)}
-                      aria-label={`Set ${l.label.toLowerCase()} for this unit`}
-                    >
-                      {l.source === 'override' ? 'Change' : 'Set for this unit'}
-                    </button>
-                  </>
-                )}
-                {editing === l.key && (
-                  <OverrideEditor
-                    unit={unit}
-                    line={l}
-                    profile={profile}
-                    onDone={() => setEditing(null)}
-                  />
-                )}
-              </td>
-              <td className={styles.costAmount}>{amountText(l.amount)}</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr className={styles.costTotal}>
-            <th scope="row">Total</th>
-            <td className={styles.costNote}>{cost.assumed > 0 && `${cost.assumed} assumed`}</td>
-            <td className={styles.costAmount}>
-              {cost.total === null ? (
-                <i className={styles.muted}>Unknown</i>
-              ) : (
-                <>
-                  {unit.rentIsFrom && 'from '}
-                  {money(cost.total)}
-                  <small>/mo</small>
-                </>
+      <ul className={styles.costLines} aria-label="Monthly cost lines">
+        {cost.rent === null && (
+          <li className={styles.costLine}>
+            <span className={styles.costLabel}>Rent</span>
+            <span className={styles.costAmount}>
+              <i className={styles.muted}>Unknown</i>
+            </span>
+          </li>
+        )}
+        {cost.lines.map((l) => (
+          <li key={l.key} className={styles.costLine} data-assumed={l.assumed || undefined}>
+            <span className={styles.costLabel}>{l.label}</span>
+            <span className={styles.costAmount}>{amountText(l.amount)}</span>
+            <span className={styles.costEdit}>
+              {l.overrideKey && (
+                <button
+                  type="button"
+                  className={styles.pencil}
+                  aria-expanded={editing === l.key}
+                  onClick={() => setEditing(editing === l.key ? null : l.key)}
+                  title={`Your ${l.label.toLowerCase()} estimate for this unit`}
+                >
+                  <svg viewBox="0 0 16 16" aria-hidden="true">
+                    <path
+                      d="M10.8 2.6l2.6 2.6-7.6 7.6-3.2.6.6-3.2 7.6-7.6z"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span className={styles.visuallyHidden}>
+                    Set {l.label.toLowerCase()} for this unit
+                  </span>
+                </button>
               )}
-            </td>
-          </tr>
-        </tfoot>
-      </table>
+            </span>
+            <span className={styles.costNote}>
+              {l.assumed && <span className={styles.assumedTag}>assumed</span>}
+              {l.note}
+            </span>
+            {editing === l.key && (
+              <OverrideEditor
+                unit={unit}
+                line={l}
+                profile={profile}
+                onDone={() => setEditing(null)}
+              />
+            )}
+          </li>
+        ))}
+        <li className={`${styles.costLine} ${styles.costTotal}`}>
+          <span className={styles.costLabel}>Total</span>
+          <span className={styles.costAmount}>
+            {cost.total === null ? (
+              <i className={styles.muted}>Unknown</i>
+            ) : (
+              <>
+                {unit.rentIsFrom && 'from '}
+                {money(cost.total)}
+                <small>/mo</small>
+              </>
+            )}
+          </span>
+          {cost.assumed > 0 && (
+            <span className={styles.costNote}>
+              {cost.assumed} of the lines {cost.assumed === 1 ? 'is' : 'are'} assumed
+            </span>
+          )}
+        </li>
+      </ul>
       {cost.total === null && (
         <p className={styles.muted}>The total needs the rent. Edit (E) to add it.</p>
       )}
       <dl className={styles.costExtras}>
         {cost.effectiveRent !== null && (
-          <div className={styles.row}>
-            <dt>
-              Effective rent
-              <span className={styles.costSub}>
-                {' '}
-                with the move-in special over {monthsLabel(cost.leaseMonths)}
-              </span>
-            </dt>
+          <div className={styles.extra}>
+            <dt>Effective rent</dt>
             <dd>{money(cost.effectiveRent)}</dd>
+            <dd className={styles.costSub}>
+              The rent less the move-in special, spread over {monthsLabel(cost.leaseMonths)}.
+            </dd>
           </div>
         )}
-        <div className={styles.row}>
-          <dt>
-            Move-in cost
-            <span className={styles.costSub}>
-              {' '}
-              {moveIn.parts.map((p) => p.label.toLowerCase()).join(', ') || 'first month'}
-              {moveIn.unknown.length > 0 &&
-                `; ${moveIn.unknown.map((u) => u.toLowerCase()).join(', ')} unknown`}
-            </span>
-          </dt>
+        <div className={styles.extra}>
+          <dt>Move-in cost</dt>
           <dd>
             {moveIn.total === null ? <i className={styles.muted}>Unknown</i> : money(moveIn.total)}
           </dd>
+          <dd className={styles.costSub}>
+            {moveIn.parts.map((p) => `${p.label} ${money(p.amount)}`).join(', ') || 'First month'}
+            {moveIn.unknown.length > 0 &&
+              `; ${moveIn.unknown.map((u) => u.toLowerCase()).join(', ')} unknown`}
+            .
+          </dd>
         </div>
-        <div className={styles.row}>
+        <div className={styles.extra}>
           <dt>Per square foot</dt>
           <dd>
             {cost.perSqft === null ? (

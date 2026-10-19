@@ -13,12 +13,12 @@ import styles from './list.module.css';
  * over as its total-cost and $/ft² ranges.
  */
 
-/** "Total up to $2,000 · up to $2.75/ft²". */
+/** "Total up to $2,000/mo, up to $2.75/ft²". */
 function limitsText(l: CostLimits): string {
   const parts: string[] = [];
   if (l.maxTotal !== null) parts.push(`Total up to ${money(l.maxTotal)}/mo`);
   if (l.maxPerSqft !== null) parts.push(`up to ${perSqftLabel(l.maxPerSqft)}`);
-  const text = parts.join(' · ');
+  const text = parts.join(', ');
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
@@ -126,16 +126,14 @@ export function CostLimitsButton({ open, onToggle }: { open: boolean; onToggle: 
   return (
     <button
       type="button"
-      className={styles.dirButton}
+      className={styles.limitsButton}
       aria-expanded={open}
       aria-controls={open ? 'cost-limits' : undefined}
       data-active={active || undefined}
       title="Limit by total cost or cost per ft²"
       onClick={onToggle}
     >
-      Cost
-      {active && <span aria-hidden="true"> ●</span>}
-      {active && <span className={styles.visuallyHidden}> (limits on)</span>}
+      {active ? 'Cost limits on' : 'Cost limits'}
     </button>
   );
 }

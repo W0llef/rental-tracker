@@ -159,12 +159,12 @@ function utilityLine(key: UtilityKey, unit: Unit, profile: CostProfile): CostLin
   if (term?.mode === 'extra' && term.amount !== null)
     return line(term.amount, 'listing', 'billed by the landlord', false);
   if (term?.mode === 'tenant-paid' && term.estimate !== null)
-    return line(term.estimate, 'listing', 'you pay, listed estimate', false);
+    return line(term.estimate, 'listing', 'listed estimate', false);
   const est = estimate(profile, key, unit);
   if (term?.mode === 'extra')
-    return line(est.amount, est.source, `billed extra, amount unknown · ${est.note}`, true, true);
+    return line(est.amount, est.source, `billed extra, amount not listed; ${est.note}`, true, true);
   if (term?.mode === 'tenant-paid') return line(est.amount, est.source, est.note, false, true);
-  return line(est.amount, est.source, `unknown, so you pay · ${est.note}`, true, true);
+  return line(est.amount, est.source, `not listed; ${est.note}`, true, true);
 }
 
 function parkingLine(unit: Unit, profile: CostProfile): CostLine | null {

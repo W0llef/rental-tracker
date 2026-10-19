@@ -81,7 +81,7 @@ describe('unitCost', () => {
     const c = unitCost(unitIn(b, { rent: 1000 }), b, profile(noInsurance));
     expect(c.assumed).toBe(UTILITY_KEYS.length);
     expect(line(c, 'heat')).toMatchObject({ assumed: true, overrideKey: 'heat' });
-    expect(line(c, 'heat')?.note).toMatch(/^unknown, so you pay/);
+    expect(line(c, 'heat')?.note).toMatch(/^not listed; your estimate/);
   });
 
   it('uses your estimate for this unit over the profile', () => {

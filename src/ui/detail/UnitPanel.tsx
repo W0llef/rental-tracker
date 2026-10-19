@@ -333,7 +333,7 @@ export function UnitPanel({
               </div>
               <div className={styles.bigSub}>
                 {rentLabel({ ...u, rent: row.cost.rent })} rent
-                {row.cost.assumed > 0 && ` · ${row.cost.assumed} assumed`}
+                {row.cost.assumed > 0 && `, ${row.cost.assumed} assumed`}
               </div>
             </>
           ) : (

@@ -443,9 +443,34 @@
 }
 
 /* Cost limits (M9): a small form under the head row, and a summary while they apply */
-.dirButton[data-active] {
-  border-color: var(--lake);
+.countRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s2);
+  margin-top: 6px;
+}
+
+.countRow .count {
+  margin: 0;
+}
+
+.limitsButton {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--lake);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.limitsButton[data-active] {
+  color: var(--ink);
+  font-weight: 800;
 }
 
 .limits {
@@ -544,7 +569,8 @@
 
 @media (max-width: 759px) {
   .limitBox,
-  .limits .button {
+  .limits .button,
+  .limitsButton {
     min-height: 44px;
   }
 }

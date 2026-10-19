@@ -360,8 +360,6 @@ function buildingValue(path: Path, v: unknown): string {
 /** A unit field's value in words ("$1,650", "Included", "12 or 15 months"). */
 function unitValue(path: Path, v: unknown): string {
   const key = path.join('.');
-  if (path[0] === 'costOverrides' && path[1])
-    return typeof v === 'number' ? `${money(v)}/mo` : 'your cost profile’s';
   if (key === 'plannedLeaseMonths') return typeof v === 'number' ? monthsLabel(v) : 'your default';
   if (v === null || v === undefined) return 'unknown';
   if (MONEY_FIELDS.has(key) && typeof v === 'number') return money(v);
@@ -512,6 +510,26 @@ function unitItems(c: RecordChange, lookup: HistoryLookup, ctx: Context): Item[]
         detail: label
           ? `Shared label ${label} on ${name}`
           : `Removed the shared label (${labelName(was as LabelColor, lookup, null)}) from ${name}`,
+      });
+      continue;
+    }
+    if (path[0] === 'costOverrides' && path[1]) {
+      // Your estimate of one cost for this unit (M9): "$80/mo", or back to the profile's.
+      const item = fieldLabel(path, 'units')
+        .replace(/^Your /, '')
+        .replace(/ estimate$/, '');
+      const text = (s: string) =>
+        typeof now === 'number'
+          ? `Your ${item} estimate ${money(now)}/mo on ${s}`
+          : `Your cost profile’s ${item} estimate on ${s}`;
+      items.push({
+        ...base,
+        group: `unit:${key}:${JSON.stringify(now)}`,
+        text,
+        detail:
+          typeof was === 'number' && typeof now === 'number'
+            ? `Your ${item} estimate ${money(was)} → ${money(now)}/mo on ${name}`
+            : text(name),
       });
       continue;
     }

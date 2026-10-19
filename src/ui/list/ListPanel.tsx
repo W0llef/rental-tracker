@@ -211,12 +211,14 @@ export function ListPanel({
               onChange={setBuildingSort}
             />
           )}
+        </div>
+        <div className={styles.countRow}>
+          <p className={styles.count} aria-live="polite" data-testid="list-count">
+            {count}
+          </p>
           <CostLimitsButton open={limitsOpen} onToggle={() => setLimitsOpen(!limitsOpen)} />
         </div>
         <CostLimitsPanel open={limitsOpen} setOpen={setLimitsOpen} />
-        <p className={styles.count} aria-live="polite" data-testid="list-count">
-          {count}
-        </p>
       </div>
 
       {data && pickedRows.length > 0 && view === 'units' && (
