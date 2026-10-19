@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { addListing, createBuilding, createUnit, updateSettings } from '../../src/commands/records';
@@ -339,7 +339,8 @@ describe('standalone homes, remembered unknowns and complex names (M8 review)', 
     expect(options.some((o) => o?.includes('3624 15th Ave S'))).toBe(false);
     expect(options.some((o) => o?.includes('Riverlight'))).toBe(true);
 
-    await router.navigate(`/unit/${unit.id}/edit`);
+    cleanup();
+    renderAt(`/unit/${unit.id}/edit`);
     await screen.findByRole('heading', { level: 1, name: '3624 15th Ave S' });
     await user.click(
       screen.getByRole('checkbox', { name: 'Part of a larger building or complex' }),
@@ -372,7 +373,9 @@ describe('standalone homes, remembered unknowns and complex names (M8 review)', 
       { field: 'unit.balcony', at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) },
     ]);
 
-    await router.navigate(`/unit/${ids.u1504}/edit`);
+    // Open the form afresh, as a later visit would.
+    cleanup();
+    renderAt(`/unit/${ids.u1504}/edit`);
     expect(await screen.findByRole('button', { name: 'Mark Balcony unknown' })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -403,11 +406,33 @@ describe('standalone homes, remembered unknowns and complex names (M8 review)', 
     expect(await screen.findByRole('heading', { name: 'North Tower · Riverlight' })).toBeVisible();
 
     // Unticking keeps the complex's name as the name and says the building's own goes
-    await router.navigate(`/building/${ids.riverlight}/edit`);
+    cleanup();
+    renderAt(`/building/${ids.riverlight}/edit`);
     await user.click(
       await screen.findByRole('checkbox', { name: 'This complex has several buildings' }),
     );
     expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Riverlight');
     expect(screen.getByText(/“North Tower” was this building’s own name/)).toBeVisible();
+  });
+});
+
+describe('moving between a unit’s form and its building’s', () => {
+  it('keeps one form in the history: Save on the second goes back to where the first was opened', async () => {
+    const user = userEvent.setup();
+    router = createMemoryRouter(routes, { initialEntries: [`/unit/${ids.u1504}`] });
+    render(<RouterProvider router={router} />);
+    await screen.findByRole('heading', { name: 'Unit 1504' });
+    await user.click(screen.getByRole('link', { name: /^Edit/ }));
+    await screen.findByRole('heading', { level: 1, name: 'Riverlight · Unit 1504' });
+    // Back and forth a few times
+    for (let i = 0; i < 2; i++) {
+      await user.click(screen.getByRole('link', { name: 'Edit building' }));
+      await screen.findByRole('heading', { level: 1, name: 'Riverlight · building' });
+      await user.click(screen.getByRole('link', { name: 'Unit 1504' }));
+      await screen.findByRole('heading', { level: 1, name: 'Riverlight · Unit 1504' });
+    }
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(path()).toBe(`/unit/${ids.u1504}`));
+    expect(screen.getByRole('heading', { name: 'Unit 1504' })).toBeVisible();
   });
 });

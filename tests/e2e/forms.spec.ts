@@ -171,6 +171,36 @@ test.describe('forms', () => {
     await expect(toast(page)).toContainText('Added Unit 2210 at The Larkin');
   });
 
+  test('going between a unit’s form and its building’s keeps one form to leave', async ({
+    page,
+  }) => {
+    await openFirst(page);
+    await panel(page).getByRole('link', { name: /^Edit/ }).click();
+    for (let i = 0; i < 2; i++) {
+      await page.getByRole('link', { name: 'Edit building' }).click();
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+        'Lowertown Flats · building',
+      );
+      await page.getByRole('link', { name: 'Unit 603' }).click();
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+        'Lowertown Flats · Unit 603',
+      );
+    }
+    // Changes, then a jump to the building: asked once, then gone
+    await page.getByRole('textbox', { name: 'Flooring' }).fill('Tile');
+    await page.getByRole('link', { name: 'Edit building' }).click();
+    await page
+      .getByRole('dialog', { name: 'Leave without saving?' })
+      .getByRole('button', { name: 'Discard changes' })
+      .click();
+    await page.getByRole('textbox', { name: 'Year renovated' }).fill('2018');
+    await page.getByRole('button', { name: /^Save/ }).click();
+    // Straight back to the main screen, with no form left over
+    await expect(panel(page).getByRole('heading', { level: 2 })).toHaveText('Unit 603');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(panel(page)).not.toContainText('Tile');
+  });
+
   test('asks before leaving with unsaved changes', async ({ page }) => {
     await openFirst(page);
     await panel(page).getByRole('link', { name: /^Edit/ }).click();

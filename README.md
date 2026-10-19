@@ -121,7 +121,9 @@ below.
   the one before), `?` marks it unknown and moves on, `⌘S` / `Ctrl+S` saves. Notes and
   preferences are skipped, so the jumps follow what counts toward completeness.
 - Nothing is saved until **Save**, and the whole save is one step in the undo history, described
-  field by field. Leaving with unsaved changes asks first.
+  field by field. Leaving with unsaved changes asks first. You can jump between a unit's form
+  and its building's (**Edit building**, or a unit under _Your units here_); Save or Cancel
+  then takes you back to the main screen, not through each form you visited.
 - **Rent and price history:** typing a new rent records it as today's price on the unit's most
   recent listing (or a new listing without a link). Adding or correcting prices in **Listings**
   moves the rent to the newest price. The form says which will happen before you save.

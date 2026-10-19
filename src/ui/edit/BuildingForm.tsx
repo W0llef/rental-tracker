@@ -29,6 +29,7 @@ import type { Option } from './fields';
 import { AddressFields, NameFields, UrlField } from './BuildingFields';
 import { SMOKING, withSchemes } from './buildingDraft';
 import { FormFrame } from './FormFrame';
+import { FormLink } from './FormLink';
 import { focusRow, rowOf } from './formState';
 import { CompletenessCard } from './Summary';
 import styles from './edit.module.css';
@@ -184,9 +185,7 @@ function BuildingForm({
               <ul className={styles.unitList}>
                 {row.units.map((u) => (
                   <li key={u.unit.id}>
-                    <Link to={`/unit/${u.unit.id}/edit`} state={{ inApp: true }}>
-                      {unitTitle(u.unit, initial)}
-                    </Link>
+                    <FormLink to={`/unit/${u.unit.id}/edit`}>{unitTitle(u.unit, initial)}</FormLink>
                     <span className={styles.small}> {rentLabel(u.unit) ?? 'rent unknown'}</span>
                   </li>
                 ))}

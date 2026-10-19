@@ -62,6 +62,7 @@ import type { Option } from './fields';
 import { HomeFields } from './BuildingFields';
 import { withSchemes } from './buildingDraft';
 import { FormFrame } from './FormFrame';
+import { FormLink } from './FormLink';
 import { focusRow, rowOf } from './formState';
 import { ListingsEditor } from './ListingsEditor';
 import { CompletenessCard } from './Summary';
@@ -419,9 +420,7 @@ function UnitForm({
                   .filter(Boolean)
                   .join(', ') || 'Not much known yet.'}
               </p>
-              <Link to={`/building/${building.id}/edit`} state={{ inApp: true }}>
-                Edit building
-              </Link>
+              <FormLink to={`/building/${building.id}/edit`}>Edit building</FormLink>
             </section>
           )}
           <CompletenessCard c={unitDone} essentials={essSplit} />
@@ -556,10 +555,8 @@ function UnitForm({
         >
           <HomeFields building={bDraft} onChange={setBDraft} />
           <p className={styles.small}>
-            <Link to={`/building/${bDraft.id}/edit`} state={{ inApp: true }}>
-              More about the home
-            </Link>{' '}
-            (amenities, subletting, notes): saves separately.
+            <FormLink to={`/building/${bDraft.id}/edit`}>More about the home</FormLink> (amenities,
+            subletting, notes) has its own form; save this one first.
           </p>
         </FormSection>
       )}
