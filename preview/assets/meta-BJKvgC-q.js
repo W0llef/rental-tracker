@@ -1,2 +1,0 @@
-import{H as e}from"./changeLog-JClhuB6r.js";var t=e({META_KEYS:()=>n,getMeta:()=>r,setMeta:()=>i}),n={lastBackupAt:`lastBackupAt`,backupSnoozedUntil:`backupSnoozedUntil`,persistAskedAt:`persistAskedAt`,meId:`meId`,nameAskedAt:`nameAskedAt`};async function r(e,t){return(await e.meta.get(t))?.value??null}async function i(e,t,n){n==null?await e.meta.delete(t):await e.meta.put({key:t,value:n})}export{i,r as n,t as r,n as t};
-//# sourceMappingURL=meta-BJKvgC-q.js.map
