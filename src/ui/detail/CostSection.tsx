@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { setCostOverride, setLeaseLength } from '../../commands/cost';
 import { db } from '../../db/db';
-import { perSqftLabel, profileEstimate, unitCost } from '../../domain/cost';
+import { ofThisUnit, perSqftLabel, profileEstimate, unitCost } from '../../domain/cost';
 import { shownLeaseMark } from '../../domain/leaseMarks';
 import { useUi } from '../../state/ui';
 import type { CostLine, UnitCost } from '../../domain/cost';
@@ -204,13 +204,6 @@ function LeaseLength({
     </div>
   );
 }
-
-/** "This unit doesn’t…", "This unit’s lease terms…": a mark's sentence, said of this unit. */
-const ofThisUnit = (text: string) =>
-  text
-    .replace(/^Doesn’t/, 'This unit doesn’t')
-    .replace(/^Its /, 'This unit’s ')
-    .replace(/^No lease terms are entered yet/, 'No lease terms are entered for this unit yet');
 
 export function CostSection({
   unit,

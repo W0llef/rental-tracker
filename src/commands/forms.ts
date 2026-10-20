@@ -1,6 +1,7 @@
 import type { RentalDB } from '../db/db';
 import { unitFullName } from '../domain/format';
 import { diffPaths } from '../domain/history';
+import { normalizeLeasePrices } from '../domain/leasePrices';
 import {
   pruneTermCharges,
   changedFields,
@@ -74,11 +75,12 @@ export async function saveUnitForm(db: RentalDB, input: UnitFormInput): Promise<
     const draftListings = input.listings.map((l) => ({ ...l, unitId: id }));
     const r = reconcileRent({
       stored: stored ? { unit: stored, listings: storedListings } : null,
-      draft: { unit: input.unit, listings: draftListings },
+      // Prices by lease length (Q37): the listed length's prices are the unit's own.
+      draft: { unit: pruneTermCharges(normalizeLeasePrices(input.unit)), listings: draftListings },
       today: input.today,
       newListing: () => newListing({ unitId: id, firstSeen: input.today }, at),
     });
-    let next = withIdentity(pruneTermCharges(r.unit));
+    let next = withIdentity(r.unit);
     if (stored) {
       const changed = changedFields(stored, next);
       next = { ...next, fieldSources: dropStaleSources(next.fieldSources, changed, 'unit') };

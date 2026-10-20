@@ -32,6 +32,8 @@ interface RowProps {
   /** A field that doesn't apply (a floor plan's floor): shown, never counted as empty. */
   notApplicable?: ReactNode;
   wide?: boolean;
+  /** A small action beside the control ("Varies by length", M9 review). */
+  action?: ReactNode;
 }
 
 /** One labelled field: label · control · [?] · hint and error. */
@@ -47,6 +49,7 @@ export function FieldRow({
   onUnknown,
   notApplicable,
   wide,
+  action,
 }: RowProps) {
   const form = useFormApi();
   const marked = form.marked.has(path);
@@ -71,6 +74,7 @@ export function FieldRow({
       )}
       <div className={styles.control}>
         {notApplicable ? <p className={styles.na}>{notApplicable}</p> : children}
+        {action && <span className={styles.rowAction}>{action}</span>}
         {!noUnknown && !notApplicable && onUnknown && (
           <button
             type="button"
@@ -212,6 +216,7 @@ export function NumberField({
   hint,
   notApplicable,
   size = 'short',
+  action,
 }: {
   path: string;
   label: string;
@@ -224,6 +229,7 @@ export function NumberField({
   hint?: ReactNode;
   notApplicable?: ReactNode;
   size?: 'short' | 'medium';
+  action?: ReactNode;
 }) {
   const id = useId();
   const form = useFormApi();
@@ -249,6 +255,7 @@ export function NumberField({
       controlId={id}
       hint={hint}
       notApplicable={notApplicable}
+      action={action}
       onUnknown={() => unknown()}
     >
       <span className={size === 'medium' ? styles.numWrapMedium : styles.numWrap}>

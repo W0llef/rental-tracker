@@ -14,7 +14,22 @@ import {
 } from '../../domain/completeness';
 import { HOME_FIELDS, isStandalone } from '../../domain/standalone';
 import { copyDetails, unitFromSource } from '../../domain/copyFrom';
-import { profileEstimate } from '../../domain/cost';
+import { leaseMonthsFor, profileEstimate } from '../../domain/cost';
+import {
+  addRows,
+  priceRows,
+  pricesDiffer,
+  startDiffering,
+  stopDiffering,
+  varyingCharges,
+} from '../../domain/leasePrices';
+import {
+  DifferField,
+  LeasePricesTable,
+  MonthlyFeesVary,
+  PlannedLeaseField,
+  VaryButton,
+} from './LeasePricing';
 import {
   BUILDING_TYPE_LABELS,
   buildingName,
@@ -43,8 +58,6 @@ import {
   FeesEditor,
   LeaseTermsField,
   LinksEditor,
-  RentByTermEditor,
-  TermChargesEditor,
   SpecialField,
   UtilityField,
   WindowsEditor,
@@ -101,7 +114,6 @@ const sqftParse = (t: string) => parseWhole(t, { max: 20000, what: 'square feet'
 const bedsParse = (t: string) => parseWhole(t, { max: 20, what: 'a number of bedrooms' });
 const bathsParse = (t: string) => parseStep(t, 0.5, { max: 20, what: 'bathrooms' });
 const spacesParse = (t: string) => parseWhole(t, { max: 10, what: 'a number of spaces' });
-const monthsParse = (t: string) => parseWhole(t, { min: 1, max: 60, what: 'months' });
 
 const VIA_LABELS: Record<FieldSource['via'], string> = {
   manual: 'By hand',
@@ -239,6 +251,9 @@ function UnitForm({
   const [copyFrom, setCopyFrom] = useState('');
   const leave = useLeave(isNew ? `/building/${storedBuilding.id}` : `/unit/${initial.id}`);
   const settings = data.settings;
+  // Prices by lease length (Q37): the checkbox, and which charges have a column.
+  const [differ, setDiffer] = useState(() => pricesDiffer(initial));
+  const varying = new Set(varyingCharges(draft));
   const set =
     <K extends keyof Unit>(k: K) =>
     (v: Unit[K]) =>
@@ -697,22 +712,6 @@ function UnitForm({
       </FormSection>
 
       <FormSection id="lease" title="Lease">
-        <NumberField
-          path="unit.rent"
-          label="Rent"
-          value={draft.rent}
-          onChange={set('rent')}
-          parse={money$}
-          prefix="$"
-          suffix="/mo"
-          size="medium"
-          hint={rentHint}
-        />
-        <CheckField
-          label="Rent is a starting price (“from $…”, for floor plans)"
-          checked={draft.rentIsFrom}
-          onChange={set('rentIsFrom')}
-        />
         <DateField
           path="unit.availableDate"
           label="Available"
@@ -722,49 +721,77 @@ function UnitForm({
         <LeaseTermsField
           path="unit.leaseTermsMonths"
           value={draft.leaseTermsMonths}
-          onChange={set('leaseTermsMonths')}
+          onChange={(v) =>
+            setDraft((d) =>
+              differ ? addRows({ ...d, leaseTermsMonths: v }) : { ...d, leaseTermsMonths: v },
+            )
+          }
         />
-        <NumberField
-          path="unit.deposit"
-          label="Deposit"
-          value={draft.deposit}
-          onChange={set('deposit')}
-          parse={money$}
-          prefix="$"
-          size="medium"
+        <DifferField
+          differ={differ}
+          rows={priceRows(draft).length}
+          onChange={(on) => {
+            setDiffer(on);
+            setDraft((d) =>
+              on ? startDiffering(d, leaseMonthsFor(d, settings.costProfile)) : stopDiffering(d),
+            );
+          }}
         />
-        <NumberField
-          path="unit.applicationFee"
-          label="Application fee"
-          value={draft.applicationFee}
-          onChange={set('applicationFee')}
-          parse={money$}
-          prefix="$"
+        {!differ && (
+          <NumberField
+            path="unit.rent"
+            label="Rent"
+            value={draft.rent}
+            onChange={set('rent')}
+            parse={money$}
+            prefix="$"
+            suffix="/mo"
+            size="medium"
+            hint={rentHint}
+          />
+        )}
+        <CheckField
+          label="Rent is a starting price (“from $…”, for floor plans)"
+          checked={draft.rentIsFrom}
+          onChange={set('rentIsFrom')}
         />
-        <NumberField
-          path="unit.adminFee"
-          label="Admin fee"
-          value={draft.adminFee}
-          onChange={set('adminFee')}
-          parse={money$}
-          prefix="$"
-        />
-        <RentByTermEditor
-          path="unit.rentByTerm"
-          value={draft.rentByTerm}
-          onChange={set('rentByTerm')}
-        />
-        <TermChargesEditor path="unit.termCharges" unit={draft} onChange={set('termCharges')} />
+        {differ && <p className={styles.subhead}>Same for every lease length</p>}
+        {(['deposit', 'applicationFee', 'adminFee'] as const).map((k) => (
+          <NumberField
+            key={k}
+            path={`unit.${k}`}
+            label={
+              k === 'deposit' ? 'Deposit' : k === 'applicationFee' ? 'Application fee' : 'Admin fee'
+            }
+            value={draft[k]}
+            onChange={set(k)}
+            parse={money$}
+            prefix="$"
+            size={k === 'deposit' ? 'medium' : 'short'}
+            notApplicable={
+              differ && varying.has(k) ? 'Varies by lease length: in the table below.' : undefined
+            }
+            action={
+              differ ? <VaryButton draft={draft} setDraft={setDraft} charge={k} /> : undefined
+            }
+          />
+        ))}
+        {differ && <MonthlyFeesVary draft={draft} setDraft={setDraft} />}
         <SpecialField
           path="unit.moveInSpecial"
           value={draft.moveInSpecial}
           onChange={set('moveInSpecial')}
+          valueVaries={differ && varying.has('moveInSpecial')}
+          valueAction={
+            differ ? (
+              <VaryButton draft={draft} setDraft={setDraft} charge="moveInSpecial" />
+            ) : undefined
+          }
         />
-        <PlannedLease
-          value={draft.plannedLeaseMonths}
-          onChange={set('plannedLeaseMonths')}
-          settings={settings}
-        />
+        {differ && (
+          <LeasePricesTable draft={draft} setDraft={setDraft} profile={settings.costProfile} />
+        )}
+        <PlannedLeaseField draft={draft} setDraft={setDraft} profile={settings.costProfile} />
       </FormSection>
 
       <FormSection
@@ -899,29 +926,6 @@ function UnitForm({
         </p>
       </FormSection>
     </FormFrame>
-  );
-}
-
-function PlannedLease({
-  value,
-  onChange,
-  settings,
-}: {
-  value: number | null;
-  onChange: (v: number | null) => void;
-  settings: Settings;
-}) {
-  return (
-    <NumberField
-      path="unit.plannedLeaseMonths"
-      label="Lease you’d sign"
-      value={value}
-      onChange={onChange}
-      parse={monthsParse}
-      suffix="months"
-      size="medium"
-      hint={`Blank uses your default, ${settings.costProfile.defaultLeaseMonths} months. The costs use this lease length’s prices.`}
-    />
   );
 }
 

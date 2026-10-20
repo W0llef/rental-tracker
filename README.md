@@ -204,16 +204,25 @@ below.
   unit's terms or Other…; the rent for that term and the spread follow.
 - A unit's own numbers always win over the profile: an amount billed extra, a listed estimate,
   a parking price.
-- **Charges by lease length:** when a listing gives rents for two or more lease lengths, the
-  form's Lease section shows **Other charges by lease length**. Everything is the same for every
-  length until you click a charge under _Differs by lease length_ (deposit, application fee,
-  admin fee, a monthly fee, the move-in special); it then gets one box per length. **Same for all
-  lengths** puts it back.
+- **Prices by lease length:** in the form's Lease section, **Lease terms** takes single lengths
+  and ranges ("12, 15" or "9-18, 24"). Tick **Rent or fees differ by lease length** and a table
+  appears with a row per lease length: type each rent; deposit, application and admin fees,
+  monthly fees and the move-in special stay the same for all until you click **Varies by
+  length**, which gives that charge a column (**Same for all** takes it back). **Price
+  history** marks the rent the listing advertises (the one price history records); it doesn't
+  change which rent your totals use. The row your totals use is tagged **Your lease**.
 - **When a unit doesn't list your lease length** (you compare at 15 months, it offers 12 and
-  18), its costs use the nearest length it lists, and it's marked: **No 15-month lease** on its
-  card, a small calendar-with-a-slash icon on its row in the map's building cards (point at it
-  for why), and a note in its Monthly cost. Units whose lease terms are unknown say so in their
-  Monthly cost. **Cost limits → Only units that list your lease length** leaves both out.
+  18), its costs use the nearest length it lists. **Lease length marks** say so: **No 15-month
+  lease**, **Lease terms unknown** (marked `?`, or none listed) and **No lease terms entered**,
+  in amber, on cards, as an icon on map pins and building-card rows (point at it for why), and
+  as a note in the unit's Monthly cost. **Settings → Lease length marks** turns them off
+  altogether (if you don't enter lease terms), picks which ones and where, with a live preview;
+  the choices are kept in this browser. **Cost limits → Only units that list your lease
+  length** leaves out the marked units.
+- **A unit's own lease length:** pick **Lease you'd sign** in its form (or Lease length in its
+  Monthly cost) and that unit is priced at it; its card shows a slate **15-month lease** tag.
+  **Cost profile → Compare every unit at this lease length** ignores those picks on cards, the
+  map and sorting; the unit's Monthly cost then adds a line with what its own pick would cost.
 
 ### Browsing your units
 

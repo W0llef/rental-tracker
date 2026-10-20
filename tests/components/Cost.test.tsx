@@ -180,16 +180,23 @@ describe('charges by lease length (M9 review)', () => {
         })}
       />,
     );
-    const group = await screen.findByRole('group', { name: 'Other charges by lease length' });
-    await user.click(
-      within(group).getByRole('button', { name: 'Deposit differs by lease length' }),
-    );
+    // Layout C (Q37): prices differ already, so the table shows a row per lease length.
+    expect(
+      await screen.findByRole('checkbox', { name: 'Rent or fees differ by lease length' }),
+    ).toBeChecked();
+    const table = screen.getByRole('table', { name: 'Prices by lease length' });
+    expect(
+      within(table)
+        .getAllByRole('rowheader')
+        .map((r) => r.textContent),
+    ).toEqual(['12 monthsYour lease', '15 months']);
+    await user.click(screen.getByRole('button', { name: 'Deposit varies by lease length' }));
     await user.type(
-      within(group).getByRole('textbox', { name: 'Deposit on a 12-month lease' }),
+      within(table).getByRole('textbox', { name: 'Deposit on a 12-month lease' }),
       '500',
     );
     await user.type(
-      within(group).getByRole('textbox', { name: 'Deposit on a 15-month lease' }),
+      within(table).getByRole('textbox', { name: 'Deposit on a 15-month lease' }),
       '250',
     );
     await user.click(screen.getByRole('button', { name: /^Save/ }));
@@ -206,6 +213,40 @@ describe('charges by lease length (M9 review)', () => {
       unitCost((await db.units.get(unitId))!, undefined, (await getSettings(db)).costProfile).moveIn
         .parts,
     ).toContainEqual({ key: 'deposit', label: 'Deposit', amount: 250 });
+  });
+
+  it('takes lease lengths as ranges, and keeps the price-history length’s prices when turned off', async () => {
+    const user = userEvent.setup();
+    render(
+      <RouterProvider
+        router={createMemoryRouter(routes, {
+          initialEntries: ['/', `/unit/${unitId}/edit`],
+          initialIndex: 1,
+        })}
+      />,
+    );
+    const terms = await screen.findByRole('textbox', { name: 'Lease terms' });
+    expect(terms).toHaveValue('12, 15');
+    await user.clear(terms);
+    await user.type(terms, '9-12, 15');
+    expect(screen.getByText(/Reads as: 9 to 12 or 15 months \(5 lease lengths\)/)).toBeVisible();
+    const table = screen.getByRole('table', { name: 'Prices by lease length' });
+    expect(within(table).getAllByRole('rowheader')).toHaveLength(5);
+    // The 15-month rent is the one the listing advertises
+    await user.click(
+      within(table).getByRole('radio', { name: 'Price history follows the 15-month rent' }),
+    );
+    await user.click(screen.getByRole('checkbox', { name: 'Rent or fees differ by lease length' }));
+    expect(screen.queryByRole('table', { name: 'Prices by lease length' })).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Rent' })).toHaveValue('1595');
+    // Removing a row rewrites the box
+    await user.click(screen.getByRole('checkbox', { name: 'Rent or fees differ by lease length' }));
+    await user.click(
+      within(screen.getByRole('table', { name: 'Prices by lease length' })).getByRole('button', {
+        name: 'Remove the 11-month lease',
+      }),
+    );
+    expect(terms).toHaveValue('9, 10, 12, 15');
   });
 
   it('marks units without your lease length and can leave them out', async () => {

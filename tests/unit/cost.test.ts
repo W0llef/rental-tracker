@@ -498,6 +498,7 @@ describe('charges by lease length in the form (M9 review)', () => {
       ],
       recurringFees: [{ id: 'f1', label: 'Amenity fee', amount: 40 }],
       moveInSpecial: null,
+      leaseTermsMonths: null,
       termCharges: [
         { charge: 'deposit' as const, months: 12, amount: 500 },
         { charge: 'deposit' as const, months: 18, amount: 400 }, // no 18-month rent

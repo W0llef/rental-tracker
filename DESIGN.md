@@ -224,7 +224,8 @@ Phone gestures: swipe the unit's photo strip; tap a star to rate; long-press a c
 - Floor plan only: "Plan C" plus a "floor plan" tag; specs say "units vary"; prices say "from".
 - New: the status pill reads "New" with its amber edge; no separate badge on the card (it repeated the pill). The amber New dot stays an option on map pins (§2.4), which show no status text.
 - Needs location: a "Needs location" chip with "Place on map".
-- Doesn't list your lease length (M9 review): a **No 15-month lease** tag in the foot, amber outline and `--assumed-ink` text with a small calendar-with-a-slash icon; its tooltip says which length the costs use instead. On the map, the same icon alone ends the unit's row in an open building's card (tooltip and spoken name explain).
+- Lease-length marks (M9 review): amber tags in the foot with a 12 px calendar icon: **No 15-month lease** (slash), **Lease terms unknown** (`?`), **No lease terms entered** (dashed); the tooltip explains. On the map: the icon alone in a 17 px amber square at the top-left of a single unit's plate or photo, and at the end of its row in a building card. Which show, and where: Settings → Lease length marks.
+- Its own lease length (M9 review): a slate **15-month lease** tag in the foot when the unit is priced at a lease length other than yours (hidden while comparing every unit at yours).
 - Multi-select: ⌘/Ctrl-click or Shift-click; a check appears in the photo corner and the card gets a lake outline. A **selection bar** above the list (M7) shows the count, the markers for all selected units, **Edit together…** and **Clear**.
 - The **Building card** (Buildings view) shows name, neighborhood, building type, "3 of your units", and the range "$1,857–$2,560".
 
@@ -301,7 +302,7 @@ In **Shortlist mode** each section header shows a completeness count ("Unit 7 of
 - Every field has three visible states: filled, unknown (`?` pressed, italic "Unknown"), and empty-not-yet-asked (same as unknown in data; shown with a faint dashed border so you can see what's left).
 - Yes/no fields are three-way toggles: **Yes · No · ?**.
 - Utilities: one row per item with **Included · Extra $ · Tenant-paid (est. $)**; the estimate placeholder shows your cost-profile number.
-- **Other charges by lease length** (M9 review) appears under *Rent by lease length* once it has two or more lengths: a "Differs by lease length:" line of *+ Deposit*, *+ Application fee*, … links; a charge that differs becomes a row with its name, a box per length ("12 mo $[1,395]  15 mo $[698]") and *Same for all lengths*. Nothing else changes until a link is clicked.
+- **Prices by lease length** (M9 review, layout C): **Lease terms** takes ranges ("9-18, 24") and reads them back with a count. A **Rent or fees differ by lease length** checkbox; when ticked, the Rent box goes, a "Same for every lease length" subheading groups Deposit, Application fee, Admin fee, Monthly fees and the special's value, each with a **Varies by length** link (a varying one reads "Varies by lease length: in the table below." with **Same for all**), and **Prices by lease length** is a table: one row per lease length (the row your totals use tinted lake and tagged **Your lease** or **Nearest to yours**), Rent, one column per varying charge (header with **Same for all**), a **Price history** radio, ✕. Notes under it explain both markers. Phone: each length is a bordered card with labelled boxes. **Lease you'd sign** is a menu (your default, the unit's lengths, Other…).
 - Edits are a draft; Save commits once (one undo step). Leaving with unsaved changes asks first.
 - The building form uses the same frame with its own sections.
 

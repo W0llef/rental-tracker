@@ -340,6 +340,7 @@ export function makeSampleData(
           { months: 12, rent },
           { months: 15, rent: rent - 50 },
         ];
+        u.listedTermMonths = 12;
         if (u.deposit !== null)
           u.termCharges = [
             { charge: 'deposit', months: 12, amount: u.deposit },

@@ -172,14 +172,20 @@ export function feeProblem(fees: readonly { label: string }[] | null): string | 
 }
 
 /**
- * Drops charges by lease length that no longer apply (M9 review): lengths without a rent
- * by lease length, monthly fees that were removed, a special that's gone. With fewer than
- * two priced lengths nothing can differ, so every charge is the same for all lengths.
+ * Drops charges by lease length that no longer apply (M9 review): lengths the unit doesn't
+ * list or price, monthly fees that were removed, a special that's gone. With fewer than two
+ * lease lengths nothing can differ, so every charge is the same for all lengths.
  */
 export function pruneTermCharges<
-  T extends Pick<Unit, 'rentByTerm' | 'termCharges' | 'recurringFees' | 'moveInSpecial'>,
+  T extends Pick<
+    Unit,
+    'rentByTerm' | 'termCharges' | 'recurringFees' | 'moveInSpecial' | 'leaseTermsMonths'
+  >,
 >(u: T): T {
-  const months = new Set((u.rentByTerm ?? []).map((t) => t.months));
+  const months = new Set([
+    ...(u.leaseTermsMonths ?? []),
+    ...(u.rentByTerm ?? []).map((t) => t.months),
+  ]);
   if (months.size < 2) return u.termCharges.length ? { ...u, termCharges: [] } : u;
   const fees = new Set((u.recurringFees ?? []).map((f) => `fee:${f.id}`));
   const kept = u.termCharges.filter(

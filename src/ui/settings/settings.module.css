@@ -813,6 +813,11 @@
   background: var(--frost);
 }
 
+.previewCard:hover .previewThumb,
+.previewCard[aria-pressed='true'] .previewThumb {
+  background: var(--surface);
+}
+
 .previewBody {
   display: flex;
   flex-direction: column;

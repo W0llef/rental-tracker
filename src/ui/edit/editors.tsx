@@ -1,19 +1,10 @@
 import { useId, useRef, useState } from 'react';
-import type { KeyboardEvent } from 'react';
-import { aLease, DIRECTION_NAMES, enumLabel, leaseTermsLabel, money } from '../../domain/format';
-import { numText, parseMoney, parseUrl, parseWhole } from '../../domain/input';
-import { parseMonths } from '../../domain/triage';
+import type { KeyboardEvent, ReactNode } from 'react';
+import { DIRECTION_NAMES, enumLabel, leaseTermsLabel, money } from '../../domain/format';
+import { numText, parseMoney, parseUrl } from '../../domain/input';
+import { monthsText, parseMonths } from '../../domain/triage';
 import { DIRECTIONS, WINDOW_SIZES } from '../../model';
-import type {
-  Direction,
-  Link,
-  RecurringFee,
-  TermCharge,
-  TermChargeKey,
-  Unit,
-  UtilityTerm,
-  WindowSpec,
-} from '../../model';
+import type { Direction, Link, RecurringFee, Unit, UtilityTerm, WindowSpec } from '../../model';
 import { newId } from '../../model/factories';
 import { FieldRow, Segmented } from './fields';
 import type { Option } from './fields';
@@ -25,7 +16,7 @@ import styles from './edit.module.css';
 const modified = (e: KeyboardEvent) => e.metaKey || e.ctrlKey || e.altKey;
 
 /** A money box inside a list row: keeps what's typed while it can't be read. */
-function MoneyCell({
+export function MoneyCell({
   path,
   label,
   value,
@@ -559,120 +550,6 @@ export function FeesEditor({
   );
 }
 
-// ── Rent by lease length ───────────────────────────────────────────────────
-
-interface TermRow {
-  key: string;
-  months: string;
-  rent: number | null;
-}
-
-/** When the rent depends on the lease length ("12 months $1,650, 15 months $1,600"). */
-export function RentByTermEditor({
-  path,
-  value,
-  onChange,
-}: {
-  path: string;
-  value: Unit['rentByTerm'];
-  onChange: (v: Unit['rentByTerm']) => void;
-}) {
-  const labelId = useId();
-  const form = useFormApi();
-  const [rows, setRows] = useState<TermRow[]>(() =>
-    (value ?? []).map((t) => ({ key: newId(), months: String(t.months), rent: t.rent })),
-  );
-  /** Keeps the rows, checks them and passes the complete ones up. */
-  const update = (next: TermRow[]) => {
-    setRows(next);
-    for (const k of form.errors.keys()) if (k.startsWith(`${path}.`)) form.setError(k, null);
-    const out: { months: number; rent: number }[] = [];
-    next.forEach((r, i) => {
-      const m = parseWhole(r.months, { min: 1, max: 60, what: 'months' });
-      if (!m.ok || m.value === null)
-        form.setError(
-          `${path}.${r.key}.months`,
-          `Lease length ${i + 1}: enter months from 1 to 60.`,
-        );
-      else if (r.rent === null)
-        form.setError(`${path}.${r.key}.rent`, `Lease length ${i + 1}: enter its rent.`);
-      else out.push({ months: m.value, rent: r.rent });
-    });
-    onChange(out.length ? out : null);
-  };
-  return (
-    <FieldRow
-      path={path}
-      label="Rent by lease length"
-      empty={false}
-      labelId={labelId}
-      noUnknown
-      wide
-      hint="Only when the listing gives a different rent for different lease lengths."
-    >
-      <div className={styles.listEditor} role="group" aria-labelledby={labelId}>
-        {rows.map((r, i) => (
-          <div key={r.key} className={styles.listRow} data-term={r.key}>
-            <span className={styles.numWrap}>
-              <input
-                className={styles.input}
-                inputMode="numeric"
-                aria-label={`Lease length ${i + 1} in months`}
-                value={r.months}
-                onChange={(e) =>
-                  update(rows.map((x) => (x.key === r.key ? { ...x, months: e.target.value } : x)))
-                }
-              />
-              <span className={styles.affix} aria-hidden="true">
-                months
-              </span>
-            </span>
-            <span className={styles.numWrap}>
-              <span className={styles.affix} aria-hidden="true">
-                $
-              </span>
-              <input
-                className={styles.input}
-                inputMode="decimal"
-                aria-label={`Rent on lease length ${i + 1}`}
-                defaultValue={numText(r.rent)}
-                onChange={(e) => {
-                  const m = parseMoney(e.target.value);
-                  update(
-                    rows.map((x) => (x.key === r.key ? { ...x, rent: m.ok ? m.value : null } : x)),
-                  );
-                }}
-              />
-            </span>
-            <button
-              type="button"
-              className={styles.removeBtn}
-              aria-label={`Remove lease length ${i + 1}`}
-              onClick={() => update(rows.filter((x) => x.key !== r.key))}
-            >
-              ✕
-            </button>
-          </div>
-        ))}
-        <button
-          type="button"
-          className={styles.addBtn}
-          onClick={() => {
-            const key = newId();
-            update([...rows, { key, months: '', rent: null }]);
-            requestAnimationFrame(() =>
-              document.querySelector<HTMLInputElement>(`[data-term="${key}"] input`)?.focus(),
-            );
-          }}
-        >
-          + Add a lease length
-        </button>
-        <RowErrors prefix={`${path}.`} />
-      </div>
-    </FieldRow>
-  );
-}
-
 // ── Lease terms ────────────────────────────────────────────────────────────
 
 /** "12, 15" → [12, 15]; "none"; `?` unknown. */
@@ -687,11 +564,12 @@ export function LeaseTermsField({
 }) {
   const id = useId();
   const form = useFormApi();
-  const [text, setText] = useState(value ? (value.length ? value.join(', ') : 'none') : '');
+  const shown = (v: number[] | null) => (v ? (v.length ? monthsText(v) : 'none') : '');
+  const [text, setText] = useState(shown(value));
   const [seen, setSeen] = useState(value);
   if (JSON.stringify(seen) !== JSON.stringify(value)) {
     setSeen(value);
-    setText(value ? (value.length ? value.join(', ') : 'none') : '');
+    setText(shown(value));
   }
   const marked = form.marked.has(path);
   return (
@@ -707,7 +585,9 @@ export function LeaseTermsField({
         form.setMarked(path, true);
       }}
       hint={
-        value ? `Reads as: ${leaseTermsLabel(value)}` : 'Months offered, like “12, 15”, or “none”.'
+        value
+          ? `Reads as: ${leaseTermsLabel(value)}${value.length > 1 ? ` (${value.length} lease lengths)` : ''}.`
+          : 'Months offered: single lengths or ranges, like “12, 15” or “9-18, 24”, or “none”.'
       }
     >
       <input
@@ -715,7 +595,7 @@ export function LeaseTermsField({
         className={styles.input}
         value={text}
         autoComplete="off"
-        placeholder={value === null && marked ? 'Unknown' : '12, 15'}
+        placeholder={value === null && marked ? 'Unknown' : '9-18, 24'}
         onChange={(e) => {
           const t = e.target.value;
           setText(t);
@@ -726,7 +606,10 @@ export function LeaseTermsField({
             return;
           }
           const months = parseMonths(t);
-          if (months === undefined) form.setError(path, 'Enter months like “12, 15”, or “none”.');
+          // Still typing a range or a list ("9-", "9 to", "12,"): wait before saying it's wrong.
+          if (months === undefined && /(-|–|\bto|,)\s*$/i.test(t.trim())) form.setError(path, null);
+          else if (months === undefined)
+            form.setError(path, 'Enter months like “12, 15” or a range like “9-18”, or “none”.');
           else {
             form.setError(path, null);
             setSeen(months);
@@ -753,10 +636,16 @@ export function SpecialField({
   path,
   value,
   onChange,
+  valueVaries = false,
+  valueAction,
 }: {
   path: string;
   value: Unit['moveInSpecial'];
   onChange: (v: Unit['moveInSpecial']) => void;
+  /** Its value differs by lease length (Q37): it's in the table instead. */
+  valueVaries?: boolean;
+  /** "Varies by length" or "Same for all", beside the value. */
+  valueAction?: ReactNode;
 }) {
   const id = useId();
   return (
@@ -780,7 +669,7 @@ export function SpecialField({
             onChange(text.trim() ? { text, valueUsd: value?.valueUsd ?? null } : null);
           }}
         />
-        {value && (
+        {value && !valueVaries && (
           <MoneyCell
             path={`${path}.value`}
             label="Special worth, in dollars"
@@ -788,6 +677,8 @@ export function SpecialField({
             onChange={(n) => onChange({ ...value, valueUsd: n })}
           />
         )}
+        {value && valueVaries && <span className={styles.per}>Value varies by lease length</span>}
+        {value && valueAction}
       </div>
     </FieldRow>
   );
@@ -865,142 +756,6 @@ export function LinksEditor({
         >
           + Add link
         </button>
-        <RowErrors prefix={`${path}.`} />
-      </div>
-    </FieldRow>
-  );
-}
-
-// ── Other charges by lease length (M9 review) ──────────────────────────────
-
-interface ChargeOption {
-  charge: TermChargeKey;
-  label: string;
-  /** The unit's main amount, which a newly split charge starts from. */
-  main: number | null;
-}
-
-/**
- * When the listing gives rents for two or more lease lengths, the other charges can differ
- * too: the deposit, application and admin fees, each monthly fee and the move-in special's
- * value. Every charge is the same for all lengths until you say it differs; then it gets one
- * box per length, starting from its main amount. A blank box means unknown for the deposit
- * and one-time fees, and the main amount for a monthly fee or special.
- */
-export function TermChargesEditor({
-  path,
-  unit,
-  onChange,
-}: {
-  path: string;
-  unit: Pick<
-    Unit,
-    | 'rentByTerm'
-    | 'termCharges'
-    | 'deposit'
-    | 'applicationFee'
-    | 'adminFee'
-    | 'recurringFees'
-    | 'moveInSpecial'
-  >;
-  onChange: (v: TermCharge[]) => void;
-}) {
-  const labelId = useId();
-  const months = [...new Set((unit.rentByTerm ?? []).map((t) => t.months))].sort((a, b) => a - b);
-  const value = unit.termCharges;
-  if (months.length < 2 && value.length === 0) return null;
-
-  const options: ChargeOption[] = [
-    { charge: 'deposit', label: 'Deposit', main: unit.deposit },
-    { charge: 'applicationFee', label: 'Application fee', main: unit.applicationFee },
-    { charge: 'adminFee', label: 'Admin fee', main: unit.adminFee },
-    ...(unit.recurringFees ?? []).map((f) => ({
-      charge: `fee:${f.id}` as TermChargeKey,
-      label: f.label || 'Monthly fee',
-      main: f.amount,
-    })),
-    ...(unit.moveInSpecial
-      ? [
-          {
-            charge: 'moveInSpecial' as const,
-            label: 'Move-in special',
-            main: unit.moveInSpecial.valueUsd,
-          },
-        ]
-      : []),
-  ];
-  const split = new Set(value.map((c) => c.charge));
-  const amountOf = (charge: TermChargeKey, m: number) =>
-    value.find((c) => c.charge === charge && c.months === m)?.amount ?? null;
-  const setAmount = (charge: TermChargeKey, m: number, amount: number | null) =>
-    onChange([
-      ...value.filter((c) => !(c.charge === charge && c.months === m)),
-      { charge, months: m, amount },
-    ]);
-  const splitCharge = (o: ChargeOption) =>
-    onChange([...value, ...months.map((m) => ({ charge: o.charge, months: m, amount: o.main }))]);
-  const join = (o: ChargeOption) => onChange(value.filter((c) => c.charge !== o.charge));
-  const shown = options.filter((o) => split.has(o.charge));
-  const offer = options.filter((o) => !split.has(o.charge));
-
-  return (
-    <FieldRow
-      path={path}
-      label="Other charges by lease length"
-      empty={false}
-      labelId={labelId}
-      noUnknown
-      wide
-      hint="Everything else is the same for every lease length unless you say it differs."
-    >
-      <div className={styles.listEditor} role="group" aria-labelledby={labelId}>
-        {shown.map((o) => (
-          <div key={o.charge} className={styles.termCharge} data-charge={o.charge}>
-            <span className={styles.termChargeName}>{o.label}</span>
-            {months.map((m) => (
-              <span key={m} className={styles.termCell}>
-                <span className={styles.per}>{m} mo</span>
-                <MoneyCell
-                  path={`${path}.${o.charge}.${m}`}
-                  label={`${o.label} on ${aLease(m)}`}
-                  value={amountOf(o.charge, m)}
-                  onChange={(v) => setAmount(o.charge, m, v)}
-                />
-              </span>
-            ))}
-            <button type="button" className={styles.textButton} onClick={() => join(o)}>
-              Same for all lengths
-            </button>
-          </div>
-        ))}
-        {offer.length > 0 && months.length >= 2 && (
-          <div className={styles.listActions}>
-            <span className={styles.per}>Differs by lease length:</span>
-            {offer.map((o) => (
-              <button
-                key={o.charge}
-                type="button"
-                className={styles.addBtn}
-                aria-label={`${o.label} differs by lease length`}
-                onClick={() => {
-                  splitCharge(o);
-                  requestAnimationFrame(() =>
-                    document
-                      .querySelector<HTMLInputElement>(`[data-charge="${o.charge}"] input`)
-                      ?.focus(),
-                  );
-                }}
-              >
-                + {o.label}
-              </button>
-            ))}
-          </div>
-        )}
-        {months.length < 2 && (
-          <p className={styles.per}>
-            Add rents for two or more lease lengths above to price the other charges by length.
-          </p>
-        )}
         <RowErrors prefix={`${path}.`} />
       </div>
     </FieldRow>

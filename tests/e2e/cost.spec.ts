@@ -240,12 +240,25 @@ test.describe('lease lengths', () => {
     await panel(page)
       .getByRole('link', { name: /^Edit$/ })
       .click();
-    const group = page.getByRole('group', { name: 'Other charges by lease length' });
-    await expect(group.getByRole('textbox', { name: 'Deposit on a 15-month lease' })).toBeVisible();
-    await group.getByRole('button', { name: 'Same for all lengths' }).click();
+    // Layout C (Q37): a row per lease length, the deposit as a column while it varies.
+    const table = page.getByRole('table', { name: 'Prices by lease length' });
+    await expect(table.getByRole('textbox', { name: 'Deposit on a 15-month lease' })).toBeVisible();
+    await page
+      .getByRole('button', { name: 'Deposit: make it the same for all lease lengths' })
+      .first()
+      .click();
+    await expect(table.getByRole('textbox', { name: 'Deposit on a 15-month lease' })).toHaveCount(
+      0,
+    );
     await expect(
-      group.getByRole('button', { name: 'Deposit differs by lease length' }),
+      page.getByRole('button', { name: 'Deposit varies by lease length' }),
     ).toBeVisible();
+
+    // Lease terms take ranges: 9 to 18 gives ten rows.
+    const terms = page.getByRole('textbox', { name: 'Lease terms' });
+    await terms.fill('9-18');
+    await expect(table.getByRole('rowheader')).toHaveCount(10);
+    await expect(page.getByText('(10 lease lengths)')).toBeVisible();
   });
 
   test('units without your lease length are marked on cards and the map, and can be left out', async ({
@@ -278,5 +291,64 @@ test.describe('lease lengths', () => {
       // No sample unit lists 18 months
       await expect(page.getByText('No units within your cost limits')).toBeVisible();
     }
+  });
+
+  test('Settings → Lease length marks: all marks off, or only some, with a live preview', async ({
+    page,
+  }) => {
+    await expect(cards(page).filter({ hasText: 'No lease terms entered' }).first()).toBeVisible();
+    await page.goto('/#/settings/lease-marks');
+    const preview = page.getByRole('region', { name: /^Preview/ });
+    await expect(preview.getByText('No lease terms entered').first()).toBeVisible();
+    await page.getByRole('checkbox', { name: 'No lease terms are entered yet' }).uncheck();
+    await expect(preview.getByText('No lease terms entered')).toHaveCount(0);
+    await page.getByRole('link', { name: 'Back to the app' }).click();
+    await expect(cards(page).filter({ hasText: 'No lease terms entered' })).toHaveCount(0);
+
+    await page.goto('/#/settings/lease-marks');
+    await page.getByRole('switch', { name: 'Show lease length marks' }).uncheck();
+    await expect(
+      page.getByRole('checkbox', { name: 'Its lease terms are unknown' }),
+    ).toBeDisabled();
+    // Remembered in this browser
+    await page.reload();
+    await expect(page.getByRole('switch', { name: 'Show lease length marks' })).not.toBeChecked();
+    await page.goto('/#/settings/cost');
+    const box = page.getByRole('textbox', { name: 'Lease length you expect to sign' });
+    await box.fill('18');
+    await box.press('Enter');
+    await page.getByRole('link', { name: 'Back to the app' }).click();
+    await expect(cards(page).first()).toBeVisible();
+    await expect(
+      cards(page).filter({ hasText: /No 18-month lease|Lease terms unknown/ }),
+    ).toHaveCount(0);
+  });
+
+  test('a unit’s own lease length is tagged, and comparing every unit at yours hides it', async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name.includes('phone'), 'uses the list beside the details');
+    const first = cards(page).first();
+    const title = (await first.locator('[class*="unitTitle"]').textContent()) ?? '';
+    await openCard(page, 0);
+    await panel(page)
+      .getByRole('link', { name: /^Edit$/ })
+      .click();
+    await page.getByRole('combobox', { name: 'Lease you’d sign' }).selectOption('other');
+    await page.getByRole('textbox', { name: 'Lease you’d sign, in months' }).fill('15');
+    await page.getByRole('button', { name: /^Save/ }).click();
+    const card = cards(page).filter({ hasText: title });
+    await expect(card.first()).toContainText('15-month lease');
+
+    await page.goto('/#/settings/cost');
+    // Saved as a cost-profile change, so wait for it rather than for the click
+    const compare = page.getByRole('checkbox', { name: 'Compare every unit at this lease length' });
+    await compare.click();
+    await expect(compare).toBeChecked();
+    await page.getByRole('link', { name: 'Back to the app' }).click();
+    await expect(card.first()).not.toContainText('15-month lease');
+    await card.first().click();
+    await expect(cost(page)).toContainText('At the 15-month lease you’d sign here:');
+    await expect(cost(page).getByRole('combobox', { name: 'Lease you’d sign here' })).toBeVisible();
   });
 });

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getSettings } from '../../commands/records';
 import { db } from '../../db/db';
-import { leaseMark } from '../../domain/cost';
+import { leaseMark, ofThisUnit } from '../../domain/cost';
 import type { LeaseMarkInfo, TermStatus } from '../../domain/cost';
 import { aLease } from '../../domain/format';
 import { shownLeaseMark } from '../../domain/leaseMarks';
@@ -78,7 +78,7 @@ const KINDS: { kind: LeaseMarkKind; text: string; sub: string }[] = [
     text: 'Its lease terms are unknown',
     sub: 'you marked them ?, or the listing lists none',
   },
-  { kind: 'empty', text: 'No lease terms are entered yet', sub: 'not filled in in its form' },
+  { kind: 'empty', text: 'No lease terms are entered yet', sub: 'nothing in its Lease terms yet' },
 ];
 
 const PLACES: { place: LeaseMarkPlace; text: string; sub: string }[] = [
@@ -189,7 +189,7 @@ function Preview({ prefs, wanted }: { prefs: LeaseMarkPrefs; wanted: number }) {
             {note ? (
               <p className={styles.previewNote}>
                 <LeaseMark kind={note.kind} label={note.label} explain={note.explain} />{' '}
-                {note.explain}
+                {ofThisUnit(note.explain)}
               </p>
             ) : (
               <p className={styles.previewMuted}>

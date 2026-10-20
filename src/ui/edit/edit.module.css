@@ -1032,3 +1032,193 @@
   color: var(--slate);
   opacity: 0.75;
 }
+
+/* A small action beside a field ("Varies by length", M9 review) */
+.rowAction {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--s2);
+}
+
+/* ── Prices by lease length (Q37, layout C) ─────────────────────────────── */
+
+.subhead {
+  margin: var(--s3) 0 0;
+  padding-top: var(--s3);
+  border-top: 1px solid var(--ice);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--slate);
+}
+
+.differLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  font-weight: 700;
+  font-size: 14.5px;
+  cursor: pointer;
+}
+
+.differLabel input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.feeVary {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.feeVary li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--s3);
+}
+
+.priceTableWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  width: 100%;
+  min-width: 0;
+}
+
+.priceTable {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  overflow-x: auto;
+}
+
+.priceRow {
+  display: grid;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 12px;
+  border-top: 1px solid var(--ice);
+  background: var(--surface);
+  min-width: min-content;
+}
+
+.priceRow[data-used] {
+  background: color-mix(in srgb, var(--lake) 6%, var(--surface));
+}
+
+.priceHead {
+  border-top: 0;
+  align-items: end;
+  padding: 10px 12px;
+  background: var(--frost);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--slate);
+}
+
+.priceHeadCharge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+}
+
+.priceHeadCharge .textButton {
+  min-height: 22px;
+  font-size: 12.5px;
+}
+
+.num {
+  text-align: right;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  text-align: center;
+}
+
+.priceRow .numWrap,
+.priceRow .numWrap .input {
+  width: 100%;
+}
+
+.priceLength {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 13.5px;
+}
+
+.priceUsed {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--river);
+}
+
+.priceNote {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--slate);
+}
+
+.priceNote b {
+  color: var(--ink);
+}
+
+/* Phone: each lease length is a small card, its cells labelled */
+@media (max-width: 759px) {
+  .priceRow.priceHead {
+    display: none;
+  }
+
+  .priceRemove {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .priceTable {
+    border: 0;
+    gap: var(--s2);
+  }
+
+  .priceRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 132px !important;
+    border: 1px solid var(--ice);
+    border-radius: var(--r-md);
+    min-width: 0;
+  }
+
+  .priceRow > [role='cell'][data-label]::before {
+    content: attr(data-label);
+    font-size: 13px;
+    color: var(--ink);
+  }
+
+  .priceRow > [role='cell'][data-label] {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 132px;
+    align-items: center;
+    gap: var(--s2);
+  }
+
+  .priceRow > [role='cell'].center {
+    justify-content: stretch;
+    justify-items: end;
+  }
+
+  .priceLength {
+    grid-column: 1;
+  }
+}

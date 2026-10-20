@@ -531,6 +531,13 @@ export function unitCost(
 export const notOfferedLabel = (c: Pick<UnitCost, 'wantedMonths'>): string =>
   `No ${c.wantedMonths}-month lease`;
 
+/** "This unit doesn’t…", "This unit’s lease terms…": a mark's sentence, said of this unit. */
+export const ofThisUnit = (text: string): string =>
+  text
+    .replace(/^Doesn’t/, 'This unit doesn’t')
+    .replace(/^Its /, 'This unit’s ')
+    .replace(/^No lease terms are entered yet/, 'No lease terms are entered for this unit yet');
+
 /** A lease-length mark (Q36): which kind, its short label, and the sentence explaining it. */
 export interface LeaseMarkInfo {
   kind: 'not-offered' | 'unknown' | 'empty';
