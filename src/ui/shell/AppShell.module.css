@@ -120,6 +120,8 @@
   grid-template-columns: 360px minmax(0, 1fr);
   min-height: 0;
   position: relative;
+  /* Nothing inside may stretch the page: the columns scroll themselves (M9 review). */
+  overflow: clip;
 }
 
 .app[data-open] .main {
@@ -149,6 +151,9 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* Holds its absolutely placed descendants (screen-reader-only text), which otherwise
+     sit at their place deep in the panel and made the whole page scroll into empty space. */
+  position: relative;
 }
 
 .close {

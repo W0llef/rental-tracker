@@ -91,6 +91,7 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  position: relative; /* holds absolutely placed descendants, so they can't stretch the page */
 }
 
 .cards {

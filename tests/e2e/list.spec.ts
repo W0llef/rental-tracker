@@ -15,17 +15,30 @@ async function loadSample(page: Page) {
 }
 
 const cards = (page: Page) => page.getByRole('list', { name: 'Units' }).getByRole('link');
+/** The rent on each card ("$1,090 rent"; the total comes first, "$1,516/mo"). */
 const rents = async (page: Page) =>
   (await cards(page).allTextContents()).map((t) => {
-    const m = t.match(/\$([\d,]+)\/mo rent/);
+    const m = t.match(/\$([\d,]+) rent/);
+    return m ? Number(m[1]?.replace(/,/g, '')) : null;
+  });
+/** The total on each card ("$1,516/mo"). */
+const totals = async (page: Page) =>
+  (await cards(page).allTextContents()).map((t) => {
+    const m = t.match(/\$([\d,]+)\/mo/);
     return m ? Number(m[1]?.replace(/,/g, '')) : null;
   });
 
 test.describe('unit list and detail (preview/dev build)', () => {
   test.beforeEach(async ({ page }) => loadSample(page));
 
-  test('sorts by rent both ways, unknowns last', async ({ page }) => {
+  test('sorts by total cost by default, and by rent both ways, unknowns last', async ({ page }) => {
+    const byTotal = (await totals(page)).filter((r): r is number => r !== null);
+    expect(byTotal.length).toBeGreaterThan(20);
+    expect(byTotal).toEqual([...byTotal].sort((a, b) => a - b));
+
+    await page.getByRole('combobox', { name: 'Sort by' }).selectOption('rent');
     const asc = await rents(page);
+    expect(asc.filter((r) => r !== null).length).toBeGreaterThan(20);
     const known = asc.filter((r): r is number => r !== null);
     expect(known).toEqual([...known].sort((a, b) => a - b));
     expect(asc.indexOf(null) === -1 || asc.slice(asc.indexOf(null)).every((r) => r === null)).toBe(
@@ -52,6 +65,17 @@ test.describe('unit list and detail (preview/dev build)', () => {
     expect(sizes.slice(firstUnknown).every((s) => s === null)).toBe(true);
     const known = sizes.slice(0, firstUnknown) as number[];
     expect(known).toEqual([...known].sort((a, b) => b - a));
+  });
+
+  test('the page itself never scrolls: only the list and details do (M9 review)', async ({
+    page,
+  }) => {
+    await cards(page).first().click();
+    await expect(page.getByRole('article').getByRole('heading', { level: 2 })).toBeVisible();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollHeight - document.documentElement.clientHeight,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
   });
 
   test('opens a unit, shows its details, and Back closes it', async ({ page }, info) => {
