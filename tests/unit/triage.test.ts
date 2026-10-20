@@ -92,6 +92,18 @@ describe('lease terms typed in Edit together', () => {
     expect(parseMonths('none')).toEqual([]);
     expect(parseMonths('?')).toBeNull();
     expect(parseMonths('twelve')).toBeUndefined();
+    // Ranges (M9 review)
+    expect(parseMonths('9-12, 15')).toEqual([9, 10, 11, 12, 15]);
+    expect(parseMonths('9 to 11')).toEqual([9, 10, 11]);
+    expect(parseMonths('9–11 months, 24')).toEqual([9, 10, 11, 24]);
+    expect(parseMonths('12-9')).toBeUndefined();
+    expect(parseMonths('1-61')).toBeUndefined();
+    expect(parseMonths('9-')).toBeUndefined();
+    const { monthsText } = await import('../../src/domain/triage');
+    expect(monthsText([9, 10, 11, 12, 15, 17, 18])).toBe('9-12, 15, 17, 18');
+    const { leaseTermsLabel } = await import('../../src/domain/format');
+    expect(leaseTermsLabel([9, 10, 11, 12, 15, 24])).toBe('9 to 12, 15 or 24 months');
+    expect(leaseTermsLabel([12, 15])).toBe('12 or 15 months');
     expect(parseMonths('0')).toBeUndefined();
   });
 });

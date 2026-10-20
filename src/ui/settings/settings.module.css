@@ -642,3 +642,290 @@
     padding: 2px 0;
   }
 }
+
+/* Lease length marks (Q36) */
+.switchRow {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.switch {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 24px;
+  margin: 0;
+  border-radius: 12px;
+  background: var(--slate);
+  cursor: pointer;
+}
+
+.switch::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.switch:checked {
+  background: var(--river);
+}
+
+.switch:checked::before {
+  left: 19px;
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--lake);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .switch::before {
+    transition: left 0.12s;
+  }
+}
+
+.switchNote {
+  margin: var(--s2) 0 0 52px;
+  font-size: 13px;
+  color: var(--slate);
+}
+
+.markGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+.markGroup:disabled .markText {
+  color: var(--slate);
+}
+
+.markLegend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 2px;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.markCheck {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s3);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.markCheck input {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin: 2px 0 0;
+}
+
+.markText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.markName {
+  font-weight: 600;
+}
+
+.markSub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--s2);
+  font-size: 12.5px;
+  color: var(--slate);
+}
+
+.markPreview {
+  margin-top: var(--s4);
+}
+
+.previewCols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s4);
+  margin-top: var(--s2);
+}
+
+.previewCards {
+  flex: 1 1 280px;
+  min-width: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.previewCard {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: var(--s3);
+  width: 100%;
+  padding: var(--s3) var(--s4);
+  border: 0;
+  border-bottom: 1px solid var(--ice);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.previewCards li:last-child .previewCard {
+  border-bottom: 0;
+}
+
+.previewCard:hover,
+.previewCard[aria-pressed='true'] {
+  background: var(--frost);
+}
+
+.previewCard[aria-pressed='true'] {
+  box-shadow: inset 4px 0 0 var(--river);
+}
+
+.previewThumb {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-sm);
+  background: var(--frost);
+}
+
+.previewBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13.5px;
+  min-width: 0;
+}
+
+.previewTotal {
+  font-size: 16px;
+}
+
+.previewMuted {
+  margin: 0;
+  color: var(--slate);
+  font-size: 12.5px;
+}
+
+.previewRight {
+  flex: 1 1 280px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.previewMap {
+  position: relative;
+  height: 220px;
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  background: var(--map-land, var(--frost));
+  overflow: hidden;
+}
+
+.previewMapCard {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 170px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--river);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 13px;
+}
+
+.previewRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.previewPin {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 2px 9px 0 10px;
+  border-radius: 6px;
+  border-left: 4px solid var(--st-reviewing);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.previewBadge,
+.previewBadgeInline {
+  display: inline-grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--plow) 70%, var(--ice));
+  background: color-mix(in srgb, var(--plow) 14%, var(--surface));
+  color: var(--assumed-ink);
+}
+
+.previewBadge {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+}
+
+.previewBadgeInline {
+  margin-left: auto;
+}
+
+.previewBadge svg,
+.previewBadgeInline svg {
+  width: 11px;
+  height: 11px;
+}
+
+.previewCost {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--ice);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.previewNote {
+  margin: 0;
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--plow) 10%, var(--surface));
+  font-size: 13px;
+  line-height: 19px;
+}

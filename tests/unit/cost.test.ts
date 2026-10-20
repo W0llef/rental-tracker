@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   breakdownText,
   isPetFee,
+  leaseMark,
   nearestTerm,
   notOfferedLabel,
   notOfferedText,
@@ -12,6 +13,11 @@ import {
   unitCost,
 } from '../../src/domain/cost';
 import { aLease } from '../../src/domain/format';
+import {
+  defaultLeaseMarkPrefs,
+  parseLeaseMarkPrefs,
+  shownLeaseMark,
+} from '../../src/domain/leaseMarks';
 import { pruneTermCharges } from '../../src/domain/unitForm';
 import { defaultSettings, UTILITY_KEYS } from '../../src/model';
 import type { Building, CostProfile, Unit } from '../../src/model';
@@ -367,9 +373,23 @@ describe('unitCost', () => {
       rent: 1550,
     });
     expect(unitCost(unitIn(b, { rent: 1000 }), b, fifteen)).toMatchObject({
-      termStatus: 'unknown',
+      termStatus: 'empty',
       leaseMonths: 15,
     });
+    // Lease terms unknown: none listed, or checked and marked ? (Q29); not entered is "empty".
+    expect(unitCost(unitIn(b, { rent: 1000, leaseTermsMonths: [] }), b, fifteen).termStatus).toBe(
+      'unknown',
+    );
+    expect(
+      unitCost(
+        unitIn(b, {
+          rent: 1000,
+          checkedUnknown: [{ field: 'unit.leaseTermsMonths', at: '2026-10-20' }],
+        }),
+        b,
+        fifteen,
+      ).termStatus,
+    ).toBe('unknown');
     expect(unitCost(unitIn(b, { rent: 1000, leaseTermsMonths: [15] }), b, fifteen).termStatus).toBe(
       'offered',
     );
@@ -409,6 +429,59 @@ describe('unitCost', () => {
     expect(line(fifteen, 'fee:f1')).toMatchObject({ amount: 0, note: 'for a 15-month lease' });
     expect(fifteen.effectiveRent).toBe(Math.round(1595 - 1650 / 15));
     expect(fifteen.termPriced.sort()).toEqual(['adminFee', 'deposit', 'fee:f1']);
+  });
+
+  it('compares every unit at your lease length when you ask, and says what the unit’s own would be', () => {
+    const b = building();
+    const u = unitIn(b, {
+      rent: 1650,
+      utilities: allIncluded,
+      plannedLeaseMonths: 15,
+      leaseTermsMonths: [12, 15],
+      rentByTerm: [
+        { months: 12, rent: 1650 },
+        { months: 15, rent: 1595 },
+      ],
+    });
+    const own = unitCost(u, b, profile(noInsurance));
+    expect(own).toMatchObject({ wantedMonths: 15, rent: 1595, ownMonths: 15, ownIgnored: false });
+    const all = unitCost(
+      u,
+      b,
+      profile((x) => {
+        noInsurance(x);
+        x.compareAtDefaultLease = true;
+      }),
+    );
+    expect(all).toMatchObject({ wantedMonths: 12, rent: 1650, ownMonths: 15, ownIgnored: true });
+    // A unit set to your default has no lease of its own to tag.
+    expect(unitCost({ ...u, plannedLeaseMonths: 12 }, b, profile()).ownMonths).toBeNull();
+  });
+
+  it('gives each kind of lease mark its words', () => {
+    const base = { wantedMonths: 15, leaseMonths: 12, offeredTerms: [12, 18] };
+    expect(leaseMark({ ...base, termStatus: 'offered' })).toBeNull();
+    expect(leaseMark({ ...base, termStatus: 'not-offered' })?.label).toBe('No 15-month lease');
+    expect(leaseMark({ ...base, termStatus: 'unknown' })).toMatchObject({
+      label: 'Lease terms unknown',
+      explain:
+        'Its lease terms are unknown, so its costs assume a 15-month lease at the listed prices.',
+    });
+    expect(leaseMark({ ...base, termStatus: 'empty' })?.label).toBe('No lease terms entered');
+    const prefs = defaultLeaseMarkPrefs();
+    const cost = { ...base, termStatus: 'empty' as const };
+    expect(shownLeaseMark(cost, prefs, 'cards')?.kind).toBe('empty');
+    expect(shownLeaseMark(cost, { ...prefs, on: false }, 'cards')).toBeNull();
+    expect(
+      shownLeaseMark(cost, { ...prefs, kinds: { ...prefs.kinds, empty: false } }, 'cards'),
+    ).toBeNull();
+    expect(
+      shownLeaseMark(cost, { ...prefs, places: { ...prefs.places, map: false } }, 'map'),
+    ).toBeNull();
+    expect(parseLeaseMarkPrefs({ on: false, kinds: { unknown: 'x' } })).toMatchObject({
+      on: false,
+      kinds: { unknown: true },
+    });
   });
 
   it('formats cost per ft²', () => {

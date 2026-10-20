@@ -63,18 +63,33 @@ import { Pin } from './Pin';
 import { PhotoPreview } from './PhotoPreview';
 import { PinsPanel } from './PinsPanel';
 import styles from './map.module.css';
-import { notOfferedText } from '../../domain/cost';
+import { shownLeaseMark } from '../../domain/leaseMarks';
+import type { LeaseMarkPrefs } from '../../domain/leaseMarks';
 import type { PinCost } from '../../domain/pins';
 
-/** Why a unit's row gets the "no lease of your length" mark (M9 review), or null. */
-function leaseNote(c: PinCost): string | null {
-  if (c.termStatus !== 'not-offered' || !c.wantedMonths || !c.leaseMonths || !c.offeredTerms)
-    return null;
-  return notOfferedText({
-    wantedMonths: c.wantedMonths,
-    leaseMonths: c.leaseMonths,
-    offeredTerms: c.offeredTerms,
-  });
+/** A unit's lease-length mark on the map (Q36), or null. */
+function mapLeaseMark(c: PinCost, prefs: LeaseMarkPrefs) {
+  if (!c.termStatus || !c.wantedMonths || !c.leaseMonths || !c.offeredTerms) return null;
+  const mark = shownLeaseMark(
+    {
+      termStatus: c.termStatus,
+      wantedMonths: c.wantedMonths,
+      leaseMonths: c.leaseMonths,
+      offeredTerms: c.offeredTerms,
+    },
+    prefs,
+    'map',
+  );
+  return mark ? { kind: mark.kind, explain: mark.explain } : null;
+}
+
+/** A pin's tooltip: its lease-length mark's sentence, or its own lease length (Q36). */
+function pinTip(c: PinCost, prefs: LeaseMarkPrefs, defaultMonths: number): string | null {
+  const mark = mapLeaseMark(c, prefs);
+  if (mark) return mark.explain;
+  if (c.ownMonths && c.wantedMonths === c.ownMonths)
+    return `Priced for the ${c.ownMonths}-month lease picked for this unit; your other units use ${defaultMonths} months.`;
+  return null;
 }
 
 /**
@@ -196,6 +211,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
   const mapRef = useRef<MapRef>(null);
   const [loaded, setLoaded] = useState(false);
   const ui = useUi();
+  const leaseMarks = ui.leaseMarks;
   const { hoverKey, setHover, panel, setPanel, togglePanel, openFans, foldedFans } = ui;
   const layersBtn = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -368,10 +384,10 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
           hot: false,
           label: unitPinLabel(r),
           title: unitTitle(r.unit, r.building),
-          leaseNote: leaseNote(r.cost),
+          leaseMark: mapLeaseMark(r.cost, leaseMarks),
         };
       }),
-    [prefs, scale, newMark, selectedKey, isPicked],
+    [prefs, scale, newMark, selectedKey, isPicked, leaseMarks],
   );
   /** Everything that decides a card's size. */
   const cardKey = useCallback(
@@ -382,7 +398,7 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
         buildingName(b.building),
         ...rows.map(
           (r) =>
-            `${r.content.typeIcon ?? ''}:${r.content.segments.map((x) => x.text).join('¦')}:${r.newMark ?? ''}:${r.leaseNote ? 'L' : ''}`,
+            `${r.content.typeIcon ?? ''}:${r.content.segments.map((x) => x.text).join('¦')}:${r.newMark ?? ''}:${r.leaseMark ? 'L' : ''}`,
         ),
       ].join('|'),
     [prefs.style],
@@ -709,6 +725,12 @@ export default function MapView({ data, listView, view, selectedKey }: MapViewPr
             : buildingPinLabel(b.building, b.summary, view, b.pinned.length)
         }
         expanded={b.group ? false : undefined}
+        leaseMark={single ? mapLeaseMark(single.cost, leaseMarks) : null}
+        tip={
+          single
+            ? pinTip(single.cost, leaseMarks, data.settings.costProfile.defaultLeaseMonths)
+            : null
+        }
         onClick={(additive) => {
           if (additive) pickUnits(b.pinned.map(unitKey), b.id);
           else if (single || view === 'buildings') select(key);

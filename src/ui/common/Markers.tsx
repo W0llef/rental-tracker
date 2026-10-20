@@ -1,3 +1,4 @@
+import type { LeaseMarkKind } from '../../domain/leaseMarks';
 import type { CSSProperties, ReactNode } from 'react';
 import { STATUS_COLOR_VAR, STATUS_LABELS } from '../../domain/format';
 import { initial, PERSON_COLOR_VAR } from '../../domain/people';
@@ -97,28 +98,54 @@ export function Tag({ children }: { children: ReactNode }) {
   return <span className={styles.tag}>{children}</span>;
 }
 
-/** A calendar with a slash: "doesn't list your lease length" (M9 review). */
-function NoLeaseIcon() {
+/**
+ * Lease-length mark icons (Q36): a calendar with a slash (doesn't list your length), with a
+ * question mark (terms unknown), dashed and empty (no terms entered yet).
+ */
+export function LeaseIcon({ kind }: { kind: LeaseMarkKind }) {
   return (
     <svg viewBox="0 0 12 12" className={styles.leaseIcon} aria-hidden="true">
-      <rect x="1.5" y="2.5" width="9" height="8" rx="1.2" fill="none" stroke="currentColor" />
-      <path d="M1.5 5h9M4 1.5v2M8 1.5v2" stroke="currentColor" />
-      <path d="M2 11 10.5 2" stroke="currentColor" strokeWidth="1.4" />
+      <rect
+        x="1.5"
+        y="2.5"
+        width="9"
+        height="8"
+        rx="1.2"
+        fill="none"
+        stroke="currentColor"
+        strokeDasharray={kind === 'empty' ? '1.6 1.2' : undefined}
+      />
+      <path d="M4 1.5v2M8 1.5v2" stroke="currentColor" />
+      {kind === 'not-offered' && (
+        <>
+          <path d="M1.5 5h9" stroke="currentColor" />
+          <path d="M2 11 10.5 2" stroke="currentColor" strokeWidth="1.4" />
+        </>
+      )}
+      {kind === 'unknown' && (
+        <path
+          d="M4.9 6.1a1.2 1.2 0 1 1 1.7 1.1c-.4.2-.6.4-.6.8M6 9.2v.1"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+        />
+      )}
     </svg>
   );
 }
 
 /**
- * The unit doesn't list the lease length you'd sign, so its costs use the nearest one it
- * does (M9 review). On cards: the icon and "No 15-month lease"; on the map's cards, where
- * room is short: the icon alone. Pointing at it explains, and so does its name.
+ * A lease-length mark (M9 review, Q36): "No 15-month lease", "Lease terms unknown", "No
+ * lease terms entered". On cards: the icon and the label; on the map's cards, where room is
+ * short: the icon alone. Pointing at it explains, and so does its name.
  */
 export function LeaseMark({
+  kind,
   label,
   explain,
   compact = false,
 }: {
-  /** "No 15-month lease". */
+  kind: LeaseMarkKind;
   label: string;
   /** The full sentence (tooltip and, for the icon alone, its name). */
   explain: string;
@@ -127,13 +154,23 @@ export function LeaseMark({
   if (compact)
     return (
       <span className={styles.leaseMarkIcon} role="img" aria-label={explain} title={explain}>
-        <NoLeaseIcon />
+        <LeaseIcon kind={kind} />
       </span>
     );
   return (
     <span className={styles.leaseMark} title={explain}>
-      <NoLeaseIcon />
+      <LeaseIcon kind={kind} />
       {label}
+    </span>
+  );
+}
+
+/** "12-month lease": the unit has its own lease length, so it's priced differently (slate). */
+export function OwnLeaseTag({ months, defaultMonths }: { months: number; defaultMonths: number }) {
+  const text = `Priced for the ${months}-month lease picked for this unit; your other units use ${defaultMonths} months.`;
+  return (
+    <span className={styles.tag} title={text}>
+      {months}-month lease<span className={styles.visuallyHidden}>. {text}</span>
     </span>
   );
 }

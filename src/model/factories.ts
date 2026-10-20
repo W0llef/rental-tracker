@@ -107,6 +107,7 @@ export function newUnit(input: UnitInput, at: ISODateTime = nowIso()): Unit {
     rentIsFrom: false,
     rentByTerm: null,
     termCharges: [],
+    listedTermMonths: null,
     availableDate: null,
     leaseTermsMonths: null,
     plannedLeaseMonths: null,

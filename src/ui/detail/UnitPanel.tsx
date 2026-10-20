@@ -354,7 +354,7 @@ export function UnitPanel({
         <EssentialsSection unit={u} building={b} settings={settings} standalone={row.standalone} />
       )}
       <RatingsSection unitId={u.id} rows={row.opinions} settings={settings} />
-      <CostSection unit={u} cost={row.cost} profile={settings.costProfile} />
+      <CostSection unit={u} building={b} cost={row.cost} profile={settings.costProfile} />
       <LeaseSection u={u} today={today} />
       <UnitFacts u={u} floors={b?.floors ?? null} />
       <WindowsSection u={u} />

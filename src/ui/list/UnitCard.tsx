@@ -9,7 +9,9 @@ import {
   rentLabel,
   unitTitle,
 } from '../../domain/format';
-import { breakdownText, notOfferedLabel, notOfferedText } from '../../domain/cost';
+import { breakdownText } from '../../domain/cost';
+import { shownLeaseMark } from '../../domain/leaseMarks';
+import { useUi } from '../../state/ui';
 import { CARD_BADGES, othersSummary, ratingsSummary, starRange } from '../../domain/people';
 import type { OthersSummary } from '../../domain/people';
 import type { Settings } from '../../model';
@@ -18,6 +20,7 @@ import {
   FlagMark,
   LabelSwatch,
   LeaseMark,
+  OwnLeaseTag,
   PersonBadge,
   Stars,
   StatusPill,
@@ -89,6 +92,11 @@ export function UnitCard({
   const bName = b ? buildingName(b) : null;
   const rent = rentLabel(u);
   const cost = row.cost;
+  const mark = shownLeaseMark(
+    cost,
+    useUi((s) => s.leaseMarks),
+    'cards',
+  );
   const mine = row.mine;
   const rejected = mine.flag === 'reject';
   const others = othersSummary(row.opinions);
@@ -189,8 +197,12 @@ export function UnitCard({
         <span className={styles.foot}>
           {u.isFloorPlanOnly && <Tag>floor plan</Tag>}
           {b && b.location === null && <Tag>Needs location</Tag>}
-          {cost.termStatus === 'not-offered' && (
-            <LeaseMark label={notOfferedLabel(cost)} explain={notOfferedText(cost)} />
+          {mark && <LeaseMark kind={mark.kind} label={mark.label} explain={mark.explain} />}
+          {cost.ownMonths !== null && !cost.ownIgnored && (
+            <OwnLeaseTag
+              months={cost.ownMonths}
+              defaultMonths={settings.costProfile.defaultLeaseMonths}
+            />
           )}
           {rejected ? (
             <FlagMark flag="reject" reasons={rejectReasonText(mine.rejectReasonIds, settings)} />

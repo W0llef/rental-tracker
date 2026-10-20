@@ -212,6 +212,7 @@ const UNIT_FIELDS: Record<string, string> = {
   rentIsFrom: 'Rent is “from”',
   rentByTerm: 'Rent by lease length',
   termCharges: 'Charges by lease length',
+  listedTermMonths: 'Listed lease length',
   availableDate: 'Available date',
   leaseTermsMonths: 'Lease terms',
   plannedLeaseMonths: 'Lease length',
@@ -921,6 +922,13 @@ export function costProfileChanges(a: CostProfile, b: CostProfile): [string, str
     out.push([
       'cost:spread-specials',
       `${b.amortizeSpecials ? 'Spreading' : 'Stopped spreading'} move-in specials over the lease`,
+    ]);
+  if ((a.compareAtDefaultLease === true) !== (b.compareAtDefaultLease === true))
+    out.push([
+      'cost:compare-all',
+      b.compareAtDefaultLease
+        ? `Comparing every unit at ${monthsLabel(b.defaultLeaseMonths)}`
+        : 'Using the lease picked for each unit',
     ]);
   if (a.defaultLeaseMonths !== b.defaultLeaseMonths)
     out.push([

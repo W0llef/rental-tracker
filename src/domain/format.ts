@@ -203,16 +203,29 @@ export function rentLabel(u: Pick<Unit, 'rent' | 'rentIsFrom'>): string | null {
   return u.rentIsFrom ? `from ${money(u.rent)}` : money(u.rent);
 }
 
-/** "12 or 15 months", "12 months"; null when unknown, "None listed" when empty. */
+/**
+ * "12 or 15 months", "12 months", "9 to 18 months" (runs of three or more read as a range,
+ * M9 review); null when unknown, "None listed" when empty.
+ */
 export function leaseTermsLabel(months: number[] | null): string | null {
   if (months === null) return null;
   if (months.length === 0) return 'None listed';
-  const sorted = [...months].sort((a, b) => a - b);
+  const sorted = [...new Set(months)].sort((a, b) => a - b);
+  const parts: string[] = [];
+  let i = 0;
+  while (i < sorted.length) {
+    let j = i;
+    while (j + 1 < sorted.length && sorted[j + 1] === (sorted[j] as number) + 1) j++;
+    if (j - i >= 2) parts.push(`${sorted[i]} to ${sorted[j]}`);
+    else parts.push(...sorted.slice(i, j + 1).map(String));
+    i = j + 1;
+  }
   const list =
-    sorted.length === 1
-      ? String(sorted[0])
-      : `${sorted.slice(0, -1).join(', ')} or ${sorted[sorted.length - 1]}`;
-  return `${list} month${sorted.length === 1 && sorted[0] === 1 ? '' : 's'}`;
+    parts.length === 1
+      ? parts[0]
+      : `${parts.slice(0, -1).join(', ')} or ${parts[parts.length - 1]}`;
+  const one = sorted.length === 1 && sorted[0] === 1;
+  return `${list} month${one ? '' : 's'}`;
 }
 
 /** "$1,650–$2,560", "$1,650", or null when no unit has a known rent. */

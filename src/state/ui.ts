@@ -1,3 +1,5 @@
+import { defaultLeaseMarkPrefs, parseLeaseMarkPrefs } from '../domain/leaseMarks';
+import type { LeaseMarkPrefs } from '../domain/leaseMarks';
 import { NO_COST_LIMITS } from '../domain/filter';
 import type { CostLimits } from '../domain/filter';
 import { create } from 'zustand';
@@ -116,6 +118,9 @@ export interface UiState extends Remembered, MapUi, TriageUi {
   /** Cost limits above the list (M9); for this visit only, like search. */
   costLimits: CostLimits;
   setCostLimits: (limits: CostLimits) => void;
+  /** Which lease-length marks show, and where (Q36); remembered in this browser. */
+  leaseMarks: LeaseMarkPrefs;
+  setLeaseMarks: (prefs: LeaseMarkPrefs) => void;
   placing: Placing | null;
   notice: Notice | null;
   setPlacing: (placing: Placing | null) => void;
@@ -154,6 +159,23 @@ export interface UiState extends Remembered, MapUi, TriageUi {
 }
 
 const MAP_KEY = `${dbName}.mapPrefs`;
+const LEASE_MARKS_KEY = `${dbName}.leaseMarks`;
+
+export function loadLeaseMarks(): LeaseMarkPrefs {
+  try {
+    return parseLeaseMarkPrefs(JSON.parse(localStorage.getItem(LEASE_MARKS_KEY) ?? 'null'));
+  } catch {
+    return defaultLeaseMarkPrefs();
+  }
+}
+
+function rememberLeaseMarks(prefs: LeaseMarkPrefs) {
+  try {
+    localStorage.setItem(LEASE_MARKS_KEY, JSON.stringify(prefs));
+  } catch {
+    // Storage blocked or full: the choice still applies for this visit.
+  }
+}
 
 export function loadMapMemory(): MapMemory {
   try {
@@ -227,6 +249,11 @@ export const useUi = create<UiState>()((set, get) => {
     query: '',
     costLimits: NO_COST_LIMITS,
     setCostLimits: (costLimits) => set({ costLimits }),
+    leaseMarks: loadLeaseMarks(),
+    setLeaseMarks: (leaseMarks) => {
+      set({ leaseMarks });
+      rememberLeaseMarks(leaseMarks);
+    },
     placing: null,
     notice: null,
     setPlacing: (placing) => set({ placing }),
@@ -355,6 +382,7 @@ export function resetUi() {
     ...mapUiStart(),
     query: '',
     costLimits: NO_COST_LIMITS,
+    leaseMarks: defaultLeaseMarkPrefs(),
     placing: null,
     notice: null,
     picked: [],

@@ -53,14 +53,22 @@ export interface MoveInCost {
 }
 
 /**
- * Whether the unit lists the lease length you'd sign (M9 review): it does; it lists others
- * but not yours (its costs then use the nearest one it lists); or its terms are unknown.
+ * Whether the unit lists the lease length its costs are for (M9 review): it does; it lists
+ * others but not that one (its costs then use the nearest one it lists); its lease terms are
+ * unknown (marked `?`, or the listing lists none); or no lease terms are entered yet.
  */
-export type TermStatus = 'offered' | 'not-offered' | 'unknown';
+export type TermStatus = 'offered' | 'not-offered' | 'unknown' | 'empty';
 
 export interface UnitCost {
-  /** The lease length you'd sign here: the unit's own choice, else your default. */
+  /**
+   * The lease length the costs are for: your default when you compare every unit at it
+   * (`compareAtDefaultLease`), else the unit's own choice, else your default.
+   */
   wantedMonths: number;
+  /** The unit's own lease length when it differs from your default (shown as a tag), else null. */
+  ownMonths: number | null;
+  /** The unit has its own lease length but you compare every unit at yours: it's not used. */
+  ownIgnored: boolean;
   /**
    * The lease length the costs use: `wantedMonths` when the unit lists it (or its terms are
    * unknown), else the nearest one it lists (a tie goes to the shorter).
@@ -149,7 +157,16 @@ export const isPetFee = (label: string): boolean => /\bpets?\b/i.test(label);
 
 /** The lease length the costs assume for a unit. */
 export const leaseMonthsFor = (unit: Pick<Unit, 'plannedLeaseMonths'>, profile: CostProfile) =>
-  unit.plannedLeaseMonths ?? profile.defaultLeaseMonths;
+  profile.compareAtDefaultLease === true
+    ? profile.defaultLeaseMonths
+    : (unit.plannedLeaseMonths ?? profile.defaultLeaseMonths);
+
+/** Lease terms checked and found unknown, or none listed: "Lease terms unknown". */
+export const leaseTermsUnknown = (
+  unit: Pick<Unit, 'leaseTermsMonths' | 'checkedUnknown'>,
+): boolean =>
+  (unit.leaseTermsMonths !== null && unit.leaseTermsMonths.length === 0) ||
+  (unit.checkedUnknown ?? []).some((c) => c.field === 'unit.leaseTermsMonths');
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -385,10 +402,14 @@ export function unitCost(
   const wantedMonths = leaseMonthsFor(stored, profile);
   const offered = offeredTerms(stored);
   const termStatus: TermStatus = !offered.length
-    ? 'unknown'
+    ? leaseTermsUnknown(stored)
+      ? 'unknown'
+      : 'empty'
     : offered.includes(wantedMonths)
       ? 'offered'
       : 'not-offered';
+  const own = stored.plannedLeaseMonths;
+  const ownMonths = own !== null && own !== profile.defaultLeaseMonths ? own : null;
   const leaseMonths =
     termStatus === 'not-offered' ? nearestTerm(offered, wantedMonths) : wantedMonths;
   const { unit, termPriced } = pricedForTerm(stored, leaseMonths);
@@ -478,6 +499,8 @@ export function unitCost(
   const terms = new Set<number>([...offered, wantedMonths]);
   return {
     wantedMonths,
+    ownMonths,
+    ownIgnored: ownMonths !== null && profile.compareAtDefaultLease === true,
     leaseMonths,
     termStatus,
     offeredTerms: offered,
@@ -507,6 +530,38 @@ export function unitCost(
 /** "No 15-month lease": the short mark for a unit that doesn't list your lease length. */
 export const notOfferedLabel = (c: Pick<UnitCost, 'wantedMonths'>): string =>
   `No ${c.wantedMonths}-month lease`;
+
+/** A lease-length mark (Q36): which kind, its short label, and the sentence explaining it. */
+export interface LeaseMarkInfo {
+  kind: 'not-offered' | 'unknown' | 'empty';
+  label: string;
+  explain: string;
+}
+
+/** The mark a unit's costs call for, or null when it lists the lease length they're for. */
+export function leaseMark(
+  c: Pick<UnitCost, 'termStatus' | 'wantedMonths' | 'leaseMonths' | 'offeredTerms'>,
+): LeaseMarkInfo | null {
+  const lease = aLease(c.wantedMonths);
+  switch (c.termStatus) {
+    case 'not-offered':
+      return { kind: 'not-offered', label: notOfferedLabel(c), explain: notOfferedText(c) };
+    case 'unknown':
+      return {
+        kind: 'unknown',
+        label: 'Lease terms unknown',
+        explain: `Its lease terms are unknown, so its costs assume ${lease} at the listed prices.`,
+      };
+    case 'empty':
+      return {
+        kind: 'empty',
+        label: 'No lease terms entered',
+        explain: `No lease terms are entered yet, so its costs assume ${lease} at the listed prices. Add them with Edit (E), Lease.`,
+      };
+    default:
+      return null;
+  }
+}
 
 /** "Doesn't list a 15-month lease (it lists 12 and 18 months), so its costs use 12." */
 export function notOfferedText(

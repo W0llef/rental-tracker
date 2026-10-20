@@ -207,7 +207,8 @@
             "months": 15,
             "amount": 0
           }
-        ]
+        ],
+        "listedTermMonths": 12
       },
       {
         "id": "u-2",
@@ -273,7 +274,8 @@
         "fieldSources": [],
         "buildingId": "b-1",
         "checkedUnknown": [],
-        "termCharges": []
+        "termCharges": [],
+        "listedTermMonths": null
       }
     ],
     "people": [
@@ -592,7 +594,8 @@
           },
           "amortizeOneTimeFees": false,
           "amortizeSpecials": false,
-          "defaultLeaseMonths": 12
+          "defaultLeaseMonths": 12,
+          "compareAtDefaultLease": false
         },
         "baseline": {
           "maxRent": null,

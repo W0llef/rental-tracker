@@ -2,11 +2,13 @@ import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { setCostOverride, setLeaseLength } from '../../commands/cost';
 import { db } from '../../db/db';
-import { notOfferedLabel, notOfferedText, perSqftLabel, profileEstimate } from '../../domain/cost';
+import { perSqftLabel, profileEstimate, unitCost } from '../../domain/cost';
+import { shownLeaseMark } from '../../domain/leaseMarks';
+import { useUi } from '../../state/ui';
 import type { CostLine, UnitCost } from '../../domain/cost';
 import { aLease, money, monthsLabel } from '../../domain/format';
 import { parseMoney, parseWhole } from '../../domain/input';
-import type { CostProfile, Unit } from '../../model';
+import type { Building, CostProfile, Unit } from '../../model';
 import { LeaseMark } from '../common/Markers';
 import { Section } from './parts';
 import styles from './detail.module.css';
@@ -127,7 +129,7 @@ function LeaseLength({
   return (
     <div className={styles.lease}>
       <label htmlFor={id} className={styles.leaseLabel}>
-        Lease length
+        {profile.compareAtDefaultLease ? 'Lease you’d sign here' : 'Lease length'}
       </label>
       <select
         id={id}
@@ -185,6 +187,9 @@ function LeaseLength({
         </p>
       )}
       <p className={styles.overrideHint}>
+        {profile.compareAtDefaultLease
+          ? `Not used for comparing: you compare every unit at ${monthsLabel(profile.defaultLeaseMonths)} (Cost profile). `
+          : ''}
         {cost.termStatus === 'not-offered'
           ? ''
           : cost.rentForTerm
@@ -200,35 +205,51 @@ function LeaseLength({
   );
 }
 
+/** "This unit doesn’t…", "This unit’s lease terms…": a mark's sentence, said of this unit. */
+const ofThisUnit = (text: string) =>
+  text
+    .replace(/^Doesn’t/, 'This unit doesn’t')
+    .replace(/^Its /, 'This unit’s ')
+    .replace(/^No lease terms are entered yet/, 'No lease terms are entered for this unit yet');
+
 export function CostSection({
   unit,
+  building,
   cost,
   profile,
 }: {
   unit: Unit;
+  building: Building | undefined;
   cost: UnitCost;
   profile: CostProfile;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
   const moveIn = cost.moveIn;
+  const mark = shownLeaseMark(
+    cost,
+    useUi((s) => s.leaseMarks),
+    'details',
+  );
+  // Comparing every unit at your lease length (Q36): what the lease picked here would cost.
+  const own =
+    cost.ownIgnored && cost.ownMonths !== null
+      ? unitCost(unit, building, { ...profile, compareAtDefaultLease: false })
+      : null;
   return (
     <Section
       title="Monthly cost"
       id="unit-cost"
       action={<Link to="/settings/cost">Edit cost profile</Link>}
     >
-      {cost.termStatus === 'not-offered' && (
+      {mark && (
         <p className={styles.leaseNote}>
-          <LeaseMark label={notOfferedLabel(cost)} explain={notOfferedText(cost)} />{' '}
-          {notOfferedText(cost).replace(/^Doesn’t/, 'This unit doesn’t')}
+          <LeaseMark kind={mark.kind} label={mark.label} explain={mark.explain} />{' '}
+          {ofThisUnit(mark.explain)}
         </p>
       )}
-      {cost.termStatus === 'unknown' && (
-        <p className={styles.leaseNoteQuiet}>
-          Lease terms unknown, so the costs assume {aLease(cost.leaseMonths)} at the listed prices.
-        </p>
+      {(cost.leaseMatters || cost.ownMonths !== null) && (
+        <LeaseLength unit={unit} cost={cost} profile={profile} />
       )}
-      {cost.leaseMatters && <LeaseLength unit={unit} cost={cost} profile={profile} />}
       <ul className={styles.costLines} aria-label="Monthly cost lines">
         {cost.rent === null && (
           <li className={styles.costLine}>
@@ -300,6 +321,14 @@ export function CostSection({
           )}
         </li>
       </ul>
+      {own && own.total !== null && cost.total !== null && (
+        <p className={styles.ownLease}>
+          At the {own.ownMonths}-month lease you’d sign here: <b>{money(own.total)}/mo</b>
+          {own.total !== cost.total &&
+            ` (${money(Math.abs(own.total - cost.total))} ${own.total > cost.total ? 'more' : 'less'})`}
+          . Cards and the map use {monthsLabel(cost.wantedMonths)}, like every unit.
+        </p>
+      )}
       {cost.total === null && (
         <p className={styles.muted}>The total needs the rent. Edit (E) to add it.</p>
       )}

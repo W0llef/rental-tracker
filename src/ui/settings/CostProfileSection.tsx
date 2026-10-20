@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useId, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { updateCostProfile } from '../../commands/cost';
 import { getSettings } from '../../commands/records';
 import { db } from '../../db/db';
@@ -312,8 +313,29 @@ export function CostProfileSection() {
             }
           />
           <p className={styles.note}>
-            Each unit can have its own in its Monthly cost section. When a listing prices lease
-            lengths differently, the total uses the rent for yours.
+            Each unit can have its own (Lease you’d sign, in its form or Monthly cost). When a
+            listing prices lease lengths differently, the total uses the rent for yours, or for the
+            nearest length the unit lists.
+          </p>
+          <label className={styles.essentialsCheck}>
+            <input
+              type="checkbox"
+              checked={p.compareAtDefaultLease === true}
+              onChange={(e) =>
+                void set(
+                  { compareAtDefaultLease: e.target.checked },
+                  e.target.checked
+                    ? `Compare every unit at ${monthsLabel(p.defaultLeaseMonths)}`
+                    : 'Use the lease picked for each unit',
+                )
+              }
+            />
+            Compare every unit at this lease length
+          </label>
+          <p className={styles.note}>
+            Ignores the lease picked for a single unit on cards, the map and sorting, so every unit
+            is priced alike. That unit’s Monthly cost still shows its own pick on a line of its own.
+            Lease length marks: <Link to="/settings/lease-marks">Settings</Link>.
           </p>
           <label className={styles.essentialsCheck}>
             <input

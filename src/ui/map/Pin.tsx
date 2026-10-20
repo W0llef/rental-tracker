@@ -4,6 +4,8 @@ import { accessibleName } from '../../domain/pins';
 import type { PinContent } from '../../domain/pins';
 import type { PinStyle } from '../../domain/pinPrefs';
 import type { UnitType } from '../../model';
+import type { LeaseMarkKind } from '../../domain/leaseMarks';
+import { LeaseIcon } from '../common/Markers';
 import styles from './map.module.css';
 
 /** 16 px unit-type glyphs for pins (DESIGN.md §2.4): apartment, condo, townhome, house, room. */
@@ -53,6 +55,10 @@ export interface PinProps {
   dimmed?: boolean;
   /** Photo pins: show the larger photo beside this pin (its box), or hide it (null). */
   onPreview?: (anchor: DOMRect | null) => void;
+  /** A single unit's lease-length mark (Q36): a small badge on the plate or photo. */
+  leaseMark?: { kind: LeaseMarkKind; explain: string } | null;
+  /** Tooltip: the mark's sentence, or a note that the unit has its own lease length. */
+  tip?: string | null;
 }
 
 /** Vertical stripes for a plate's edge, a bar under a photo, a ring for a dot. */
@@ -183,14 +189,16 @@ export function Pin(p: PinProps) {
       multi ? String(p.count) : null,
       p.newMark === 'tag' ? 'New' : null,
     ],
-    p.label,
+    [p.label, p.tip].filter(Boolean).join('. '),
   );
+  const badge = p.leaseMark && !asDot ? p.leaseMark : null;
 
   return (
     <button
       type="button"
       className={cls.join(' ')}
       style={style}
+      title={p.tip ?? undefined}
       aria-label={name}
       aria-pressed={p.expanded === undefined ? p.selected : undefined}
       aria-expanded={p.expanded}
@@ -217,6 +225,11 @@ export function Pin(p: PinProps) {
       {inner}
       {p.newMark === 'dot' && <span className={styles.newb} aria-hidden="true" />}
       {p.newMark === 'tag' && <span className={styles.newTag}> New</span>}
+      {badge && (
+        <span className={styles.leaseBadge} aria-hidden="true">
+          <LeaseIcon kind={badge.kind} />
+        </span>
+      )}
     </button>
   );
 }

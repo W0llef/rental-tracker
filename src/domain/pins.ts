@@ -12,6 +12,7 @@ import {
 import type { ColorBy, PinField, PinPrefs, RejectedMode } from './pinPrefs';
 import { activeFields } from './pinPrefs';
 import { perSqftLabel } from './cost';
+import type { UnitCost } from './cost';
 import { sortBy } from './sort';
 
 /**
@@ -27,14 +28,11 @@ import { sortBy } from './sort';
 export const PRICE_COLOR_LABEL = 'Total cost';
 
 /** What a pin needs of a unit's cost (`UnitCost`, M9). */
-export interface PinCost {
+export interface PinCost extends Partial<
+  Pick<UnitCost, 'termStatus' | 'wantedMonths' | 'leaseMonths' | 'offeredTerms' | 'ownMonths'>
+> {
   total: number | null;
   perSqft: number | null;
-  /** Whether the unit lists your lease length (M9 review); see `UnitCost`. */
-  termStatus?: 'offered' | 'not-offered' | 'unknown';
-  wantedMonths?: number;
-  leaseMonths?: number;
-  offeredTerms?: number[];
 }
 
 export interface PinUnit {

@@ -998,3 +998,13 @@
 .leaseNoteQuiet {
   color: var(--slate);
 }
+
+/* Comparing every unit at your lease length: what the lease picked here would cost (Q36) */
+.ownLease {
+  margin: var(--s2) 0 0;
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-md);
+  background: var(--frost);
+  font-size: 13px;
+  line-height: 19px;
+}

@@ -14,10 +14,11 @@ describe('migration to version 3', () => {
     const before = fixture.data.units[0] as Record<string, unknown>;
     const after = data.units![0] as Record<string, unknown>;
     // Later versions add their own fields; v3 only adds checkedUnknown.
-    expect({ ...after, checkedUnknown: undefined, termCharges: undefined }).toEqual({
+    const later = { termCharges: undefined, listedTermMonths: undefined };
+    expect({ ...after, checkedUnknown: undefined, ...later }).toEqual({
       ...before,
       checkedUnknown: undefined,
-      termCharges: undefined,
+      ...later,
     });
   });
 

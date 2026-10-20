@@ -71,17 +71,43 @@ export function commonFlag(opinions: readonly Pick<OpinionFields, 'flag'>[]): Fl
 /** "5 units", "1 unit". */
 export const unitsCount = (n: number) => `${n} unit${n === 1 ? '' : 's'}`;
 
-/** "12, 15" → [12, 15]; "none" → []; "?" → null; anything unreadable → undefined. */
+/**
+ * Lease lengths as typed: "12, 15" → [12, 15]; ranges too, "9-18, 24" or "9 to 18" →
+ * [9, 10, …, 18, 24] (M9 review); "none" → []; "?" → null; anything unreadable → undefined.
+ */
 export function parseMonths(text: string): number[] | null | undefined {
   const t = text.trim().toLowerCase();
   if (t === '?') return null;
   if (t === 'none') return [];
-  const words = t.replace(/\b(months?|mos?|or|and)\b/g, ' ');
-  if (/[^\d\s,/.]/.test(words)) return undefined;
-  const nums = words
-    .split(/[\s,/]+/)
-    .filter(Boolean)
-    .map(Number);
-  if (!nums.length || nums.some((n) => !Number.isInteger(n) || n < 1 || n > 60)) return undefined;
-  return [...new Set(nums)].sort((a, b) => a - b);
+  const words = t
+    .replace(/[–—]/g, '-')
+    .replace(/\s*(?:-|\bto\b|through|thru)\s*/g, '-')
+    .replace(/\b(months?|mos?|or|and)\b/g, ' ');
+  if (/[^\d\s,/.-]/.test(words)) return undefined;
+  const out = new Set<number>();
+  const tokens = words.split(/[\s,/]+/).filter(Boolean);
+  if (!tokens.length) return undefined;
+  for (const tok of tokens) {
+    const m = /^(\d+)(?:-(\d+))?$/.exec(tok);
+    if (!m) return undefined;
+    const a = Number(m[1]);
+    const b = m[2] === undefined ? a : Number(m[2]);
+    if (a < 1 || b > 60 || b < a) return undefined;
+    for (let n = a; n <= b; n++) out.add(n);
+  }
+  return [...out].sort((x, y) => x - y);
+}
+
+/** [9, 10, 11, 12, 15] → "9-12, 15": what the Lease terms box shows for a list of lengths. */
+export function monthsText(months: readonly number[]): string {
+  const sorted = [...new Set(months)].sort((a, b) => a - b);
+  const out: string[] = [];
+  let i = 0;
+  while (i < sorted.length) {
+    let j = i;
+    while (j + 1 < sorted.length && sorted[j + 1] === (sorted[j] as number) + 1) j++;
+    out.push(j - i >= 2 ? `${sorted[i]}-${sorted[j]}` : sorted.slice(i, j + 1).join(', '));
+    i = j + 1;
+  }
+  return out.join(', ');
 }

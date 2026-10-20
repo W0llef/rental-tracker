@@ -6,6 +6,7 @@ import { CostProfileSection } from './CostProfileSection';
 import { DataSection } from './DataSection';
 import { EssentialsSection } from './EssentialsSection';
 import { LabelsSection } from './LabelsSection';
+import { LeaseMarksSection } from './LeaseMarksSection';
 import { PeopleSection } from './PeopleSection';
 import { StorageSection } from './StorageSection';
 import styles from './settings.module.css';
@@ -19,6 +20,7 @@ import styles from './settings.module.css';
 const SECTIONS = [
   { id: 'people', label: 'People', Component: PeopleSection },
   { id: 'cost', label: 'Cost profile', Component: CostProfileSection },
+  { id: 'lease-marks', label: 'Lease length marks', Component: LeaseMarksSection },
   { id: 'labels', label: 'Labels and reasons', Component: LabelsSection },
   { id: 'essentials', label: 'Essential fields', Component: EssentialsSection },
   { id: 'backup', label: 'Backup and restore', Component: BackupSection },

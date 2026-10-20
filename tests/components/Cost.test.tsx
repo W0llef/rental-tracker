@@ -239,11 +239,17 @@ describe('charges by lease length (M9 review)', () => {
     expect(line('Rent')).toHaveTextContent('$1,595');
   });
 
-  it('says when a unit’s lease terms are unknown', async () => {
+  it('says when a unit’s lease terms aren’t entered, or are unknown', async () => {
     renderAt(`/unit/${cheapId}`);
     await waitFor(() =>
       expect(costRegion()).toHaveTextContent(
-        'Lease terms unknown, so the costs assume a 12-month lease',
+        'No lease terms are entered for this unit yet, so its costs assume a 12-month lease',
+      ),
+    );
+    await updateUnit(db, cheapId, { leaseTermsMonths: [] });
+    await waitFor(() =>
+      expect(costRegion()).toHaveTextContent(
+        'This unit’s lease terms are unknown, so its costs assume a 12-month lease',
       ),
     );
   });

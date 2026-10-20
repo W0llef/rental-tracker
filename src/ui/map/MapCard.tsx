@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { accessibleName } from '../../domain/pins';
 import type { PinContent } from '../../domain/pins';
 import type { UnitType } from '../../model';
+import type { LeaseMarkKind } from '../../domain/leaseMarks';
 import { LeaseMark } from '../common/Markers';
 import { Segments, TypeGlyph } from './Pin';
 import styles from './map.module.css';
@@ -30,8 +31,8 @@ export interface CardRow {
   label: string;
   /** For the preview's caption: "Unit 1504". */
   title: string;
-  /** The unit doesn't list your lease length: why (a mark with this as its tooltip). */
-  leaseNote?: string | null;
+  /** A lease-length mark (Q36): its icon, with the sentence as its tooltip and name. */
+  leaseMark?: { kind: LeaseMarkKind; explain: string } | null;
 }
 
 export interface MapCardProps {
@@ -139,7 +140,7 @@ export function MapCard(p: MapCardProps) {
           const empty = !r.content.typeIcon && !r.content.segments.length;
           const name = accessibleName(
             [...r.content.segments.map((s) => s.text), r.newMark === 'tag' ? 'New' : null],
-            r.leaseNote ? `${r.label}. ${r.leaseNote}` : r.label,
+            r.leaseMark ? `${r.label}. ${r.leaseMark.explain}` : r.label,
           );
           return (
             <li key={r.key}>
@@ -193,9 +194,14 @@ export function MapCard(p: MapCardProps) {
                 {r.newMark === 'tag' && ' '}
                 {r.newMark === 'tag' && <span className={styles.rowNew}>New</span>}
                 {r.newMark === 'dot' && <span className={styles.rowNewDot} aria-hidden="true" />}
-                {r.leaseNote && (
+                {r.leaseMark && (
                   <span className={styles.rowLease} aria-hidden="true">
-                    <LeaseMark label="" explain={r.leaseNote} compact />
+                    <LeaseMark
+                      kind={r.leaseMark.kind}
+                      label=""
+                      explain={r.leaseMark.explain}
+                      compact
+                    />
                   </span>
                 )}
               </button>

@@ -124,8 +124,8 @@ function LimitsForm({
           Only units that list your lease length
           <span className={styles.limitHint}>
             {' '}
-            ({leaseMonths} months, or the one you picked for a unit; units with unknown lease terms
-            are left out too)
+            ({leaseMonths} months, or the one you picked for a unit; units with unknown or no lease
+            terms are left out too)
           </span>
         </span>
       </label>

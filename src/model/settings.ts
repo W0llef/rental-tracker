@@ -23,6 +23,9 @@ export const costProfile = z.object({
   amortizeOneTimeFees: z.boolean(), // Q5, default off
   amortizeSpecials: z.boolean(), // Q5, default off
   defaultLeaseMonths: z.number().int().min(1), // Q5; per unit via plannedLeaseMonths
+  // v4 (M9 review): price every unit at defaultLeaseMonths, ignoring the lease length picked
+  // for a unit (its Monthly cost still shows that one on a line of its own).
+  compareAtDefaultLease: z.boolean().default(false),
 });
 export type CostProfile = z.infer<typeof costProfile>;
 
@@ -154,6 +157,7 @@ export function defaultSettings(): Settings {
       amortizeOneTimeFees: false,
       amortizeSpecials: false,
       defaultLeaseMonths: 12,
+      compareAtDefaultLease: false,
     },
     baseline: {
       maxRent: null,

@@ -146,6 +146,9 @@ export const unit = base.extend({
   rentIsFrom: z.boolean(), // "from $X" (floor-plan-only pricing)
   rentByTerm: maybe(z.array(z.object({ months: z.number().int().min(1), rent: usd }))),
   termCharges: z.array(termCharge).default([]), // v4 (M9 review): other charges by lease length
+  // v4 (M9 review): the lease length the listed rent is for. Price history follows that
+  // rent; which rent the totals use comes from your lease length, not from this.
+  listedTermMonths: maybe(z.number().int().min(1)).default(null),
   availableDate: maybe(isoDate),
   leaseTermsMonths: maybe(z.array(z.number().int().min(1))),
   plannedLeaseMonths: maybe(z.number().int().min(1)), // null → cost profile default (Q5)
